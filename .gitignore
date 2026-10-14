@@ -1,0 +1,30 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Archivos generados por compilación
+[Bb]in/
+[Oo]bj/
+
+# Dependencias NuGet: se restauran usando packages.config
+packages/
+
+# Resultados y temporales
+TestResults/
+*.log
+*.tmp
+*.cache
+
+# Configuración local del editor
+.vscode/
+.idea/
+
+# Archivos locales de SQL Server y respaldos
+*.mdf
+*.ldf
+*.ndf
+*.bak
+*.trn
