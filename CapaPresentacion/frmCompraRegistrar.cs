@@ -29,6 +29,7 @@ namespace CapaPresentacion
             txtRazonSocial.KeyDown += TxtProveedor_KeyDown;
             txtPrecioCompra.TextChanged += PrecioYPorcentaje_TextChanged;
             txtPorcentaje.TextChanged += PrecioYPorcentaje_TextChanged;
+            ExperienciaUsuario.Aplicar(this, txtCodigoProducto, txtCodigoProducto, txtNuevoDocumento, txtRazonSocial);
         }
 
         private void TxtCodigoProducto_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)

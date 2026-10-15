@@ -21,6 +21,7 @@ namespace CapaPresentacion
         public frmCompraVerDetalle()
         {
             InitializeComponent();
+            CapaPresentacion.Utilidades.ExperienciaUsuario.Aplicar(this, txtBusqueda, txtBusqueda);
         }
 
         private void label10_Click(object sender, EventArgs e)

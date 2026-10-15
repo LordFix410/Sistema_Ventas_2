@@ -20,6 +20,7 @@ namespace CapaPresentacion.Modales
         public mdProducto()
         {
             InitializeComponent();
+            CapaPresentacion.Utilidades.ExperienciaUsuario.Aplicar(this, txtBusqueda, txtBusqueda);
             txtBusqueda.KeyDown += txtBusqueda_KeyDown;
             dgvData.KeyDown += dgvData_KeyDown;
             Shown += mdProducto_Shown;

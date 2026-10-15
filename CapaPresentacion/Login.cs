@@ -18,6 +18,7 @@ namespace CapaPresentacion
         public Login()
         {
             InitializeComponent();
+            CapaPresentacion.Utilidades.ExperienciaUsuario.Aplicar(this, txtNumeroDoc, txtContrasena);
         }
 
         private void btnCancelar_Click(object sender, EventArgs e)

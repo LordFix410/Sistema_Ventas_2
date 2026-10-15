@@ -25,6 +25,7 @@ namespace CapaPresentacion
             txtBusqueda.KeyDown += txtBusqueda_KeyDown;
             txtFechaInicio.KeyDown += txtBusqueda_KeyDown;
             txtFechaFinal.KeyDown += txtBusqueda_KeyDown;
+            ExperienciaUsuario.Aplicar(this, txtBusqueda, txtBusqueda, txtFechaInicio, txtFechaFinal);
         }
 
         private void frmReporteCompras_Load(object sender, EventArgs e)

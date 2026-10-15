@@ -14,6 +14,31 @@ namespace CapaDatos
 {
     public class CD_Usuario
     {
+        public List<Usuario> ListarActivosPorClave(string clave)
+        {
+            List<Usuario> lista = new List<Usuario>();
+            using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+            using (SqlCommand cmd = new SqlCommand(
+                "SELECT IdUsuario, NombreCompleto FROM USUARIO WHERE Estado = 1 " +
+                "AND CONVERT(varbinary(100), Clave) = CONVERT(varbinary(100), @Clave)", conexion))
+            {
+                cmd.Parameters.Add("@Clave", SqlDbType.VarChar, 50).Value = clave;
+                conexion.Open();
+                using (SqlDataReader dr = cmd.ExecuteReader())
+                {
+                    while (dr.Read())
+                    {
+                        lista.Add(new Usuario
+                        {
+                            IdUsuario = Convert.ToInt32(dr["IdUsuario"]),
+                            NombreCompleto = Convert.ToString(dr["NombreCompleto"])
+                        });
+                    }
+                }
+            }
+            return lista;
+        }
+
         public List<Usuario> Listar()
         {
             List<Usuario> lista = new List<Usuario>();

@@ -18,6 +18,7 @@ namespace CapaPresentacion
         public frmCategoria()
         {
             InitializeComponent();
+            ExperienciaUsuario.Aplicar(this, txtDescripcion, txtBusqueda);
         }
 
         private void frmCategoria_Load(object sender, EventArgs e)

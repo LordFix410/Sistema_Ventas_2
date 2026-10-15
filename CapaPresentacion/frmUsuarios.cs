@@ -23,6 +23,7 @@ namespace CapaPresentacion
         public frmUsuarios()
         {
             InitializeComponent();
+            ExperienciaUsuario.Aplicar(this, txtDocumento, txtBusqueda);
         }
 
         private void frmUsuarios_Load(object sender, EventArgs e)

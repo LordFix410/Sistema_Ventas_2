@@ -18,6 +18,12 @@ namespace CapaNegocio
             return objcd_usuario.Listar();
         }
 
+        public List<Usuario> ListarActivosPorClave(string clave)
+        {
+            if (string.IsNullOrWhiteSpace(clave)) return new List<Usuario>();
+            return objcd_usuario.ListarActivosPorClave(clave);
+        }
+
         public int Registrar(Usuario obj, out string Mensaje)
         {
             Mensaje = string.Empty;

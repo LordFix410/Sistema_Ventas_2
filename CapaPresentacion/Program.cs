@@ -88,9 +88,10 @@ namespace CapaPresentacion
                 conexion.Open();
 
                 using (SqlCommand comando = new SqlCommand(
-                    "SELECT COUNT(*) FROM sys.databases WHERE name = 'DBSVentas'",
+                    "SELECT COUNT(*) FROM sys.databases WHERE name = @NombreBase",
                     conexion))
                 {
+                    comando.Parameters.Add("@NombreBase", System.Data.SqlDbType.NVarChar, 128).Value = "DBSISTEMA_VENTA";
                     int existe = Convert.ToInt32(comando.ExecuteScalar());
 
                     if (existe > 0)
@@ -101,19 +102,19 @@ namespace CapaPresentacion
             // Si no existe, buscamos el script incluido con el programa.
             string rutaScript = Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
-                "querys.sql"
+                "query.sql"
             );
 
             if (!File.Exists(rutaScript))
             {
                 throw new FileNotFoundException(
-                    "No se encontró el archivo querys.sql."
+                    "No se encontró el archivo query.sql."
                 );
             }
 
             string script = File.ReadAllText(rutaScript);
 
-            // querys.sql utiliza GO para separar bloques.
+            // query.sql utiliza GO para separar bloques.
             string[] bloques = System.Text.RegularExpressions.Regex.Split(
                 script,
                 @"^\s*GO\s*$",

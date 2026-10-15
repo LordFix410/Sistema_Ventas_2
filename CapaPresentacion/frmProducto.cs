@@ -19,6 +19,7 @@ namespace CapaPresentacion
         public frmProducto()
         {
             InitializeComponent();
+            ExperienciaUsuario.Aplicar(this, txtCodigo, txtBusqueda);
         }
 
         private void frmProducto_Load(object sender, EventArgs e)

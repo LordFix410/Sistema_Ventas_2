@@ -32,6 +32,7 @@ namespace CapaPresentacion
             txtNombreCliente.KeyDown += TxtCliente_KeyDown;
             txtCantidad.KeyDown += TxtCantidad_KeyDown;
             Shown += frmVentas_Shown;
+            ExperienciaUsuario.Aplicar(this, txtCodigoProducto, txtCodigoProducto, txtDocumentoCliente, txtNombreCliente, txtCantidad);
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -593,6 +594,40 @@ namespace CapaPresentacion
                     return;
                 }
 
+                Usuario usuarioVendedor;
+                using (var dialogo = new DialogoConfirmarVendedor())
+                {
+                    if (dialogo.ShowDialog(this) != DialogResult.OK)
+                    {
+                        txtCodigoProducto.Focus();
+                        return;
+                    }
+
+                    List<Usuario> coincidencias;
+                    try
+                    {
+                        coincidencias = new CN_Usuario().ListarActivosPorClave(dialogo.Clave);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(this, "No fue posible validar al vendedor: " + ex.Message,
+                            "Error de validación", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        txtCodigoProducto.Focus();
+                        return;
+                    }
+                    if (coincidencias.Count != 1)
+                    {
+                        string aviso = coincidencias.Count == 0
+                            ? "La contraseña no corresponde a un usuario activo. No se registró la venta."
+                            : "Esa contraseña pertenece a más de un usuario activo. Asigna contraseñas diferentes para identificar correctamente al vendedor.";
+                        MessageBox.Show(this, aviso, "No se pudo validar al vendedor",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        txtCodigoProducto.Focus();
+                        return;
+                    }
+                    usuarioVendedor = coincidencias[0];
+                }
+
                 string mensaje = string.Empty;
                 List<KeyValuePair<int, int>> productosTemporales;
                 if (!PrepararProductosTemporales(detalle_venta, out productosTemporales, out mensaje))
@@ -603,7 +638,7 @@ namespace CapaPresentacion
 
                 Venta oVenta = new Venta()
                 {
-                    oUsuario = new Usuario() { IdUsuario = _Usuario.IdUsuario },
+                    oUsuario = new Usuario() { IdUsuario = usuarioVendedor.IdUsuario },
                     TipoDocumento = ((OpcionCombo)cboTipoDocumento.SelectedItem).Texto,
                     NumeroDocumento = string.Empty,
                     DocumentoCliente = txtDocumentoCliente.Text,
@@ -717,6 +752,50 @@ namespace CapaPresentacion
             if (txtCantidad.Value < 1)
             {
                 txtCantidad.Value = 1;
+            }
+        }
+
+        private sealed class DialogoConfirmarVendedor : Form
+        {
+            private readonly TextBox txtClave = new TextBox();
+
+            public string Clave { get { return txtClave.Text; } }
+
+            public DialogoConfirmarVendedor()
+            {
+                Text = "Confirmar vendedor";
+                FormBorderStyle = FormBorderStyle.FixedDialog;
+                StartPosition = FormStartPosition.CenterParent;
+                MinimizeBox = false;
+                MaximizeBox = false;
+                ShowInTaskbar = false;
+                ClientSize = new Size(360, 145);
+
+                Controls.Add(new Label
+                {
+                    Text = "Ingresa tu contraseña para registrar la venta a tu nombre:",
+                    Left = 18,
+                    Top = 18,
+                    Width = 324,
+                    Height = 38
+                });
+
+                txtClave.SetBounds(18, 62, 324, 26);
+                txtClave.MaxLength = 50;
+                txtClave.UseSystemPasswordChar = true;
+                Controls.Add(txtClave);
+
+                var cancelar = new System.Windows.Forms.Button { Text = "Cancelar", DialogResult = DialogResult.Cancel };
+                cancelar.SetBounds(164, 101, 85, 30);
+                Controls.Add(cancelar);
+
+                var aceptar = new System.Windows.Forms.Button { Text = "Confirmar", DialogResult = DialogResult.OK };
+                aceptar.SetBounds(257, 101, 85, 30);
+                Controls.Add(aceptar);
+
+                AcceptButton = aceptar;
+                CancelButton = cancelar;
+                Shown += (s, e) => txtClave.Focus();
             }
         }
 
