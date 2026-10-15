@@ -53,8 +53,11 @@
             this.NombreProducto = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Categoria = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.PrecioVenta = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.PrecioCompra = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Porcentaje = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Cantidad = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.SubTotal = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.GananciaBruta = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.btnBuscar = new FontAwesome.Sharp.IconButton();
             ((System.ComponentModel.ISupportInitialize)(this.dgvVentas)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
@@ -80,7 +83,7 @@
             // 
             this.label10.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.label10.Font = new System.Drawing.Font("Arial", 18F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label10.Location = new System.Drawing.Point(41, 25);
+            this.label10.Location = new System.Drawing.Point(42, 24);
             this.label10.Name = "label10";
             this.label10.Size = new System.Drawing.Size(280, 39);
             this.label10.TabIndex = 24;
@@ -89,7 +92,7 @@
             // txtFechaInicio
             // 
             this.txtFechaInicio.Format = System.Windows.Forms.DateTimePickerFormat.Short;
-            this.txtFechaInicio.Location = new System.Drawing.Point(163, 66);
+            this.txtFechaInicio.Location = new System.Drawing.Point(159, 67);
             this.txtFechaInicio.Margin = new System.Windows.Forms.Padding(4);
             this.txtFechaInicio.Name = "txtFechaInicio";
             this.txtFechaInicio.Size = new System.Drawing.Size(129, 22);
@@ -111,7 +114,7 @@
             // 
             this.label2.AutoSize = true;
             this.label2.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label2.Location = new System.Drawing.Point(300, 70);
+            this.label2.Location = new System.Drawing.Point(301, 70);
             this.label2.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(80, 16);
@@ -121,7 +124,7 @@
             // txtFechaFinal
             // 
             this.txtFechaFinal.Format = System.Windows.Forms.DateTimePickerFormat.Short;
-            this.txtFechaFinal.Location = new System.Drawing.Point(419, 64);
+            this.txtFechaFinal.Location = new System.Drawing.Point(416, 66);
             this.txtFechaFinal.Margin = new System.Windows.Forms.Padding(4);
             this.txtFechaFinal.Name = "txtFechaFinal";
             this.txtFechaFinal.Size = new System.Drawing.Size(129, 22);
@@ -254,8 +257,11 @@
             this.NombreProducto,
             this.Categoria,
             this.PrecioVenta,
+            this.PrecioCompra,
+            this.Porcentaje,
             this.Cantidad,
-            this.SubTotal});
+            this.SubTotal,
+            this.GananciaBruta});
             this.dgvData.Location = new System.Drawing.Point(48, 183);
             this.dgvData.Margin = new System.Windows.Forms.Padding(4);
             this.dgvData.Name = "dgvData";
@@ -351,6 +357,18 @@
             this.PrecioVenta.Name = "PrecioVenta";
             this.PrecioVenta.ReadOnly = true;
             this.PrecioVenta.Width = 125;
+            // PrecioCompra
+            this.PrecioCompra.HeaderText = "Costo compra";
+            this.PrecioCompra.MinimumWidth = 6;
+            this.PrecioCompra.Name = "PrecioCompra";
+            this.PrecioCompra.ReadOnly = true;
+            this.PrecioCompra.Width = 110;
+            // Porcentaje
+            this.Porcentaje.HeaderText = "Margen %";
+            this.Porcentaje.MinimumWidth = 6;
+            this.Porcentaje.Name = "Porcentaje";
+            this.Porcentaje.ReadOnly = true;
+            this.Porcentaje.Width = 100;
             // 
             // Cantidad
             // 
@@ -367,6 +385,12 @@
             this.SubTotal.Name = "SubTotal";
             this.SubTotal.ReadOnly = true;
             this.SubTotal.Width = 125;
+            // GananciaBruta
+            this.GananciaBruta.HeaderText = "Ganancia bruta";
+            this.GananciaBruta.MinimumWidth = 6;
+            this.GananciaBruta.Name = "GananciaBruta";
+            this.GananciaBruta.ReadOnly = true;
+            this.GananciaBruta.Width = 125;
             // 
             // btnBuscar
             // 
@@ -375,7 +399,7 @@
             this.btnBuscar.IconFont = FontAwesome.Sharp.IconFont.Auto;
             this.btnBuscar.IconSize = 18;
             this.btnBuscar.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnBuscar.Location = new System.Drawing.Point(589, 43);
+            this.btnBuscar.Location = new System.Drawing.Point(587, 52);
             this.btnBuscar.Margin = new System.Windows.Forms.Padding(4);
             this.btnBuscar.Name = "btnBuscar";
             this.btnBuscar.Size = new System.Drawing.Size(107, 43);
@@ -443,8 +467,11 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn NombreProducto;
         private System.Windows.Forms.DataGridViewTextBoxColumn Categoria;
         private System.Windows.Forms.DataGridViewTextBoxColumn PrecioVenta;
+        private System.Windows.Forms.DataGridViewTextBoxColumn PrecioCompra;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Porcentaje;
         private System.Windows.Forms.DataGridViewTextBoxColumn Cantidad;
         private System.Windows.Forms.DataGridViewTextBoxColumn SubTotal;
+        private System.Windows.Forms.DataGridViewTextBoxColumn GananciaBruta;
         private FontAwesome.Sharp.IconButton btnBuscar;
     }
 }

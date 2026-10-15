@@ -19,7 +19,10 @@ namespace CapaEntidad
         public string NombreProducto { get; set; }
         public string Categoria { get; set; }
         public string PrecioVenta { get; set; }
+        public string PrecioCompra { get; set; }
+        public string Porcentaje { get; set; }
         public string Cantidad { get; set; }
         public string SubTotal { get; set; }
+        public string GananciaBruta { get; set; }
     }
 }

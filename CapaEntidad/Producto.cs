@@ -17,6 +17,7 @@ namespace CapaEntidad
         public int Stock {  get; set; }
         public decimal PrecioCompra {  get; set; }
         public decimal PrecioVenta {  get; set; }
+        public decimal Porcentaje { get; set; }
         public bool Estado {  get; set; }
         public string FechaRegistro {  get; set; }
 

@@ -12,6 +12,26 @@ namespace CapaNegocio
     {
         private CD_Producto objcd_producto = new CD_Producto();
 
+        public int RegistrarTemporal(Producto obj, int cantidad, out string Mensaje)
+        {
+            if (string.IsNullOrWhiteSpace(obj.Nombre))
+            {
+                Mensaje = "Escribe el nombre o descripción del artículo temporal.";
+                return 0;
+            }
+            if (cantidad <= 0)
+            {
+                Mensaje = "La cantidad debe ser mayor que cero.";
+                return 0;
+            }
+            return objcd_producto.RegistrarTemporal(obj, cantidad, out Mensaje);
+        }
+
+        public void EliminarTemporalNoVendido(int idProducto)
+        {
+            objcd_producto.EliminarTemporalNoVendido(idProducto);
+        }
+
         public List<Producto> Listar()
         {
             return objcd_producto.Listar();
@@ -25,6 +45,7 @@ namespace CapaNegocio
             if (obj.Nombre == "") Mensaje += "Es necesario el nombre del Producto\n";
 
             if (obj.Descripcion == "") Mensaje += "Es necesario una descripcion\n";
+            if (obj.Porcentaje < 0) Mensaje += "El porcentaje no puede ser negativo\n";
 
             if (Mensaje != string.Empty) return 0;
             else return objcd_producto.Registrar(obj, out Mensaje);
@@ -37,6 +58,7 @@ namespace CapaNegocio
             if (obj.Nombre == "") Mensaje += "Es necesario el nombre del Producto\n";
 
             if (obj.Descripcion == "") Mensaje += "Es necesario una descripcion\n";
+            if (obj.Porcentaje < 0) Mensaje += "El porcentaje no puede ser negativo\n";
 
             if (Mensaje != string.Empty) return false;
             return objcd_producto.Editar(obj, out Mensaje);

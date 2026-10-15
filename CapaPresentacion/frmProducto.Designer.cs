@@ -54,6 +54,7 @@
             this.Stock = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.PRECIOCOMPRA = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.PRECIOVENTA = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.PORCENTAJE = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.EstadoValor = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Estado = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.label9 = new System.Windows.Forms.Label();
@@ -66,6 +67,8 @@
             this.txtDescripcion = new System.Windows.Forms.TextBox();
             this.txtNombre = new System.Windows.Forms.TextBox();
             this.txtCodigo = new System.Windows.Forms.TextBox();
+            this.txtPorcentaje = new System.Windows.Forms.TextBox();
+            this.labelPorcentaje = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
@@ -198,7 +201,7 @@
             this.btnEliminar.IconColor = System.Drawing.Color.White;
             this.btnEliminar.IconFont = FontAwesome.Sharp.IconFont.Auto;
             this.btnEliminar.IconSize = 16;
-            this.btnEliminar.Location = new System.Drawing.Point(33, 453);
+            this.btnEliminar.Location = new System.Drawing.Point(33, 499);
             this.btnEliminar.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnEliminar.Name = "btnEliminar";
             this.btnEliminar.Size = new System.Drawing.Size(179, 41);
@@ -220,7 +223,7 @@
             this.btnCancelarUsuario.IconColor = System.Drawing.Color.White;
             this.btnCancelarUsuario.IconFont = FontAwesome.Sharp.IconFont.Auto;
             this.btnCancelarUsuario.IconSize = 16;
-            this.btnCancelarUsuario.Location = new System.Drawing.Point(32, 406);
+            this.btnCancelarUsuario.Location = new System.Drawing.Point(32, 452);
             this.btnCancelarUsuario.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnCancelarUsuario.Name = "btnCancelarUsuario";
             this.btnCancelarUsuario.Size = new System.Drawing.Size(179, 41);
@@ -242,7 +245,7 @@
             this.btnGuardar.IconColor = System.Drawing.Color.White;
             this.btnGuardar.IconFont = FontAwesome.Sharp.IconFont.Auto;
             this.btnGuardar.IconSize = 16;
-            this.btnGuardar.Location = new System.Drawing.Point(33, 359);
+            this.btnGuardar.Location = new System.Drawing.Point(33, 405);
             this.btnGuardar.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnGuardar.Name = "btnGuardar";
             this.btnGuardar.Size = new System.Drawing.Size(179, 41);
@@ -291,6 +294,7 @@
             this.Stock,
             this.PRECIOCOMPRA,
             this.PRECIOVENTA,
+            this.PORCENTAJE,
             this.EstadoValor,
             this.Estado});
             this.dgvData.EditMode = System.Windows.Forms.DataGridViewEditMode.EditOnEnter;
@@ -396,6 +400,12 @@
             this.PRECIOVENTA.Name = "PRECIOVENTA";
             this.PRECIOVENTA.ReadOnly = true;
             this.PRECIOVENTA.Width = 125;
+            // PORCENTAJE
+            this.PORCENTAJE.HeaderText = "MARGEN %";
+            this.PORCENTAJE.MinimumWidth = 6;
+            this.PORCENTAJE.Name = "PORCENTAJE";
+            this.PORCENTAJE.ReadOnly = true;
+            this.PORCENTAJE.Width = 100;
             // 
             // EstadoValor
             // 
@@ -434,6 +444,19 @@
             this.cboEstado.Name = "cboEstado";
             this.cboEstado.Size = new System.Drawing.Size(177, 24);
             this.cboEstado.TabIndex = 45;
+            // txtPorcentaje
+            this.txtPorcentaje.Location = new System.Drawing.Point(35, 365);
+            this.txtPorcentaje.Name = "txtPorcentaje";
+            this.txtPorcentaje.Size = new System.Drawing.Size(177, 22);
+            this.txtPorcentaje.TabIndex = 46;
+            // labelPorcentaje
+            this.labelPorcentaje.AutoSize = true;
+            this.labelPorcentaje.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.labelPorcentaje.Location = new System.Drawing.Point(32, 346);
+            this.labelPorcentaje.Name = "labelPorcentaje";
+            this.labelPorcentaje.Size = new System.Drawing.Size(72, 16);
+            this.labelPorcentaje.TabIndex = 47;
+            this.labelPorcentaje.Text = "Margen %:";
             // 
             // label8
             // 
@@ -593,6 +616,8 @@
             this.Controls.Add(this.dgvData);
             this.Controls.Add(this.label9);
             this.Controls.Add(this.cboEstado);
+            this.Controls.Add(this.txtPorcentaje);
+            this.Controls.Add(this.labelPorcentaje);
             this.Controls.Add(this.label8);
             this.Controls.Add(this.cboCategoria);
             this.Controls.Add(this.label5);
@@ -642,6 +667,8 @@
         private System.Windows.Forms.TextBox txtDescripcion;
         private System.Windows.Forms.TextBox txtNombre;
         private System.Windows.Forms.TextBox txtCodigo;
+        private System.Windows.Forms.TextBox txtPorcentaje;
+        private System.Windows.Forms.Label labelPorcentaje;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Label label2;
@@ -656,6 +683,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn Stock;
         private System.Windows.Forms.DataGridViewTextBoxColumn PRECIOCOMPRA;
         private System.Windows.Forms.DataGridViewTextBoxColumn PRECIOVENTA;
+        private System.Windows.Forms.DataGridViewTextBoxColumn PORCENTAJE;
         private System.Windows.Forms.DataGridViewTextBoxColumn EstadoValor;
         private System.Windows.Forms.DataGridViewTextBoxColumn Estado;
         private FontAwesome.Sharp.IconButton iconButton1;

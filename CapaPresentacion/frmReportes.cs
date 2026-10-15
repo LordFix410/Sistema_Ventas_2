@@ -21,10 +21,15 @@ namespace CapaPresentacion
         public frmReportes()
         {
             InitializeComponent();
+            txtBusqueda.KeyDown += txtBusqueda_KeyDown;
+            txtFechaInicio.KeyDown += txtBusqueda_KeyDown;
+            txtFechaFinal.KeyDown += txtBusqueda_KeyDown;
         }
 
         private void frmReportes_Load(object sender, EventArgs e)
         {
+            txtFechaInicio.Value = DateTime.Today;
+            txtFechaFinal.Value = DateTime.Today;
             ConfigurarTablaReporte();
             foreach (DataGridViewColumn columna in dgvData.Columns)
             {
@@ -37,25 +42,42 @@ namespace CapaPresentacion
 
         private void ConfigurarTablaReporte()
         {
-            dgvData.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvData.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+            dgvData.ScrollBars = ScrollBars.Both;
+            dgvData.AllowUserToResizeColumns = true;
             dgvData.RowHeadersVisible = false;
             dgvData.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvData.RowTemplate.Height = 30;
-            dgvData.ColumnHeadersHeight = 38;
+            dgvData.RowTemplate.Height = 28;
+            dgvData.ColumnHeadersHeight = 48;
             dgvData.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             dgvData.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
             dgvData.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             dgvData.DefaultCellStyle.Padding = new Padding(4, 0, 4, 0);
+            dgvData.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
             dgvData.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            dgvData.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
 
-            float[] anchos = { 90, 90, 115, 90, 100, 105, 135, 105, 150, 95, 90, 70, 90 };
+            int[] anchos = { 120, 120, 145, 110, 125, 135, 170, 125, 190, 130, 110, 110, 100, 90, 110, 125 };
             for (int i = 0; i < dgvData.Columns.Count && i < anchos.Length; i++)
             {
-                dgvData.Columns[i].FillWeight = anchos[i];
-                dgvData.Columns[i].MinimumWidth = 65;
+                dgvData.Columns[i].Width = anchos[i];
+                dgvData.Columns[i].MinimumWidth = 80;
             }
-            foreach (string columna in new[] { "MontoTotal", "PrecioVenta", "Cantidad", "SubTotal" })
+            foreach (string columna in new[] { "MontoTotal", "PrecioVenta", "PrecioCompra", "Porcentaje", "Cantidad", "SubTotal", "GananciaBruta" })
                 dgvData.Columns[columna].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+        }
+
+        private void txtBusqueda_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.F5)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                if (sender == txtBusqueda)
+                    btnBusqueda.PerformClick();
+                else
+                    btnBuscar.PerformClick();
+            }
         }
 
         private void iconButton1_Click(object sender, EventArgs e)
@@ -100,8 +122,11 @@ namespace CapaPresentacion
                     rc.NombreProducto,
                     rc.Categoria,
                     rc.PrecioVenta,
+                    rc.PrecioCompra,
+                    rc.Porcentaje,
                     rc.Cantidad,
-                    rc.SubTotal
+                    rc.SubTotal,
+                    rc.GananciaBruta
                 });
             }
 
@@ -150,7 +175,10 @@ namespace CapaPresentacion
                             row.Cells[9].Value.ToString(),
                             row.Cells[10].Value.ToString(),
                             row.Cells[11].Value.ToString(),
-                            row.Cells[12].Value.ToString()
+                            row.Cells[12].Value.ToString(),
+                            row.Cells[13].Value.ToString(),
+                            row.Cells[14].Value.ToString(),
+                            row.Cells[15].Value.ToString()
                         });
                 }
 

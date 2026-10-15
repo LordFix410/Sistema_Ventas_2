@@ -116,7 +116,9 @@ namespace CapaDatos
                     cmd.Parameters.AddWithValue("MontoPago", obj.MontoPago);
                     cmd.Parameters.AddWithValue("MontoCambio", obj.MontoCambio);
                     cmd.Parameters.AddWithValue("MontoTotal", obj.MontoTotal);
-                    cmd.Parameters.AddWithValue("DetalleVenta", DetalleVenta);
+                    SqlParameter parametroDetalle = cmd.Parameters.AddWithValue("DetalleVenta", DetalleVenta);
+                    parametroDetalle.SqlDbType = SqlDbType.Structured;
+                    parametroDetalle.TypeName = "dbo.EDetalle_Venta";
                     cmd.Parameters.Add("Resultado", SqlDbType.Bit).Direction = ParameterDirection.Output;
                     cmd.Parameters.Add("Mensaje", SqlDbType.VarChar, 500).Direction = ParameterDirection.Output;
                     cmd.CommandType = CommandType.StoredProcedure;

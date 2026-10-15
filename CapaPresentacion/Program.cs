@@ -33,7 +33,48 @@ namespace CapaPresentacion
                 return;
             }
 
+            Application.AddMessageFilter(new CtrlBackspaceClearTextFilter());
             Application.Run(new Login());
+        }
+
+        private sealed class CtrlBackspaceClearTextFilter : IMessageFilter
+        {
+            private const int WmKeyDown = 0x0100;
+            private const int VkBack = 0x08;
+
+            public bool PreFilterMessage(ref Message m)
+            {
+                if (m.Msg != WmKeyDown || m.WParam.ToInt32() != VkBack ||
+                    (Control.ModifierKeys & Keys.Control) != Keys.Control)
+                    return false;
+
+                TextBoxBase cuadro = Control.FromHandle(m.HWnd) as TextBoxBase;
+                if (cuadro == null)
+                    cuadro = BuscarCuadroEnfocado(Form.ActiveForm);
+
+                if (cuadro == null || cuadro.IsDisposed || !cuadro.Enabled || cuadro.ReadOnly)
+                    return false;
+
+                cuadro.Clear();
+                return true;
+            }
+
+            private static TextBoxBase BuscarCuadroEnfocado(Control contenedor)
+            {
+                if (contenedor == null) return null;
+
+                TextBoxBase cuadro = contenedor as TextBoxBase;
+                if (cuadro != null && cuadro.Focused) return cuadro;
+
+                foreach (Control hijo in contenedor.Controls)
+                {
+                    if (!hijo.ContainsFocus) continue;
+                    cuadro = BuscarCuadroEnfocado(hijo);
+                    if (cuadro != null) return cuadro;
+                }
+
+                return null;
+            }
         }
 
         private static void PrepararBaseDeDatos()

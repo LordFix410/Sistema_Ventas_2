@@ -51,6 +51,7 @@
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.Producto = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.PrecioCompra = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Porcentaje = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Cantidad = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.SubTotal = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.txtTotalPagar = new System.Windows.Forms.TextBox();
@@ -302,6 +303,7 @@
             this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.Producto,
             this.PrecioCompra,
+            this.Porcentaje,
             this.Cantidad,
             this.SubTotal});
             this.dataGridView1.Location = new System.Drawing.Point(124, 299);
@@ -327,6 +329,12 @@
             this.PrecioCompra.Name = "PrecioCompra";
             this.PrecioCompra.ReadOnly = true;
             this.PrecioCompra.Width = 125;
+            // Porcentaje
+            this.Porcentaje.HeaderText = "MARGEN %";
+            this.Porcentaje.MinimumWidth = 6;
+            this.Porcentaje.Name = "Porcentaje";
+            this.Porcentaje.ReadOnly = true;
+            this.Porcentaje.Width = 100;
             // 
             // Cantidad
             // 
@@ -445,6 +453,7 @@
         private FontAwesome.Sharp.IconButton btnPdf;
         private System.Windows.Forms.DataGridViewTextBoxColumn Producto;
         private System.Windows.Forms.DataGridViewTextBoxColumn PrecioCompra;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Porcentaje;
         private System.Windows.Forms.DataGridViewTextBoxColumn Cantidad;
         private System.Windows.Forms.DataGridViewTextBoxColumn SubTotal;
     }

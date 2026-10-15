@@ -48,6 +48,7 @@ namespace CapaDatos
                                 Categoria = dr["Categoria"].ToString(),
                                 PrecioCompra = dr["PrecioCompra"].ToString(),
                                 PrecioVenta = dr["PrecioVenta"].ToString(),
+                                Porcentaje = dr["Porcentaje"].ToString(),
                                 Cantidad = dr["Cantidad"].ToString(),
                                 SubTotal = dr["SubTotal"].ToString(),
                             });
@@ -97,8 +98,11 @@ namespace CapaDatos
                                 NombreProducto = dr["NombreProducto"].ToString(),
                                 Categoria = dr["Categoria"].ToString(),
                                 PrecioVenta = dr["PrecioVenta"].ToString(),
+                                PrecioCompra = dr["PrecioCompra"].ToString(),
+                                Porcentaje = dr["Porcentaje"].ToString(),
                                 Cantidad = dr["Cantidad"].ToString(),
                                 SubTotal = dr["SubTotal"].ToString(),
+                                GananciaBruta = dr["GananciaBruta"].ToString(),
                             });
                         }
 

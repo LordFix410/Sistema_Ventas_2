@@ -13,6 +13,107 @@ namespace CapaDatos
 {
     public class CD_Producto
     {
+        private static void AgregarParametroPorcentaje(SqlCommand comando, decimal porcentaje)
+        {
+            SqlParameter parametro = comando.Parameters.Add("Porcentaje", SqlDbType.Decimal);
+            parametro.Precision = 9;
+            parametro.Scale = 4;
+            parametro.Value = porcentaje;
+        }
+
+        public int RegistrarTemporal(Producto obj, int cantidad, out string Mensaje)
+        {
+            int idProducto = 0;
+            Mensaje = string.Empty;
+
+            using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+            {
+                SqlTransaction transaccion = null;
+                try
+                {
+                    conexion.Open();
+                    transaccion = conexion.BeginTransaction();
+
+                    int idCategoria;
+                    using (SqlCommand buscarCategoria = new SqlCommand(
+                        "SELECT TOP (1) IdCategoria FROM CATEGORIA WHERE Estado = 1 " +
+                        "ORDER BY CASE WHEN UPPER(Descripcion) IN ('VARIOS','OTROS','MISCELANEOS') THEN 0 ELSE 1 END, IdCategoria",
+                        conexion, transaccion))
+                    {
+                        object categoria = buscarCategoria.ExecuteScalar();
+                        if (categoria == null || categoria == DBNull.Value)
+                            throw new InvalidOperationException("No hay una categoría activa para registrar el artículo temporal.");
+                        idCategoria = Convert.ToInt32(categoria);
+                    }
+
+                    using (SqlCommand comando = new SqlCommand("sp_RegistrarProducto", conexion, transaccion))
+                    {
+                        comando.CommandType = CommandType.StoredProcedure;
+                        comando.Parameters.Add("Codigo", SqlDbType.VarChar, 20).Value = obj.Codigo;
+                        comando.Parameters.Add("Nombre", SqlDbType.VarChar, 30).Value = obj.Nombre;
+                        comando.Parameters.Add("Descripcion", SqlDbType.VarChar, 30).Value = obj.Descripcion;
+                        comando.Parameters.Add("IdCategoria", SqlDbType.Int).Value = idCategoria;
+                        AgregarParametroPorcentaje(comando, obj.Porcentaje);
+                        comando.Parameters.Add("Estado", SqlDbType.Bit).Value = false;
+                        comando.Parameters.Add("Resultado", SqlDbType.Int).Direction = ParameterDirection.Output;
+                        comando.Parameters.Add("Mensaje", SqlDbType.VarChar, 500).Direction = ParameterDirection.Output;
+                        comando.ExecuteNonQuery();
+                        idProducto = Convert.ToInt32(comando.Parameters["Resultado"].Value);
+                        Mensaje = Convert.ToString(comando.Parameters["Mensaje"].Value);
+                    }
+
+                    if (idProducto <= 0)
+                        throw new InvalidOperationException(string.IsNullOrWhiteSpace(Mensaje)
+                            ? "No se pudo crear el artículo temporal."
+                            : Mensaje);
+
+                    using (SqlCommand actualizarStock = new SqlCommand(
+                        "UPDATE PRODUCTO SET Stock = @Stock, Estado = 0 WHERE IdProducto = @IdProducto",
+                        conexion, transaccion))
+                    {
+                        actualizarStock.Parameters.Add("@Stock", SqlDbType.Int).Value = cantidad;
+                        actualizarStock.Parameters.Add("@IdProducto", SqlDbType.Int).Value = idProducto;
+                        if (actualizarStock.ExecuteNonQuery() != 1)
+                            throw new InvalidOperationException("No se pudo preparar el artículo temporal para la venta.");
+                    }
+
+                    transaccion.Commit();
+                    return idProducto;
+                }
+                catch (Exception ex)
+                {
+                    if (transaccion != null)
+                    {
+                        try { transaccion.Rollback(); }
+                        catch { }
+                    }
+                    Mensaje = ex.Message;
+                    return 0;
+                }
+            }
+        }
+
+        public void EliminarTemporalNoVendido(int idProducto)
+        {
+            try
+            {
+                using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+                using (SqlCommand comando = new SqlCommand(
+                    "DELETE FROM PRODUCTO WHERE IdProducto = @IdProducto AND Estado = 0 AND Codigo LIKE 'T%' " +
+                    "AND NOT EXISTS (SELECT 1 FROM DETALLE_VENTA WHERE IdProducto = @IdProducto) " +
+                    "AND NOT EXISTS (SELECT 1 FROM DETALLE_COMPRA WHERE IdProducto = @IdProducto)", conexion))
+                {
+                    comando.Parameters.Add("@IdProducto", SqlDbType.Int).Value = idProducto;
+                    conexion.Open();
+                    comando.ExecuteNonQuery();
+                }
+            }
+            catch
+            {
+                // Si falla la compensación, el producto permanece inactivo y no se usa en búsquedas.
+            }
+        }
+
         public List<Producto> Listar()
         {
             List<Producto> lista = new List<Producto>();
@@ -25,7 +126,7 @@ namespace CapaDatos
                     
 
                     StringBuilder query = new StringBuilder();
-                    query.AppendLine("select IdProducto, Codigo, Nombre, p.Descripcion,c.IdCategoria, c.DESCRIPCION[DescripcionCategoria], Stock, PrecioCompra, PrecioVenta, p.Estado from PRODUCTO p");
+                    query.AppendLine("select IdProducto, Codigo, Nombre, p.Descripcion,c.IdCategoria, c.DESCRIPCION[DescripcionCategoria], Stock, PrecioCompra, PrecioVenta, Porcentaje, p.Estado from PRODUCTO p");
                     query.AppendLine("inner join CATEGORIA c on c.IdCategoria = p.IdCategoria");
 
                     SqlCommand cmd = new SqlCommand(query.ToString(), oconexion);
@@ -47,6 +148,7 @@ namespace CapaDatos
                                 Stock = Convert.ToInt32( dr["Stock"].ToString()),
                                 PrecioCompra = Convert.ToDecimal(dr["PrecioCompra"].ToString()),
                                 PrecioVenta = Convert.ToDecimal(dr["PrecioVenta"].ToString()),
+                                Porcentaje = Convert.ToDecimal(dr["Porcentaje"]),
                                 Estado = Convert.ToBoolean(dr["Estado"])    
                             });
                         }
@@ -55,7 +157,7 @@ namespace CapaDatos
                 }
                 catch (Exception ex)
                 {
-                    lista = new List<Producto>();
+                    throw new InvalidOperationException("No se pudieron cargar los productos. Verifica que hayas ejecutado migracion_porcentaje_compra.sql en DBSISTEMA_VENTA.", ex);
                 }
             }
             return lista;
@@ -78,6 +180,7 @@ namespace CapaDatos
                     cmd.Parameters.AddWithValue("Nombre", obj.Nombre);
                     cmd.Parameters.AddWithValue("Descripcion", obj.Descripcion);
                     cmd.Parameters.AddWithValue("IdCategoria", obj.oCategoria.IdCategoria);
+                    AgregarParametroPorcentaje(cmd, obj.Porcentaje);
                     cmd.Parameters.AddWithValue("Estado", obj.Estado);
                     cmd.Parameters.Add("Resultado", SqlDbType.Int).Direction = ParameterDirection.Output;
                     cmd.Parameters.Add("Mensaje", SqlDbType.VarChar, 500).Direction = ParameterDirection.Output;
@@ -115,6 +218,7 @@ namespace CapaDatos
                     cmd.Parameters.AddWithValue("Nombre", obj.Nombre);
                     cmd.Parameters.AddWithValue("Descripcion", obj.Descripcion);
                     cmd.Parameters.AddWithValue("IdCategoria", obj.oCategoria.IdCategoria);
+                    AgregarParametroPorcentaje(cmd, obj.Porcentaje);
                     cmd.Parameters.AddWithValue("Estado", obj.Estado);
                     cmd.Parameters.Add("Resultado", SqlDbType.Int).Direction = ParameterDirection.Output;
                     cmd.Parameters.Add("Mensaje", SqlDbType.VarChar, 500).Direction = ParameterDirection.Output;

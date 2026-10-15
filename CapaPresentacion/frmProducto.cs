@@ -1,4 +1,4 @@
-﻿using CapaEntidad;
+using CapaEntidad;
 using CapaNegocio;
 using CapaPresentacion.Utilidades;
 using ClosedXML.Excel;
@@ -28,6 +28,7 @@ namespace CapaPresentacion
             cboEstado.DisplayMember = "Texto";
             cboEstado.ValueMember = "Valor";
             cboEstado.SelectedIndex = 0;
+            txtPorcentaje.Text = "0";
 
             List<Categoria> lista = new CN_Categoria().Listar();
 
@@ -51,12 +52,23 @@ namespace CapaPresentacion
             cboBuscar.SelectedIndex = 0;
 
             //Mostrar todos los productos:
-            List<Producto> listaProductos = new CN_Producto().Listar();
+            List<Producto> listaProductos;
+            try
+            {
+                listaProductos = new CN_Producto().Listar();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message + Environment.NewLine + ex.InnerException?.Message,
+                    "No se pudieron cargar productos", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Close();
+                return;
+            }
 
             foreach (Producto item in listaProductos)
             {
                 dgvData.Rows.Add(new object[] { "",item.IdProducto, item.Codigo, item.Nombre, item.Descripcion, item.oCategoria.IdCategoria,
-                    item.oCategoria.Descripcion, item.Stock, item.PrecioCompra, item.PrecioVenta,
+                    item.oCategoria.Descripcion, item.Stock, item.PrecioCompra, item.PrecioVenta, item.Porcentaje,
                     item.Estado == true ? 1 :0,
                     item.Estado == true? "Activo":"Inactivo"
                 });
@@ -68,6 +80,14 @@ namespace CapaPresentacion
         private void btnGuardar_Click(object sender, EventArgs e)
         {
             string mensaje = string.Empty;
+            if (!decimal.TryParse(txtPorcentaje.Text, out decimal porcentaje) || porcentaje < 0)
+            {
+                MessageBox.Show("Ingrese un porcentaje válido igual o mayor a cero.", "Porcentaje inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPorcentaje.Focus();
+                txtPorcentaje.SelectAll();
+                return;
+            }
+
             Producto objProducto = new Producto()
             {
                 IdProducto = Convert.ToInt32(txtId.Text),
@@ -75,7 +95,8 @@ namespace CapaPresentacion
                 Nombre = txtNombre.Text,
                 Descripcion = txtDescripcion.Text,
                 oCategoria = new Categoria() { IdCategoria = Convert.ToInt32(((OpcionCombo)cboCategoria.SelectedItem).Valor) },
-                Estado = Convert.ToInt32(((OpcionCombo)cboEstado.SelectedItem).Valor) == 1 ? true : false
+                Estado = Convert.ToInt32(((OpcionCombo)cboEstado.SelectedItem).Valor) == 1,
+                Porcentaje = porcentaje
             };
             if (objProducto.IdProducto == 0)
             {
@@ -94,6 +115,7 @@ namespace CapaPresentacion
                         "0",
                         "0.00",
                         "0.00",
+                        porcentaje,
                         ((OpcionCombo)cboEstado.SelectedItem).Valor.ToString(),
                         ((OpcionCombo)cboEstado.SelectedItem).Texto.ToString()
                     );
@@ -118,6 +140,14 @@ namespace CapaPresentacion
                     row.Cells["Categoria"].Value = ((OpcionCombo)cboCategoria.SelectedItem).Texto.ToString();
                     row.Cells["EstadoValor"].Value = ((OpcionCombo)cboEstado.SelectedItem).Valor.ToString();
                     row.Cells["Estado"].Value = ((OpcionCombo)cboEstado.SelectedItem).Texto.ToString();
+                    row.Cells["PORCENTAJE"].Value = objProducto.Porcentaje;
+                    decimal precioCompraActual = Convert.ToDecimal(row.Cells["PRECIOCOMPRA"].Value);
+                    decimal precioVentaSugerido = precioCompraActual == 0 ? 0 :
+                        Math.Ceiling(precioCompraActual * (1m + objProducto.Porcentaje / 100m) * 4m) / 4m;
+                    row.Cells["PRECIOVENTA"].Value = precioVentaSugerido;
+                    decimal porcentajeReal = precioCompraActual == 0 ? objProducto.Porcentaje :
+                        decimal.Ceiling(((precioVentaSugerido - precioCompraActual) / precioCompraActual) * 10000m) / 10000m;
+                    row.Cells["PORCENTAJE"].Value = porcentajeReal;
 
                     LimpiarTxt();
                 }
@@ -134,6 +164,7 @@ namespace CapaPresentacion
             txtCodigo.Text = "";
             txtNombre.Text = "";
             txtDescripcion.Text = "";
+            txtPorcentaje.Text = "0";
             cboCategoria.SelectedIndex = 0;
             cboEstado.SelectedIndex = 0;
 
@@ -250,6 +281,7 @@ namespace CapaPresentacion
                     txtCodigo.Text = dgvData.Rows[indice].Cells["Codigo"].Value.ToString();
                     txtNombre.Text = dgvData.Rows[indice].Cells["Nombre"].Value.ToString();
                     txtDescripcion.Text = dgvData.Rows[indice].Cells["Descripcion"].Value.ToString();
+                    txtPorcentaje.Text = dgvData.Rows[indice].Cells["PORCENTAJE"].Value.ToString();
 
                     foreach (OpcionCombo oc in cboCategoria.Items)
                     {
@@ -302,7 +334,8 @@ namespace CapaPresentacion
                             row.Cells[7].Value.ToString(),
                             row.Cells[8].Value.ToString(),
                             row.Cells[9].Value.ToString(),
-                            row.Cells[11].Value.ToString(),
+                            row.Cells[10].Value.ToString(),
+                            row.Cells[12].Value.ToString(),
                         });
                 }
 
@@ -330,4 +363,3 @@ namespace CapaPresentacion
         }
     }
 }
-    

@@ -49,6 +49,8 @@
             this.label9 = new System.Windows.Forms.Label();
             this.txtPrecioCompra = new System.Windows.Forms.TextBox();
             this.label8 = new System.Windows.Forms.Label();
+            this.txtPorcentaje = new System.Windows.Forms.TextBox();
+            this.labelPorcentaje = new System.Windows.Forms.Label();
             this.btnBuscarProducto = new FontAwesome.Sharp.IconButton();
             this.txtIdProducto = new System.Windows.Forms.TextBox();
             this.txtProducto = new System.Windows.Forms.TextBox();
@@ -64,6 +66,7 @@
             this.Producto = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.PrecioCompra = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.PrecioVenta = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Porcentaje = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Cantidad = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.SubTotal = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.btnEliminar = new System.Windows.Forms.DataGridViewButtonColumn();
@@ -240,6 +243,8 @@
             this.groupBox3.Controls.Add(this.label11);
             this.groupBox3.Controls.Add(this.txtPrecioVenta);
             this.groupBox3.Controls.Add(this.label9);
+            this.groupBox3.Controls.Add(this.txtPorcentaje);
+            this.groupBox3.Controls.Add(this.labelPorcentaje);
             this.groupBox3.Controls.Add(this.txtPrecioCompra);
             this.groupBox3.Controls.Add(this.label8);
             this.groupBox3.Controls.Add(this.btnBuscarProducto);
@@ -259,7 +264,7 @@
             // 
             // txtCantidad
             // 
-            this.txtCantidad.Location = new System.Drawing.Point(799, 47);
+            this.txtCantidad.Location = new System.Drawing.Point(934, 47);
             this.txtCantidad.Margin = new System.Windows.Forms.Padding(4);
             this.txtCantidad.Maximum = new decimal(new int[] {
             1000,
@@ -285,7 +290,7 @@
             // 
             this.label11.AutoSize = true;
             this.label11.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label11.Location = new System.Drawing.Point(798, 26);
+            this.label11.Location = new System.Drawing.Point(933, 26);
             this.label11.Name = "label11";
             this.label11.Size = new System.Drawing.Size(64, 16);
             this.label11.TabIndex = 35;
@@ -297,7 +302,7 @@
             this.txtPrecioVenta.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtPrecioVenta.Name = "txtPrecioVenta";
             this.txtPrecioVenta.Size = new System.Drawing.Size(101, 22);
-            this.txtPrecioVenta.TabIndex = 34;
+            this.txtPrecioVenta.TabIndex = 35;
             // 
             // label9
             // 
@@ -326,6 +331,25 @@
             this.label8.Size = new System.Drawing.Size(100, 16);
             this.label8.TabIndex = 31;
             this.label8.Text = "Precio Compra:";
+            // txtPorcentaje
+            this.txtPorcentaje.Location = new System.Drawing.Point(658, 47);
+            this.txtPorcentaje.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.txtPorcentaje.Name = "txtPorcentaje";
+            this.txtPorcentaje.Size = new System.Drawing.Size(101, 22);
+            this.txtPorcentaje.TabIndex = 34;
+            // labelPorcentaje
+            this.labelPorcentaje.AutoSize = true;
+            this.labelPorcentaje.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.labelPorcentaje.Location = new System.Drawing.Point(655, 27);
+            this.labelPorcentaje.Name = "labelPorcentaje";
+            this.labelPorcentaje.Size = new System.Drawing.Size(68, 16);
+            this.labelPorcentaje.TabIndex = 33;
+            this.labelPorcentaje.Text = "Margen %:";
+            // reubicar precio venta y cantidad para dar espacio al porcentaje
+            this.txtPrecioVenta.Location = new System.Drawing.Point(799, 47);
+            this.label9.Location = new System.Drawing.Point(796, 27);
+            this.txtCantidad.Location = new System.Drawing.Point(934, 47);
+            this.label11.Location = new System.Drawing.Point(933, 26);
             // 
             // btnBuscarProducto
             // 
@@ -405,6 +429,7 @@
             this.Producto,
             this.PrecioCompra,
             this.PrecioVenta,
+            this.Porcentaje,
             this.Cantidad,
             this.SubTotal,
             this.btnEliminar});
@@ -510,6 +535,12 @@
             this.Cantidad.Name = "Cantidad";
             this.Cantidad.ReadOnly = true;
             this.Cantidad.Width = 125;
+            // Porcentaje
+            this.Porcentaje.HeaderText = "MARGEN %";
+            this.Porcentaje.MinimumWidth = 6;
+            this.Porcentaje.Name = "Porcentaje";
+            this.Porcentaje.ReadOnly = true;
+            this.Porcentaje.Width = 100;
             // 
             // SubTotal
             // 
@@ -584,6 +615,8 @@
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.TextBox txtPrecioCompra;
         private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.TextBox txtPorcentaje;
+        private System.Windows.Forms.Label labelPorcentaje;
         private FontAwesome.Sharp.IconButton btnBuscarProducto;
         private System.Windows.Forms.TextBox txtIdProducto;
         private System.Windows.Forms.TextBox txtProducto;
@@ -599,6 +632,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn Producto;
         private System.Windows.Forms.DataGridViewTextBoxColumn PrecioCompra;
         private System.Windows.Forms.DataGridViewTextBoxColumn PrecioVenta;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Porcentaje;
         private System.Windows.Forms.DataGridViewTextBoxColumn Cantidad;
         private System.Windows.Forms.DataGridViewTextBoxColumn SubTotal;
         private System.Windows.Forms.DataGridViewButtonColumn btnEliminar;

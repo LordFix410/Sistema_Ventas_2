@@ -44,6 +44,7 @@
             this.Stock = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.PRECIOCOMPRA = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.PRECIOVENTA = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.PORCENTAJE = new System.Windows.Forms.DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.dgvData)).BeginInit();
             this.SuspendLayout();
             // 
@@ -111,6 +112,7 @@
             this.Stock,
             this.PRECIOCOMPRA,
             this.PRECIOVENTA});
+            this.dgvData.Columns.Add(this.PORCENTAJE);
             this.dgvData.EditMode = System.Windows.Forms.DataGridViewEditMode.EditOnEnter;
             this.dgvData.Location = new System.Drawing.Point(11, 92);
             this.dgvData.Margin = new System.Windows.Forms.Padding(2);
@@ -226,6 +228,12 @@
             this.PRECIOVENTA.Name = "PRECIOVENTA";
             this.PRECIOVENTA.ReadOnly = true;
             this.PRECIOVENTA.Visible = false;
+            // PORCENTAJE
+            this.PORCENTAJE.HeaderText = "MARGEN %";
+            this.PORCENTAJE.MinimumWidth = 6;
+            this.PORCENTAJE.Name = "PORCENTAJE";
+            this.PORCENTAJE.ReadOnly = true;
+            this.PORCENTAJE.Width = 100;
             // 
             // mdProducto
             // 
@@ -263,5 +271,6 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn Stock;
         private System.Windows.Forms.DataGridViewTextBoxColumn PRECIOCOMPRA;
         private System.Windows.Forms.DataGridViewTextBoxColumn PRECIOVENTA;
+        private System.Windows.Forms.DataGridViewTextBoxColumn PORCENTAJE;
     }
 }

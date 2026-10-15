@@ -59,7 +59,9 @@ namespace CapaDatos
                     numeroDocumento.Direction = ParameterDirection.InputOutput;
                     numeroDocumento.Value = obj.NumeroDocumento;
                     cmd.Parameters.AddWithValue("MontoTotal",obj.MontoTotal);
-                    cmd.Parameters.AddWithValue("DetalleCompra",detalleCompra);
+                    SqlParameter parametroDetalle = cmd.Parameters.AddWithValue("DetalleCompra", detalleCompra);
+                    parametroDetalle.SqlDbType = SqlDbType.Structured;
+                    parametroDetalle.TypeName = "dbo.EDetalle_Compra";
                     cmd.Parameters.Add("Resultado", SqlDbType.Bit).Direction = ParameterDirection.Output;
                     cmd.Parameters.Add("Mensaje", SqlDbType.VarChar, 500).Direction = ParameterDirection.Output;
                    
@@ -141,7 +143,7 @@ namespace CapaDatos
                 {
                     conexion.Open();
                     StringBuilder query = new StringBuilder();
-                    query.AppendLine("select p.Nombre,dc.PrecioCompra, dc.Cantidad, dc.MontoTotal from DETALLE_COMPRA dc");
+                    query.AppendLine("select p.Nombre,dc.PrecioCompra,dc.Porcentaje,dc.Cantidad,dc.MontoTotal from DETALLE_COMPRA dc");
                     query.AppendLine("inner join PRODUCTO p on p.IdProducto = dc.IdProducto");
                     query.AppendLine("where dc.IdCompra = @idcompra");
 
@@ -157,6 +159,7 @@ namespace CapaDatos
                             {
                                 oProducto = new Producto() { Nombre = dr["Nombre"].ToString() },
                                 PrecioCompra = Convert.ToDecimal(dr["PrecioCompra"].ToString()),
+                                Porcentaje = Convert.ToDecimal(dr["Porcentaje"].ToString()),
                                 Cantidad = Convert.ToInt32(dr["Cantidad"].ToString()),
                                 MontoTotal = Convert.ToDecimal(dr["MontoTotal"].ToString())
 

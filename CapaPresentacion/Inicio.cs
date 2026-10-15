@@ -103,12 +103,12 @@ namespace CapaPresentacion
 
         private void submRegistrarCompra_Click(object sender, EventArgs e)
         {
-            AbrirFrm((IconMenuItem)sender, new frmCompraRegistrar(usuarioActual));
+            AbrirFrm(menuCompras, new frmCompraRegistrar(usuarioActual));
         }
 
         private void iconDetalleCompra_Click(object sender, EventArgs e)
         {
-            AbrirFrm((IconMenuItem)sender, new frmCompraVerDetalle());
+            AbrirFrm(menuCompras, new frmCompraVerDetalle());
         }
 
         private void menuMantenedor_Click(object sender, EventArgs e)

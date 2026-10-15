@@ -24,6 +24,116 @@ namespace CapaPresentacion
         {
             _Usuario = oUsuario;
             InitializeComponent();
+            txtCodigoProducto.KeyDown += TxtCodigoProducto_KeyDown;
+            txtNuevoDocumento.KeyDown += TxtProveedor_KeyDown;
+            txtRazonSocial.KeyDown += TxtProveedor_KeyDown;
+            txtPrecioCompra.TextChanged += PrecioYPorcentaje_TextChanged;
+            txtPorcentaje.TextChanged += PrecioYPorcentaje_TextChanged;
+        }
+
+        private void TxtCodigoProducto_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                BuscarProductoPorCodigo();
+            }
+            else if (e.KeyCode == Keys.F5)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                btnBuscarProducto.PerformClick();
+            }
+        }
+
+        private void TxtProveedor_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                BuscarProveedorPorDocumento(sender == txtRazonSocial);
+            }
+            else if (e.KeyCode == Keys.F5)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                btnBuscarProveedor.PerformClick();
+            }
+        }
+
+        private void BuscarProveedorPorDocumento(bool buscarPorRazonSocial)
+        {
+            string valor = (buscarPorRazonSocial ? txtRazonSocial.Text : txtNuevoDocumento.Text).Trim();
+            if (valor.Length == 0)
+            {
+                btnBuscarProveedor.PerformClick();
+                return;
+            }
+
+            Proveedor proveedor = new CN_Proveedor().Listar()
+                .FirstOrDefault(item => item.Estado && string.Equals(
+                    Convert.ToString(buscarPorRazonSocial ? item.RazonSocial : item.Documento).Trim(),
+                    valor, StringComparison.OrdinalIgnoreCase));
+
+            if (proveedor == null)
+            {
+                MessageBox.Show("No se encontró un proveedor con ese " +
+                    (buscarPorRazonSocial ? "nombre." : "documento."),
+                    "Proveedor no encontrado", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                TextBox campo = buscarPorRazonSocial ? txtRazonSocial : txtNuevoDocumento;
+                campo.Focus();
+                campo.SelectAll();
+                return;
+            }
+
+            txtIdProveedor.Text = proveedor.IdProveedor.ToString();
+            txtNuevoDocumento.Text = proveedor.Documento;
+            txtRazonSocial.Text = proveedor.RazonSocial;
+            txtCodigoProducto.Focus();
+        }
+
+        private void BuscarProductoPorCodigo()
+        {
+            string codigo = txtCodigoProducto.Text.Trim();
+            if (codigo.Length == 0)
+            {
+                btnBuscarProducto.PerformClick();
+                return;
+            }
+
+            txtIdProducto.Text = "0";
+            Producto producto;
+            try
+            {
+                producto = new CN_Producto().Listar()
+                    .FirstOrDefault(item => item.Estado &&
+                        string.Equals(Convert.ToString(item.Codigo).Trim(), codigo, StringComparison.OrdinalIgnoreCase));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message + Environment.NewLine + ex.InnerException?.Message,
+                    "No se pudieron cargar productos", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (producto == null)
+            {
+                MessageBox.Show("No se encontró un producto con el código '" + codigo + "'.",
+                    "Producto no encontrado", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                txtCodigoProducto.Focus();
+                txtCodigoProducto.SelectAll();
+                return;
+            }
+
+            txtIdProducto.Text = producto.IdProducto.ToString();
+            txtCodigoProducto.Text = producto.Codigo;
+            txtProducto.Text = producto.Nombre;
+            txtPrecioCompra.Text = producto.PrecioCompra.ToString("0.00");
+            txtPorcentaje.Text = producto.Porcentaje.ToString("0.##");
+            txtPrecioCompra.Focus();
+            txtPrecioCompra.SelectAll();
         }
 
         private void frmCompraRegistrar_Load(object sender, EventArgs e)
@@ -76,6 +186,8 @@ namespace CapaPresentacion
                     txtIdProducto.Text = modal._Producto.IdProducto.ToString();
                     txtCodigoProducto.Text = modal._Producto.Codigo;
                     txtProducto.Text = modal._Producto.Nombre;
+                    txtPrecioCompra.Text = modal._Producto.PrecioCompra.ToString("0.00");
+                    txtPorcentaje.Text = modal._Producto.Porcentaje.ToString("0.##");
                     txtPrecioCompra.Select();
                 }
                 else
@@ -90,13 +202,25 @@ namespace CapaPresentacion
 
         }
 
+        private void PrecioYPorcentaje_TextChanged(object sender, EventArgs e)
+        {
+            if (!decimal.TryParse(txtPrecioCompra.Text, out decimal precioCompra) || precioCompra < 0 ||
+                !decimal.TryParse(txtPorcentaje.Text, out decimal porcentaje) || porcentaje < 0)
+                return;
+
+            decimal precioObjetivo = precioCompra * (1m + porcentaje / 100m);
+            decimal precioRedondeado = Math.Ceiling(precioObjetivo * 4m) / 4m;
+            txtPrecioVenta.Text = precioRedondeado.ToString("0.00");
+        }
+
         private void btnAgregar_Click(object sender, EventArgs e)
         {
             decimal precioCompra = 0;
             decimal precioVenta = 0;
+            decimal porcentajeSolicitado = 0;
             bool producto_existente = false;
 
-            if(int.Parse(txtIdProducto.Text) == 0)
+            if(!int.TryParse(txtIdProducto.Text, out int idProductoSeleccionado) || idProductoSeleccionado <= 0)
             {
                 MessageBox.Show("Debe de seleccionar un producto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
@@ -114,11 +238,32 @@ namespace CapaPresentacion
                 return;
             }
 
+            if (!decimal.TryParse(txtPorcentaje.Text, out porcentajeSolicitado) || porcentajeSolicitado < 0)
+            {
+                MessageBox.Show("Margen - Ingrese un porcentaje válido igual o mayor a cero", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                txtPorcentaje.Focus();
+                txtPorcentaje.SelectAll();
+                return;
+            }
+
             if (precioCompra < 0 || precioVenta < 0)
             {
                 MessageBox.Show("Los precios no pueden ser negativos", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
+
+            decimal precioVentaMinimo = Math.Ceiling(precioCompra * (1m + porcentajeSolicitado / 100m) * 4m) / 4m;
+            if (precioVenta + 0.0001m < precioVentaMinimo || Math.Abs(precioVenta * 4m - decimal.Round(precioVenta * 4m, 0)) > 0.0001m)
+            {
+                MessageBox.Show("El precio de venta debe respetar el margen mínimo y terminar en .00, .25, .50 o .75.", "Precio de venta inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPrecioVenta.Focus();
+                txtPrecioVenta.SelectAll();
+                return;
+            }
+
+            decimal porcentajeReal = precioCompra == 0
+                ? 0
+                : decimal.Ceiling(((precioVenta - precioCompra) / precioCompra * 100m) * 10000m) / 10000m;
 
             foreach(DataGridViewRow fila in dataGridView1.Rows)
             {
@@ -137,6 +282,7 @@ namespace CapaPresentacion
                     txtProducto.Text,
                         precioCompra.ToString("0.00"),
                         precioVenta.ToString("0.00"),
+                    porcentajeReal.ToString("0.####"),
                     txtCantidad.Value.ToString(),
                     (txtCantidad.Value*precioCompra).ToString("0.00")
                 });
@@ -156,6 +302,7 @@ namespace CapaPresentacion
             txtProducto.Text = "";
             txtPrecioCompra.Text = "";
             txtPrecioVenta.Text = "";
+            txtPorcentaje.Text = "";
             txtCantidad.Value = 1;
             txtCodigoProducto.Text = "";
         }
@@ -195,6 +342,7 @@ namespace CapaPresentacion
             detalle_compra.Columns.Add("IdProducto", typeof(int));
             detalle_compra.Columns.Add("PrecioCompra", typeof(decimal));
             detalle_compra.Columns.Add("PrecioVenta", typeof(decimal));
+            detalle_compra.Columns.Add("Porcentaje", typeof(decimal));
             detalle_compra.Columns.Add("Cantidad", typeof(int));
             detalle_compra.Columns.Add("MontoTotal", typeof(decimal));
 
@@ -204,10 +352,11 @@ namespace CapaPresentacion
                     new object[]
                     {
                         Convert.ToInt32(row.Cells["IdProducto"].Value.ToString()),
-                        row.Cells["PrecioCompra"].Value.ToString(),
-                        row.Cells["PrecioVenta"].Value.ToString(),
-                        row.Cells["Cantidad"].Value.ToString(),
-                        row.Cells["SubTotal"].Value.ToString(),
+                        Convert.ToDecimal(row.Cells["PrecioCompra"].Value),
+                        Convert.ToDecimal(row.Cells["PrecioVenta"].Value),
+                        Convert.ToDecimal(row.Cells["Porcentaje"].Value),
+                        Convert.ToInt32(row.Cells["Cantidad"].Value),
+                        Convert.ToDecimal(row.Cells["SubTotal"].Value),
 
                     });
             }
@@ -260,7 +409,7 @@ namespace CapaPresentacion
                 return;
             }
 
-            if (e.ColumnIndex == 6)
+            if (dataGridView1.Columns[e.ColumnIndex].Name == "btnEliminar")
             {
                 e.Paint(e.CellBounds, DataGridViewPaintParts.All);
 

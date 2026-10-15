@@ -41,6 +41,7 @@
             this.Categoria = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.PrecioCompra = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.PrecioVenta = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Porcentaje = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Cantidad = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.SubTotal = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.btnCancelar = new FontAwesome.Sharp.IconButton();
@@ -81,6 +82,7 @@
             this.Categoria,
             this.PrecioCompra,
             this.PrecioVenta,
+            this.Porcentaje,
             this.Cantidad,
             this.SubTotal});
             this.dgvData.Location = new System.Drawing.Point(35, 183);
@@ -186,6 +188,12 @@
             this.PrecioVenta.Name = "PrecioVenta";
             this.PrecioVenta.ReadOnly = true;
             this.PrecioVenta.Width = 125;
+            // Porcentaje
+            this.Porcentaje.HeaderText = "Margen %";
+            this.Porcentaje.MinimumWidth = 6;
+            this.Porcentaje.Name = "Porcentaje";
+            this.Porcentaje.ReadOnly = true;
+            this.Porcentaje.Width = 100;
             // 
             // Cantidad
             // 
@@ -308,7 +316,7 @@
             // 
             this.label2.AutoSize = true;
             this.label2.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label2.Location = new System.Drawing.Point(304, 66);
+            this.label2.Location = new System.Drawing.Point(19, 69);
             this.label2.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(82, 16);
@@ -318,7 +326,7 @@
             // txtFechaFinal
             // 
             this.txtFechaFinal.Format = System.Windows.Forms.DateTimePickerFormat.Short;
-            this.txtFechaFinal.Location = new System.Drawing.Point(422, 64);
+            this.txtFechaFinal.Location = new System.Drawing.Point(424, 67);
             this.txtFechaFinal.Margin = new System.Windows.Forms.Padding(4);
             this.txtFechaFinal.Name = "txtFechaFinal";
             this.txtFechaFinal.Size = new System.Drawing.Size(129, 22);
@@ -329,7 +337,7 @@
             // 
             this.label1.AutoSize = true;
             this.label1.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label1.Location = new System.Drawing.Point(44, 70);
+            this.label1.Location = new System.Drawing.Point(293, 68);
             this.label1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(80, 16);
@@ -383,7 +391,7 @@
             // 
             this.label4.AutoSize = true;
             this.label4.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label4.Location = new System.Drawing.Point(608, 65);
+            this.label4.Location = new System.Drawing.Point(608, 67);
             this.label4.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(74, 16);
@@ -394,7 +402,7 @@
             // 
             this.cboProveedor.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboProveedor.FormattingEnabled = true;
-            this.cboProveedor.Location = new System.Drawing.Point(700, 62);
+            this.cboProveedor.Location = new System.Drawing.Point(700, 63);
             this.cboProveedor.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.cboProveedor.Name = "cboProveedor";
             this.cboProveedor.Size = new System.Drawing.Size(193, 24);
@@ -459,6 +467,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn Categoria;
         private System.Windows.Forms.DataGridViewTextBoxColumn PrecioCompra;
         private System.Windows.Forms.DataGridViewTextBoxColumn PrecioVenta;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Porcentaje;
         private System.Windows.Forms.DataGridViewTextBoxColumn Cantidad;
         private System.Windows.Forms.DataGridViewTextBoxColumn SubTotal;
         private FontAwesome.Sharp.IconButton btnexportar;
