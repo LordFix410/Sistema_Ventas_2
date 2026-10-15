@@ -52,5 +52,13 @@ namespace CapaPresentacion
             txtNumeroDoc.Text = "";
             this.Show();
         }
+
+        private void txtContrasena_KeyDown(object sender, KeyEventArgs e)
+        {
+            if(e.KeyCode == Keys.Enter)
+            {
+                btnIngresar.PerformClick();
+            }
+        }
     }
 }

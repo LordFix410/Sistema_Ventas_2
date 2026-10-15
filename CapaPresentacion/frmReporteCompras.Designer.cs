@@ -83,95 +83,125 @@
             this.PrecioVenta,
             this.Cantidad,
             this.SubTotal});
-            this.dgvData.Location = new System.Drawing.Point(12, 152);
+            this.dgvData.Location = new System.Drawing.Point(35, 183);
+            this.dgvData.Margin = new System.Windows.Forms.Padding(4);
             this.dgvData.Name = "dgvData";
             this.dgvData.ReadOnly = true;
-            this.dgvData.Size = new System.Drawing.Size(1057, 337);
+            this.dgvData.RowHeadersWidth = 51;
+            this.dgvData.Size = new System.Drawing.Size(1409, 415);
             this.dgvData.TabIndex = 77;
             // 
             // FechaRegistro
             // 
             this.FechaRegistro.HeaderText = "Fecha Registro";
+            this.FechaRegistro.MinimumWidth = 6;
             this.FechaRegistro.Name = "FechaRegistro";
             this.FechaRegistro.ReadOnly = true;
+            this.FechaRegistro.Width = 125;
             // 
             // TipoDocumento
             // 
             this.TipoDocumento.HeaderText = "Tipo Documento";
+            this.TipoDocumento.MinimumWidth = 6;
             this.TipoDocumento.Name = "TipoDocumento";
             this.TipoDocumento.ReadOnly = true;
+            this.TipoDocumento.Width = 125;
             // 
             // NumeroDocumento
             // 
             this.NumeroDocumento.HeaderText = "Numero Documento";
+            this.NumeroDocumento.MinimumWidth = 6;
             this.NumeroDocumento.Name = "NumeroDocumento";
             this.NumeroDocumento.ReadOnly = true;
+            this.NumeroDocumento.Width = 125;
             // 
             // MontoTotal
             // 
             this.MontoTotal.HeaderText = "Monto Total";
+            this.MontoTotal.MinimumWidth = 6;
             this.MontoTotal.Name = "MontoTotal";
             this.MontoTotal.ReadOnly = true;
+            this.MontoTotal.Width = 125;
             // 
             // UsuarioRegistro
             // 
             this.UsuarioRegistro.HeaderText = "Usuario Registro";
+            this.UsuarioRegistro.MinimumWidth = 6;
             this.UsuarioRegistro.Name = "UsuarioRegistro";
             this.UsuarioRegistro.ReadOnly = true;
+            this.UsuarioRegistro.Width = 125;
             // 
             // DocumentoProveedor
             // 
             this.DocumentoProveedor.HeaderText = "Documento Proveedor";
+            this.DocumentoProveedor.MinimumWidth = 6;
             this.DocumentoProveedor.Name = "DocumentoProveedor";
             this.DocumentoProveedor.ReadOnly = true;
+            this.DocumentoProveedor.Width = 125;
             // 
             // RazonSocial
             // 
             this.RazonSocial.HeaderText = "Razon Social";
+            this.RazonSocial.MinimumWidth = 6;
             this.RazonSocial.Name = "RazonSocial";
             this.RazonSocial.ReadOnly = true;
+            this.RazonSocial.Width = 125;
             // 
             // CodigoProducto
             // 
             this.CodigoProducto.HeaderText = "Codigo Producto";
+            this.CodigoProducto.MinimumWidth = 6;
             this.CodigoProducto.Name = "CodigoProducto";
             this.CodigoProducto.ReadOnly = true;
+            this.CodigoProducto.Width = 125;
             // 
             // NombreProducto
             // 
             this.NombreProducto.HeaderText = "Nombre Producto";
+            this.NombreProducto.MinimumWidth = 6;
             this.NombreProducto.Name = "NombreProducto";
             this.NombreProducto.ReadOnly = true;
+            this.NombreProducto.Width = 125;
             // 
             // Categoria
             // 
             this.Categoria.HeaderText = "Categoria";
+            this.Categoria.MinimumWidth = 6;
             this.Categoria.Name = "Categoria";
             this.Categoria.ReadOnly = true;
+            this.Categoria.Width = 125;
             // 
             // PrecioCompra
             // 
             this.PrecioCompra.HeaderText = "Precio Compra";
+            this.PrecioCompra.MinimumWidth = 6;
             this.PrecioCompra.Name = "PrecioCompra";
             this.PrecioCompra.ReadOnly = true;
+            this.PrecioCompra.Width = 125;
             // 
             // PrecioVenta
             // 
             this.PrecioVenta.HeaderText = "Precio Venta";
+            this.PrecioVenta.MinimumWidth = 6;
             this.PrecioVenta.Name = "PrecioVenta";
             this.PrecioVenta.ReadOnly = true;
+            this.PrecioVenta.Width = 125;
             // 
             // Cantidad
             // 
             this.Cantidad.HeaderText = "Cantidad";
+            this.Cantidad.MinimumWidth = 6;
             this.Cantidad.Name = "Cantidad";
             this.Cantidad.ReadOnly = true;
+            this.Cantidad.Width = 125;
             // 
             // SubTotal
             // 
             this.SubTotal.HeaderText = "Sub Total";
+            this.SubTotal.MinimumWidth = 6;
             this.SubTotal.Name = "SubTotal";
             this.SubTotal.ReadOnly = true;
+            this.SubTotal.Width = 125;
             // 
             // btnCancelar
             // 
@@ -184,10 +214,10 @@
             this.btnCancelar.IconColor = System.Drawing.Color.Black;
             this.btnCancelar.IconFont = FontAwesome.Sharp.IconFont.Auto;
             this.btnCancelar.IconSize = 30;
-            this.btnCancelar.Location = new System.Drawing.Point(685, 103);
-            this.btnCancelar.Margin = new System.Windows.Forms.Padding(2);
+            this.btnCancelar.Location = new System.Drawing.Point(913, 127);
+            this.btnCancelar.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnCancelar.Name = "btnCancelar";
-            this.btnCancelar.Size = new System.Drawing.Size(37, 32);
+            this.btnCancelar.Size = new System.Drawing.Size(49, 39);
             this.btnCancelar.TabIndex = 76;
             this.btnCancelar.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.btnCancelar.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
@@ -205,10 +235,10 @@
             this.btnBusqueda.IconColor = System.Drawing.Color.Black;
             this.btnBusqueda.IconFont = FontAwesome.Sharp.IconFont.Auto;
             this.btnBusqueda.IconSize = 30;
-            this.btnBusqueda.Location = new System.Drawing.Point(640, 103);
-            this.btnBusqueda.Margin = new System.Windows.Forms.Padding(2);
+            this.btnBusqueda.Location = new System.Drawing.Point(853, 127);
+            this.btnBusqueda.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnBusqueda.Name = "btnBusqueda";
-            this.btnBusqueda.Size = new System.Drawing.Size(33, 32);
+            this.btnBusqueda.Size = new System.Drawing.Size(44, 39);
             this.btnBusqueda.TabIndex = 75;
             this.btnBusqueda.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.btnBusqueda.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
@@ -217,30 +247,29 @@
             // 
             // txtBusqueda
             // 
-            this.txtBusqueda.Location = new System.Drawing.Point(500, 111);
-            this.txtBusqueda.Margin = new System.Windows.Forms.Padding(2);
+            this.txtBusqueda.Location = new System.Drawing.Point(657, 140);
+            this.txtBusqueda.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtBusqueda.Name = "txtBusqueda";
-            this.txtBusqueda.Size = new System.Drawing.Size(126, 20);
+            this.txtBusqueda.Size = new System.Drawing.Size(167, 22);
             this.txtBusqueda.TabIndex = 74;
             // 
             // cboBuscar
             // 
             this.cboBuscar.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboBuscar.FormattingEnabled = true;
-            this.cboBuscar.Location = new System.Drawing.Point(340, 108);
-            this.cboBuscar.Margin = new System.Windows.Forms.Padding(2);
+            this.cboBuscar.Location = new System.Drawing.Point(436, 138);
+            this.cboBuscar.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.cboBuscar.Name = "cboBuscar";
-            this.cboBuscar.Size = new System.Drawing.Size(146, 21);
+            this.cboBuscar.Size = new System.Drawing.Size(193, 24);
             this.cboBuscar.TabIndex = 73;
             // 
             // label11
             // 
             this.label11.AutoSize = true;
             this.label11.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label11.Location = new System.Drawing.Point(258, 111);
-            this.label11.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.label11.Location = new System.Drawing.Point(335, 141);
             this.label11.Name = "label11";
-            this.label11.Size = new System.Drawing.Size(62, 13);
+            this.label11.Size = new System.Drawing.Size(76, 16);
             this.label11.TabIndex = 72;
             this.label11.Text = "Buscar Por:";
             // 
@@ -251,10 +280,12 @@
             this.dataGridView1.AllowUserToOrderColumns = true;
             this.dataGridView1.BackgroundColor = System.Drawing.SystemColors.ControlLightLight;
             this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dataGridView1.Location = new System.Drawing.Point(12, 94);
+            this.dataGridView1.Location = new System.Drawing.Point(16, 116);
+            this.dataGridView1.Margin = new System.Windows.Forms.Padding(4);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.ReadOnly = true;
-            this.dataGridView1.Size = new System.Drawing.Size(1057, 413);
+            this.dataGridView1.RowHeadersWidth = 51;
+            this.dataGridView1.Size = new System.Drawing.Size(1480, 508);
             this.dataGridView1.TabIndex = 71;
             // 
             // btnBuscar
@@ -264,9 +295,10 @@
             this.btnBuscar.IconFont = FontAwesome.Sharp.IconFont.Auto;
             this.btnBuscar.IconSize = 18;
             this.btnBuscar.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnBuscar.Location = new System.Drawing.Point(671, 49);
+            this.btnBuscar.Location = new System.Drawing.Point(900, 61);
+            this.btnBuscar.Margin = new System.Windows.Forms.Padding(4);
             this.btnBuscar.Name = "btnBuscar";
-            this.btnBuscar.Size = new System.Drawing.Size(75, 23);
+            this.btnBuscar.Size = new System.Drawing.Size(100, 28);
             this.btnBuscar.TabIndex = 70;
             this.btnBuscar.Text = "Buscar";
             this.btnBuscar.UseVisualStyleBackColor = true;
@@ -275,36 +307,42 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(228, 54);
+            this.label2.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.label2.Location = new System.Drawing.Point(304, 66);
+            this.label2.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(68, 13);
+            this.label2.Size = new System.Drawing.Size(82, 16);
             this.label2.TabIndex = 69;
             this.label2.Text = "Fecha Inicio:";
             // 
             // txtFechaFinal
             // 
             this.txtFechaFinal.Format = System.Windows.Forms.DateTimePickerFormat.Short;
-            this.txtFechaFinal.Location = new System.Drawing.Point(302, 51);
+            this.txtFechaFinal.Location = new System.Drawing.Point(422, 64);
+            this.txtFechaFinal.Margin = new System.Windows.Forms.Padding(4);
             this.txtFechaFinal.Name = "txtFechaFinal";
-            this.txtFechaFinal.Size = new System.Drawing.Size(98, 20);
+            this.txtFechaFinal.Size = new System.Drawing.Size(129, 22);
             this.txtFechaFinal.TabIndex = 68;
             this.txtFechaFinal.Value = new System.DateTime(2026, 1, 8, 0, 0, 0, 0);
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(33, 57);
+            this.label1.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.label1.Location = new System.Drawing.Point(44, 70);
+            this.label1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(68, 13);
+            this.label1.Size = new System.Drawing.Size(80, 16);
             this.label1.TabIndex = 67;
             this.label1.Text = "Fecha Final:";
             // 
             // txtFechaInicio
             // 
             this.txtFechaInicio.Format = System.Windows.Forms.DateTimePickerFormat.Custom;
-            this.txtFechaInicio.Location = new System.Drawing.Point(107, 54);
+            this.txtFechaInicio.Location = new System.Drawing.Point(145, 67);
+            this.txtFechaInicio.Margin = new System.Windows.Forms.Padding(4);
             this.txtFechaInicio.Name = "txtFechaInicio";
-            this.txtFechaInicio.Size = new System.Drawing.Size(98, 20);
+            this.txtFechaInicio.Size = new System.Drawing.Size(129, 22);
             this.txtFechaInicio.TabIndex = 66;
             this.txtFechaInicio.Value = new System.DateTime(2026, 1, 8, 0, 0, 0, 0);
             // 
@@ -312,10 +350,9 @@
             // 
             this.label10.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.label10.Font = new System.Drawing.Font("Arial", 18F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label10.Location = new System.Drawing.Point(12, 20);
-            this.label10.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.label10.Location = new System.Drawing.Point(16, 25);
             this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(1057, 71);
+            this.label10.Size = new System.Drawing.Size(1481, 87);
             this.label10.TabIndex = 65;
             this.label10.Text = "Reporte Compras:";
             // 
@@ -331,10 +368,10 @@
             this.btnexportar.IconColor = System.Drawing.Color.Lime;
             this.btnexportar.IconFont = FontAwesome.Sharp.IconFont.Auto;
             this.btnexportar.IconSize = 25;
-            this.btnexportar.Location = new System.Drawing.Point(26, 108);
-            this.btnexportar.Margin = new System.Windows.Forms.Padding(2);
+            this.btnexportar.Location = new System.Drawing.Point(35, 133);
+            this.btnexportar.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnexportar.Name = "btnexportar";
-            this.btnexportar.Size = new System.Drawing.Size(103, 36);
+            this.btnexportar.Size = new System.Drawing.Size(137, 44);
             this.btnexportar.TabIndex = 81;
             this.btnexportar.Text = "Descargar Excel";
             this.btnexportar.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -345,9 +382,11 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(456, 53);
+            this.label4.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.label4.Location = new System.Drawing.Point(608, 65);
+            this.label4.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(59, 13);
+            this.label4.Size = new System.Drawing.Size(74, 16);
             this.label4.TabIndex = 85;
             this.label4.Text = "Proveedor:";
             // 
@@ -355,17 +394,17 @@
             // 
             this.cboProveedor.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboProveedor.FormattingEnabled = true;
-            this.cboProveedor.Location = new System.Drawing.Point(520, 49);
-            this.cboProveedor.Margin = new System.Windows.Forms.Padding(2);
+            this.cboProveedor.Location = new System.Drawing.Point(700, 62);
+            this.cboProveedor.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.cboProveedor.Name = "cboProveedor";
-            this.cboProveedor.Size = new System.Drawing.Size(146, 21);
+            this.cboProveedor.Size = new System.Drawing.Size(193, 24);
             this.cboProveedor.TabIndex = 84;
             // 
             // frmReporteCompras
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1132, 519);
+            this.ClientSize = new System.Drawing.Size(1509, 639);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.cboProveedor);
             this.Controls.Add(this.btnexportar);
@@ -382,6 +421,7 @@
             this.Controls.Add(this.label1);
             this.Controls.Add(this.txtFechaInicio);
             this.Controls.Add(this.label10);
+            this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "frmReporteCompras";
             this.Text = "frmReporteCompras";
             this.Load += new System.EventHandler(this.frmReporteCompras_Load);
