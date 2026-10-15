@@ -788,7 +788,6 @@ INSERT INTO PROVEEDOR(Documento, RazonSocial, Correo, Telefono, Estado) VALUES
 GO
 
 -- 8. Clientes de Prueba
-INSERT INTO CLIENTES_DEFAULT -- (Nota: Tabla CLIENTE)
 INSERT INTO CLIENTE(Documento, NombreCompleto, Correo, Telefono, Estado) VALUES
 ('CF', 'Consumidor Final', 'cf@gmail.com', '00000000', 1)
 GO
