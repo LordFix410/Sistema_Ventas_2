@@ -16,10 +16,13 @@ namespace CapaPresentacion.Modales
 {
     public partial class mdProducto : Form
     {
+        private readonly bool _mostrarMargen;
         public Producto _Producto { get; set; }
-        public mdProducto()
+        public mdProducto(bool mostrarMargen = true)
         {
+            _mostrarMargen = mostrarMargen;
             InitializeComponent();
+            dgvData.Columns["PORCENTAJE"].Visible = _mostrarMargen;
             CapaPresentacion.Utilidades.ExperienciaUsuario.Aplicar(this, txtBusqueda, txtBusqueda);
             txtBusqueda.KeyDown += txtBusqueda_KeyDown;
             dgvData.KeyDown += dgvData_KeyDown;
@@ -128,8 +131,10 @@ namespace CapaPresentacion.Modales
                 Stock = Convert.ToInt32(fila.Cells["Stock"].Value),
                 PrecioCompra = Convert.ToDecimal(fila.Cells["PRECIOCOMPRA"].Value),
                 PrecioVenta = Convert.ToDecimal(fila.Cells["PRECIOVENTA"].Value),
-                Porcentaje = Convert.ToDecimal(fila.Cells["PORCENTAJE"].Value) /
-                    (Convert.ToDecimal(fila.Cells["PRECIOCOMPRA"].Value) > 0 ? 100m : 1m)
+                Porcentaje = _mostrarMargen
+                    ? Convert.ToDecimal(fila.Cells["PORCENTAJE"].Value) /
+                        (Convert.ToDecimal(fila.Cells["PRECIOCOMPRA"].Value) > 0 ? 100m : 1m)
+                    : 0m
             };
             DialogResult = DialogResult.OK;
             Close();

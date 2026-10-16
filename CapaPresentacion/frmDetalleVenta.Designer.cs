@@ -137,7 +137,7 @@
             // 
             // PrecioCompra
             // 
-            this.PrecioCompra.HeaderText = "PRECIO COMPRA";
+            this.PrecioCompra.HeaderText = "PRECIO VENTA";
             this.PrecioCompra.MinimumWidth = 6;
             this.PrecioCompra.Name = "PrecioCompra";
             this.PrecioCompra.ReadOnly = true;
