@@ -88,20 +88,23 @@ Las tablas del sistema deben aparecer en DBSISTEMA_VENTA, no en master.
 
 4. CONFIGURAR LAS COMPUTADORAS CLIENTE
 --------------------------------------
-Junto al ejecutable de Sistema de Ventas debe estar el archivo conexion.txt.
-Ese archivo contiene una sola línea con la cadena de conexión. Ejemplo:
+El instalador solicita la IP o nombre del servidor, el puerto, el usuario SQL y
+su contraseña. Con esos datos crea conexion.txt junto al ejecutable. La contraseña
+se guarda en texto dentro de ese archivo; no lo compartas ni lo subas a GitHub.
+
+Si necesitas cambiar el servidor o la contraseña después de instalar, edita
+conexion.txt junto al ejecutable con Bloc de notas. El archivo contiene una sola
+línea con la cadena de conexión. Ejemplo:
 
 Data Source=IP_DEL_SERVIDOR,1433;Initial Catalog=DBSISTEMA_VENTA;User ID=ventas_app2;Password=CONTRASENA_CONFIGURADA;Encrypt=False;TrustServerCertificate=True;
 
 Sustituir IP_DEL_SERVIDOR, el puerto y CONTRASENA_CONFIGURADA por los valores
-reales. Para cambiar la IP del servidor en el futuro, editar únicamente esa
-línea de conexion.txt; no es necesario recompilar el programa.
+reales. No es necesario recompilar el programa para cambiar la configuración.
 
-El proyecto incluye conexion.ejemplo.txt como plantilla. En la carpeta del
-proyecto, copiarla como CapaPresentacion\conexion.txt y configurarla antes de
-ejecutar. conexion.txt está excluido de Git porque contiene credenciales; no
-subir una contraseña real a GitHub. El instalador deberá colocar conexion.txt
-junto al ejecutable para que la aplicación pueda leerlo.
+El proyecto incluye conexion.ejemplo.txt como plantilla. Para ejecutar desde
+Visual Studio, cópiala como CapaPresentacion\conexion.txt y configúrala antes de
+iniciar. conexion.txt está excluido de Git porque contiene credenciales; nunca
+subas una contraseña real a GitHub.
 
 No usar la contraseña de ventas_app2 para iniciar sesión en la pantalla de
 usuarios del sistema.
