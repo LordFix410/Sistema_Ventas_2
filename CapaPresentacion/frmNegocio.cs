@@ -57,7 +57,7 @@ namespace CapaPresentacion
                 else
                 {
 
-                    MessageBox.Show(mensaje, "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    CapaPresentacion.DialogoSistema.Show(mensaje, "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -76,11 +76,11 @@ namespace CapaPresentacion
 
             if (respuesta)
             {
-                MessageBox.Show("Los cambios fueron guardados", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("Los cambios fueron guardados", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {
-                MessageBox.Show("Los cambios no fueron guardados", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                CapaPresentacion.DialogoSistema.Show("Los cambios no fueron guardados", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
             }
         }

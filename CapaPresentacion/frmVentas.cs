@@ -112,7 +112,7 @@ namespace CapaPresentacion
                     string.Equals(Convert.ToString(item.Documento).Trim(), documento, StringComparison.OrdinalIgnoreCase));
             if (cliente == null)
             {
-                MessageBox.Show("No se encontró un cliente con el documento '" + documento + "'.",
+                CapaPresentacion.DialogoSistema.Show("No se encontró un cliente con el documento '" + documento + "'.",
                     "Cliente no encontrado", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 txtDocumentoCliente.Focus();
                 txtDocumentoCliente.SelectAll();
@@ -140,7 +140,7 @@ namespace CapaPresentacion
 
             if (producto == null)
             {
-                MessageBox.Show("No se encontró un producto con el código '" + codigo + "'.",
+                CapaPresentacion.DialogoSistema.Show("No se encontró un producto con el código '" + codigo + "'.",
                     "Producto no encontrado", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 txtCodigoProducto.Focus();
                 txtCodigoProducto.SelectAll();
@@ -296,25 +296,25 @@ namespace CapaPresentacion
 
             if (!int.TryParse(txtIdProducto.Text, out idProductoActual) || idProductoActual == 0)
             {
-                MessageBox.Show("Debe de seleccionar un producto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("Debe de seleccionar un producto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             if (!decimal.TryParse(txtPrecioCompra.Text, out precioCompra))
             {
-                MessageBox.Show("Precio Compra - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("Precio Compra - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             if (idProductoActual > 0 && !int.TryParse(txtStock.Text, out stock))
             {
-                MessageBox.Show("Stock - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("Stock - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             if (idProductoActual > 0 && txtCantidad.Value > stock)
             {
-                MessageBox.Show("La cantidad solicitada supera el stock disponible", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("La cantidad solicitada supera el stock disponible", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -357,7 +357,7 @@ namespace CapaPresentacion
             }
             else
             {
-                MessageBox.Show("El producto ya está agregado a la venta", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("El producto ya está agregado a la venta", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
         private void limpiarProducto()
@@ -402,7 +402,7 @@ namespace CapaPresentacion
 
                 if (producto == null)
                 {
-                    MessageBox.Show("No se encontró el producto en la base de datos.", "Producto no disponible",
+                    CapaPresentacion.DialogoSistema.Show("No se encontró el producto en la base de datos.", "Producto no disponible",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
@@ -426,7 +426,7 @@ namespace CapaPresentacion
             if (e.RowIndex >= 0 && e.ColumnIndex >= 0 && dataGridView1.Columns[e.ColumnIndex].Name == "btnEliminar")
             {
                 string nombreProducto = Convert.ToString(dataGridView1.Rows[e.RowIndex].Cells["Producto"].Value);
-                DialogResult respuesta = MessageBox.Show(
+                DialogResult respuesta = CapaPresentacion.DialogoSistema.Show(
                     "¿Desea quitar '" + nombreProducto + "' de la venta?",
                     "Confirmar acción", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
@@ -500,7 +500,7 @@ namespace CapaPresentacion
         {
             if (txtTotalPagar.Text.Trim() == "")
             {
-                MessageBox.Show("No existe producto en la venta", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("No existe producto en la venta", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return false;
             }
 
@@ -514,13 +514,13 @@ namespace CapaPresentacion
 
             if (!decimal.TryParse(txtPagaCon.Text.Trim(), out pagacon))
             {
-                MessageBox.Show("El monto recibido tiene un formato incorrecto", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("El monto recibido tiene un formato incorrecto", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return false;
             }
 
             if (pagacon < total)
             {
-                MessageBox.Show("Falta Dinero", "DINERITO", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                CapaPresentacion.DialogoSistema.Show("Falta Dinero", "DINERITO", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
 
@@ -542,20 +542,20 @@ namespace CapaPresentacion
         {
             if (txtDocumentoCliente.Text == "")
             {
-                MessageBox.Show("Debe ingresar documento del cliente", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                CapaPresentacion.DialogoSistema.Show("Debe ingresar documento del cliente", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
 
             if (txtNombreCliente.Text == "")
             {
-                MessageBox.Show("Debe ingresar el nombre del cliente", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                CapaPresentacion.DialogoSistema.Show("Debe ingresar el nombre del cliente", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
 
 
             if (dataGridView1.Rows.Count <1)
             {
-                MessageBox.Show("Debe ingresar producto en la venta", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                CapaPresentacion.DialogoSistema.Show("Debe ingresar producto en la venta", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
 
@@ -580,7 +580,7 @@ namespace CapaPresentacion
 
             if (calcularCambio())
             {
-                DialogResult confirmar = MessageBox.Show(
+                DialogResult confirmar = CapaPresentacion.DialogoSistema.Show(
                     this,
                     "¿Está seguro de registrar esta venta?",
                     "Confirmar venta",
@@ -610,7 +610,7 @@ namespace CapaPresentacion
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show(this, "No fue posible validar al vendedor: " + ex.Message,
+                        CapaPresentacion.DialogoSistema.Show(this, "No fue posible validar al vendedor: " + ex.Message,
                             "Error de validación", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         txtCodigoProducto.Focus();
                         return;
@@ -620,7 +620,7 @@ namespace CapaPresentacion
                         string aviso = coincidencias.Count == 0
                             ? "La contraseña no corresponde a un usuario activo. No se registró la venta."
                             : "Esa contraseña pertenece a más de un usuario activo. Asigna contraseñas diferentes para identificar correctamente al vendedor.";
-                        MessageBox.Show(this, aviso, "No se pudo validar al vendedor",
+                        CapaPresentacion.DialogoSistema.Show(this, aviso, "No se pudo validar al vendedor",
                             MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         txtCodigoProducto.Focus();
                         return;
@@ -632,7 +632,7 @@ namespace CapaPresentacion
                 List<KeyValuePair<int, int>> productosTemporales;
                 if (!PrepararProductosTemporales(detalle_venta, out productosTemporales, out mensaje))
                 {
-                    MessageBox.Show(mensaje, "No se pudo preparar la venta", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    CapaPresentacion.DialogoSistema.Show(mensaje, "No se pudo preparar la venta", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
@@ -652,7 +652,7 @@ namespace CapaPresentacion
 
                 if (respuesta)
                 {
-                    var result = MessageBox.Show("Numero de venta generado: \n" + oVenta.NumeroDocumento + "\n\n¿Desea copiar al portapapeles?", "Mensaje",
+                    var result = CapaPresentacion.DialogoSistema.Show("Numero de venta generado: \n" + oVenta.NumeroDocumento + "\n\n¿Desea copiar al portapapeles?", "Mensaje",
                         MessageBoxButtons.YesNo, MessageBoxIcon.Information);
 
                     if (result == DialogResult.Yes)
@@ -669,7 +669,7 @@ namespace CapaPresentacion
                 else
                 {
                     RevertirProductosTemporales(detalle_venta, productosTemporales);
-                    MessageBox.Show(mensaje, "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    CapaPresentacion.DialogoSistema.Show(mensaje, "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
            
@@ -854,7 +854,7 @@ namespace CapaPresentacion
                 decimal precio;
                 if (string.IsNullOrWhiteSpace(txtNombre.Text))
                 {
-                    MessageBox.Show(this, "Escribe el nombre o descripción del artículo.", "Dato requerido",
+                    CapaPresentacion.DialogoSistema.Show(this, "Escribe el nombre o descripción del artículo.", "Dato requerido",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     txtNombre.Focus();
                     return;
@@ -863,7 +863,7 @@ namespace CapaPresentacion
                 if (!decimal.TryParse(txtPrecio.Text.Trim(), NumberStyles.Number,
                     CultureInfo.CurrentCulture, out precio) || precio < 0)
                 {
-                    MessageBox.Show(this, "Escribe un precio válido igual o mayor que cero.", "Precio inválido",
+                    CapaPresentacion.DialogoSistema.Show(this, "Escribe un precio válido igual o mayor que cero.", "Precio inválido",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     txtPrecio.Focus();
                     txtPrecio.SelectAll();

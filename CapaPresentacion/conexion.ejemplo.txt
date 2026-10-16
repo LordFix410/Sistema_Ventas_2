@@ -1,0 +1,1 @@
+Data Source=IP_DEL_SERVIDOR,1433;Initial Catalog=DBSISTEMA_VENTA;User ID=ventas_app2;Password=CAMBIAR_CONTRASENA;Encrypt=False;TrustServerCertificate=True;

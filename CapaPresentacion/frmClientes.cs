@@ -76,7 +76,7 @@ namespace CapaPresentacion
 
                 if (mensaje == string.Empty && idusuariogenerado != 0)
                 {
-                    MessageBox.Show("se ha registrado correctamente");
+                    CapaPresentacion.DialogoSistema.Show("se ha registrado correctamente");
                     dgvData.Rows.Add("", idusuariogenerado.ToString(), txtDocumento.Text, txtNombreCompleto.Text, txtCorreo.Text, txtTelefono.Text,
                        
                         ((OpcionCombo)cboEstado.SelectedItem).Valor.ToString(),
@@ -86,7 +86,7 @@ namespace CapaPresentacion
                 }
                 else
                 {
-                    MessageBox.Show(mensaje, "Error del Registro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    CapaPresentacion.DialogoSistema.Show(mensaje, "Error del Registro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
             else
@@ -107,7 +107,7 @@ namespace CapaPresentacion
                 }
                 else
                 {
-                    MessageBox.Show(mensaje);
+                    CapaPresentacion.DialogoSistema.Show(mensaje);
                 }
             }
             dgvData.Rows.Clear();
@@ -142,7 +142,7 @@ namespace CapaPresentacion
         {
             if (Convert.ToInt32(txtId.Text) != 0)
             {
-                if (MessageBox.Show("¿Desea eliminar al Cliente?", "Mensaje del sistema", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.OK)
+                if (CapaPresentacion.DialogoSistema.Show("¿Desea eliminar al Cliente?", "Mensaje del sistema", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.OK)
                 {
                     string mensaje = string.Empty;
                     Cliente oCliente = new Cliente
@@ -156,7 +156,7 @@ namespace CapaPresentacion
                     {
                         dgvData.Rows.RemoveAt(Convert.ToInt32(txtIndice.Text)); LimpiarTxt();
                     }
-                    else MessageBox.Show(mensaje, "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                    else CapaPresentacion.DialogoSistema.Show(mensaje, "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 }
             }
         }

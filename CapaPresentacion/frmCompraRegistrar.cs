@@ -80,7 +80,7 @@ namespace CapaPresentacion
 
             if (proveedor == null)
             {
-                MessageBox.Show("No se encontró un proveedor con ese " +
+                CapaPresentacion.DialogoSistema.Show("No se encontró un proveedor con ese " +
                     (buscarPorRazonSocial ? "nombre." : "documento."),
                     "Proveedor no encontrado", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 TextBox campo = buscarPorRazonSocial ? txtRazonSocial : txtNuevoDocumento;
@@ -114,14 +114,14 @@ namespace CapaPresentacion
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message + Environment.NewLine + ex.InnerException?.Message,
+                CapaPresentacion.DialogoSistema.Show(ex.Message + Environment.NewLine + ex.InnerException?.Message,
                     "No se pudieron cargar productos", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
             if (producto == null)
             {
-                MessageBox.Show("No se encontró un producto con el código '" + codigo + "'.",
+                CapaPresentacion.DialogoSistema.Show("No se encontró un producto con el código '" + codigo + "'.",
                     "Producto no encontrado", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 txtCodigoProducto.Focus();
                 txtCodigoProducto.SelectAll();
@@ -223,25 +223,25 @@ namespace CapaPresentacion
 
             if(!int.TryParse(txtIdProducto.Text, out int idProductoSeleccionado) || idProductoSeleccionado <= 0)
             {
-                MessageBox.Show("Debe de seleccionar un producto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("Debe de seleccionar un producto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             
             if(!decimal.TryParse(txtPrecioCompra.Text, out precioCompra))
             {
-                MessageBox.Show("Precio Compra - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("Precio Compra - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             if(!decimal.TryParse(txtPrecioVenta.Text, out precioVenta))
             {
-                MessageBox.Show("Precio Venta - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("Precio Venta - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             if (!decimal.TryParse(txtPorcentaje.Text, out porcentajeSolicitado) || porcentajeSolicitado < 0)
             {
-                MessageBox.Show("Margen - Ingrese un porcentaje válido igual o mayor a cero", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("Margen - Ingrese un porcentaje válido igual o mayor a cero", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 txtPorcentaje.Focus();
                 txtPorcentaje.SelectAll();
                 return;
@@ -249,14 +249,14 @@ namespace CapaPresentacion
 
             if (precioCompra < 0 || precioVenta < 0)
             {
-                MessageBox.Show("Los precios no pueden ser negativos", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("Los precios no pueden ser negativos", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             decimal precioVentaMinimo = Math.Ceiling(precioCompra * (1m + porcentajeSolicitado / 100m) * 4m) / 4m;
             if (precioVenta + 0.0001m < precioVentaMinimo || Math.Abs(precioVenta * 4m - decimal.Round(precioVenta * 4m, 0)) > 0.0001m)
             {
-                MessageBox.Show("El precio de venta debe respetar el margen mínimo y terminar en .00, .25, .50 o .75.", "Precio de venta inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                CapaPresentacion.DialogoSistema.Show("El precio de venta debe respetar el margen mínimo y terminar en .00, .25, .50 o .75.", "Precio de venta inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtPrecioVenta.Focus();
                 txtPrecioVenta.SelectAll();
                 return;
@@ -293,7 +293,7 @@ namespace CapaPresentacion
             }
             else
             {
-                MessageBox.Show("El producto ya está agregado a la compra", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("El producto ya está agregado a la compra", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -329,12 +329,12 @@ namespace CapaPresentacion
         {
             if (Convert.ToInt16(txtIdProveedor.Text)==0)
             {
-                MessageBox.Show("Debe seleccionar un proveedor", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                CapaPresentacion.DialogoSistema.Show("Debe seleccionar un proveedor", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
             if (dataGridView1.Rows.Count < 1) {
-                MessageBox.Show("Debe ingresar productos en la compra", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                CapaPresentacion.DialogoSistema.Show("Debe ingresar productos en la compra", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
@@ -377,7 +377,7 @@ namespace CapaPresentacion
 
             if (respuesta)
             {
-                var result = MessageBox.Show("Numero de Compra generada: \n"+oCompra.NumeroDocumento+"\n\n¿Desea Copiar al porta papeles?", "Mensaje", 
+                var result = CapaPresentacion.DialogoSistema.Show("Numero de Compra generada: \n"+oCompra.NumeroDocumento+"\n\n¿Desea Copiar al porta papeles?", "Mensaje",
                     MessageBoxButtons.YesNo, MessageBoxIcon.Information);
                 if(result == DialogResult.Yes)
                 {
@@ -394,7 +394,7 @@ namespace CapaPresentacion
             }
             else
             {
-                MessageBox.Show(mensaje, "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                CapaPresentacion.DialogoSistema.Show(mensaje, "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             }
         }
 
@@ -431,7 +431,7 @@ namespace CapaPresentacion
 
             int index = e.RowIndex;
 
-            if (MessageBox.Show("¿Desea eliminar Producto?", "Mensaje del sistema", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.OK)
+            if (CapaPresentacion.DialogoSistema.Show("¿Desea eliminar Producto?", "Mensaje del sistema", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.OK)
             {
                 dataGridView1.Rows.RemoveAt(index);
                 calculatTotal();
@@ -447,7 +447,7 @@ namespace CapaPresentacion
                     //{
                         
                     //}
-                    //else MessageBox.Show(mensaje, "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                    //else CapaPresentacion.DialogoSistema.Show(mensaje, "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 }
                     
             }

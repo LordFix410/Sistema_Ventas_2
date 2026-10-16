@@ -47,7 +47,7 @@ namespace CapaPresentacion.Modales
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message + Environment.NewLine + ex.InnerException?.Message,
+                CapaPresentacion.DialogoSistema.Show(ex.Message + Environment.NewLine + ex.InnerException?.Message,
                     "No se pudieron cargar productos", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Close();
                 return;

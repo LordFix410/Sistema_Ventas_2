@@ -22,6 +22,9 @@ TestResults/
 .vscode/
 .idea/
 
+# Cadena de conexión local (contiene credenciales)
+CapaPresentacion/conexion.txt
+
 # Archivos locales de SQL Server y respaldos
 *.mdf
 *.ldf

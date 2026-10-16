@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Data.SqlClient;
-using System.IO;
 using System.Windows.Forms;
 
 namespace CapaPresentacion
@@ -18,13 +17,13 @@ namespace CapaPresentacion
 
             try
             {
-                PrepararBaseDeDatos();
+                VerificarConexionBaseDeDatos();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    "No se pudo preparar la base de datos.\n\n" +
-                    ex.Message,
+                CapaPresentacion.DialogoSistema.Show(
+                    "No se pudo conectar con la base de datos del servidor.\n\n" +
+                    ex.GetBaseException().Message,
                     "Sistema Ventas",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error
@@ -77,66 +76,13 @@ namespace CapaPresentacion
             }
         }
 
-        private static void PrepararBaseDeDatos()
+        private static void VerificarConexionBaseDeDatos()
         {
-            string conexionMaster =
-                @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=master;Integrated Security=True";
-
-            // Primero comprobamos si la base ya existe.
-            using (SqlConnection conexion = new SqlConnection(conexionMaster))
+            // La base se instala una sola vez en el servidor. Cada equipo
+            // cliente solo valida la conexión; no crea una copia local.
+            using (SqlConnection conexion = new SqlConnection(CapaDatos.Conexion.cadena))
             {
                 conexion.Open();
-
-                using (SqlCommand comando = new SqlCommand(
-                    "SELECT COUNT(*) FROM sys.databases WHERE name = @NombreBase",
-                    conexion))
-                {
-                    comando.Parameters.Add("@NombreBase", System.Data.SqlDbType.NVarChar, 128).Value = "DBSISTEMA_VENTA";
-                    int existe = Convert.ToInt32(comando.ExecuteScalar());
-
-                    if (existe > 0)
-                        return;
-                }
-            }
-
-            // Si no existe, buscamos el script incluido con el programa.
-            string rutaScript = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory,
-                "query.sql"
-            );
-
-            if (!File.Exists(rutaScript))
-            {
-                throw new FileNotFoundException(
-                    "No se encontró el archivo query.sql."
-                );
-            }
-
-            string script = File.ReadAllText(rutaScript);
-
-            // query.sql utiliza GO para separar bloques.
-            string[] bloques = System.Text.RegularExpressions.Regex.Split(
-                script,
-                @"^\s*GO\s*$",
-                System.Text.RegularExpressions.RegexOptions.Multiline |
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase
-            );
-
-            using (SqlConnection conexion = new SqlConnection(conexionMaster))
-            {
-                conexion.Open();
-
-                foreach (string bloque in bloques)
-                {
-                    if (string.IsNullOrWhiteSpace(bloque))
-                        continue;
-
-                    using (SqlCommand comando = new SqlCommand(bloque, conexion))
-                    {
-                        comando.CommandTimeout = 120;
-                        comando.ExecuteNonQuery();
-                    }
-                }
             }
         }
     }

@@ -61,7 +61,7 @@ namespace CapaPresentacion
             }
             else
             {
-                MessageBox.Show("No se encontró una venta con ese número", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("No se encontró una venta con ese número", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -83,7 +83,7 @@ namespace CapaPresentacion
         {
             if (txtTipoDocumento.Text == "")
             {
-                MessageBox.Show("No se encontraron resultados", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                CapaPresentacion.DialogoSistema.Show("No se encontraron resultados", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
 
@@ -151,7 +151,7 @@ namespace CapaPresentacion
 
                     pdfDoc.Close();
                     stream.Close();
-                    MessageBox.Show("Documento Generado", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    CapaPresentacion.DialogoSistema.Show("Documento Generado", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
         }

@@ -43,7 +43,7 @@ namespace CapaPresentacion
             //Mostrar todos las Categorias:
             List<Categoria> listaCategoria = new CN_Categoria().Listar();
 
-            //if (listaCategoria.Count < 1) { MessageBox.Show("eror de lista"); } else { MessageBox.Show("no es error de lista"); }
+            //if (listaCategoria.Count < 1) { CapaPresentacion.DialogoSistema.Show("eror de lista"); } else { CapaPresentacion.DialogoSistema.Show("no es error de lista"); }
             foreach (Categoria item in listaCategoria)
             {
                 dgvData.Rows.Add(new object[] { "", item.IdCategoria.ToString(), item.Descripcion.ToString(),
@@ -78,7 +78,7 @@ namespace CapaPresentacion
 
                 if (mensaje == string.Empty && idGenerado != 0)
                 {
-                    MessageBox.Show("se ha registrado correctamente");
+                    CapaPresentacion.DialogoSistema.Show("se ha registrado correctamente");
                     dgvData.Rows.Add("", idGenerado.ToString(), txtDescripcion.Text,
                     ((OpcionCombo)cboEstado.SelectedItem).Valor.ToString(),
                     ((OpcionCombo)cboEstado.SelectedItem).Texto.ToString()
@@ -87,12 +87,12 @@ namespace CapaPresentacion
                 }
                 else
                 {
-                    MessageBox.Show(mensaje, "Error del Registro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    CapaPresentacion.DialogoSistema.Show(mensaje, "Error del Registro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
             else
             {
-                //MessageBox.Show("hola");
+                //CapaPresentacion.DialogoSistema.Show("hola");
                 bool resultado = new CN_Categoria().Editar(objCategoria, out mensaje);
                 if (resultado)
                 {
@@ -105,12 +105,12 @@ namespace CapaPresentacion
                 }
                 else
                 {
-                    MessageBox.Show(mensaje);
+                    CapaPresentacion.DialogoSistema.Show(mensaje);
                 }
             }
             List<Categoria> listaCategoria = new CN_Categoria().Listar();
 
-            //if (listaCategoria.Count < 1) { MessageBox.Show("eror de lista"); } else { MessageBox.Show("no es error de lista"); }
+            //if (listaCategoria.Count < 1) { CapaPresentacion.DialogoSistema.Show("eror de lista"); } else { CapaPresentacion.DialogoSistema.Show("no es error de lista"); }
             dgvData.Rows.Clear();
             foreach (Categoria item in listaCategoria)
             {
@@ -146,7 +146,7 @@ namespace CapaPresentacion
         {
             if (Convert.ToInt32(txtId.Text) != 0)
             {
-                if (MessageBox.Show("¿Desea Eliminar la Categoría?", "Mensaje del sistema", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.OK)
+                if (CapaPresentacion.DialogoSistema.Show("¿Desea Eliminar la Categoría?", "Mensaje del sistema", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.OK)
                 {
                     string mensaje = string.Empty;
                     Categoria ocategoria = new Categoria
@@ -161,7 +161,7 @@ namespace CapaPresentacion
                         dgvData.Rows.RemoveAt(Convert.ToInt32(txtIndice.Text)); 
                         LimpiarTxt();
                     }
-                    else MessageBox.Show(mensaje, "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                    else CapaPresentacion.DialogoSistema.Show(mensaje, "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 }
             }
         }

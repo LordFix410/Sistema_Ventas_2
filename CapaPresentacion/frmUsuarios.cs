@@ -91,7 +91,7 @@ namespace CapaPresentacion
                 if (mensaje == string.Empty && idusuariogenerado != 0)
                 {
                     
-                    MessageBox.Show("se ha registrado correctamente");
+                    CapaPresentacion.DialogoSistema.Show("se ha registrado correctamente");
                     dgvData.Rows.Add("", txtId.Text, txtDocumento.Text, txtNombreCompleto.Text, txtCorreo.Text,
                         txtClave.Text,
                         ((OpcionCombo)cboRol.SelectedItem).Valor.ToString(),
@@ -115,7 +115,7 @@ namespace CapaPresentacion
                 }
                 else
                 {
-                    MessageBox.Show(mensaje, "Error del Registro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    CapaPresentacion.DialogoSistema.Show(mensaje, "Error del Registro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }   
             }
             else
@@ -140,12 +140,12 @@ namespace CapaPresentacion
                     }
                     else
                     {
-                        MessageBox.Show(mensaje);
+                        CapaPresentacion.DialogoSistema.Show(mensaje);
                     }
                 }
                 else
                 {
-                    MessageBox.Show("La contraseña no coincide!", "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    CapaPresentacion.DialogoSistema.Show("La contraseña no coincide!", "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 
             }
@@ -232,7 +232,7 @@ namespace CapaPresentacion
         {
             if (Convert.ToInt32(txtId.Text) != 0)
             {
-                if(MessageBox.Show("¿Desea eliminar al usuario?", "Mensaje del sistema", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning)==DialogResult.OK)
+                if(CapaPresentacion.DialogoSistema.Show("¿Desea eliminar al usuario?", "Mensaje del sistema", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning)==DialogResult.OK)
                 {
                     string mensaje = string.Empty;
                     Usuario ousuario = new Usuario
@@ -246,7 +246,7 @@ namespace CapaPresentacion
                     {
                         dgvData.Rows.RemoveAt(Convert.ToInt32(txtIndice.Text)); LimpiarTxt(); 
                     }
-                    else MessageBox.Show(mensaje, "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Exclamation); 
+                    else CapaPresentacion.DialogoSistema.Show(mensaje, "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 }
             }
             /*string mensaje = string.Empty;
@@ -268,12 +268,12 @@ namespace CapaPresentacion
                 {
                     DataGridViewRow row = dgvData.Rows[Convert.ToInt32(txtIndice.Text)];
                     dgvData.Rows.Remove(row);
-                    MessageBox.Show("Se ha eliminado correctamente", "Eliminar", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                    CapaPresentacion.DialogoSistema.Show("Se ha eliminado correctamente", "Eliminar", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 }
             }
             else
             {
-                MessageBox.Show(mensaje);
+                CapaPresentacion.DialogoSistema.Show(mensaje);
             }*/
         }
 

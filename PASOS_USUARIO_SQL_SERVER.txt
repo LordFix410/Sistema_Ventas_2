@@ -1,0 +1,107 @@
+CONFIGURAR EL ACCESO DE LA APLICACION A SQL SERVER
+=================================================
+
+Este archivo documenta cómo crear o actualizar el inicio de sesión que usa
+Sistema de Ventas para conectarse a la base de datos DBSISTEMA_VENTA.
+
+IMPORTANTE
+----------
+- Ejecutar estos pasos en la PC que funciona como servidor.
+- No subir contraseñas reales a GitHub. Reemplazar el marcador
+  CAMBIAR_POR_UNA_CONTRASENA_FUERTE antes de ejecutar el script.
+- El inicio de sesión ventas_app2 es para conectar la aplicación con SQL Server.
+  Es distinto de los usuarios que inician sesión dentro del Sistema de Ventas.
+- Los permisos que se conceden son solo sobre el esquema dbo de
+  DBSISTEMA_VENTA; no se asigna sysadmin ni db_owner.
+
+1. ACTIVAR AUTENTICACION DE SQL SERVER
+--------------------------------------
+En SQL Server Management Studio (SSMS), conectado al servidor con
+Autenticación de Windows:
+
+  a. Clic derecho sobre el servidor > Propiedades > Seguridad.
+  b. Seleccionar "Modo de autenticación de SQL Server y Windows".
+  c. Aceptar y reiniciar el servicio de SQL Server.
+
+Si ya está activada la autenticación mixta, continuar con el paso 2.
+
+2. CREAR O ACTUALIZAR EL INICIO DE SESION Y SU USUARIO DE BASE DE DATOS
+-----------------------------------------------------------------------
+En SSMS, abrir Nueva consulta conectado al servidor. Confirmar que
+DBSISTEMA_VENTA ya existe y ejecutar este script. Reemplazar el marcador de
+contraseña por una contraseña fuerte; usar la misma contraseña en ambas líneas.
+
+IF CONVERT(int, SERVERPROPERTY('IsIntegratedSecurityOnly')) = 1
+    THROW 50000, 'Active la autenticacion mixta y reinicie SQL Server.', 1;
+GO
+
+USE master;
+GO
+
+IF DB_ID(N'DBSISTEMA_VENTA') IS NULL
+    THROW 50001, 'No existe DBSISTEMA_VENTA en esta instancia de SQL Server.', 1;
+GO
+
+IF SUSER_ID(N'ventas_app2') IS NULL
+    CREATE LOGIN [ventas_app2]
+        WITH PASSWORD = N'CAMBIAR_POR_UNA_CONTRASENA_FUERTE',
+             CHECK_POLICY = ON,
+             DEFAULT_DATABASE = [DBSISTEMA_VENTA];
+ELSE
+BEGIN
+    ALTER LOGIN [ventas_app2]
+        WITH PASSWORD = N'CAMBIAR_POR_UNA_CONTRASENA_FUERTE',
+             CHECK_POLICY = ON;
+    ALTER LOGIN [ventas_app2] ENABLE;
+    ALTER LOGIN [ventas_app2] WITH DEFAULT_DATABASE = [DBSISTEMA_VENTA];
+END;
+GO
+
+USE [DBSISTEMA_VENTA];
+GO
+
+IF USER_ID(N'ventas_app2') IS NULL
+    CREATE USER [ventas_app2] FOR LOGIN [ventas_app2];
+GO
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO [ventas_app2];
+GRANT EXECUTE ON SCHEMA::dbo TO [ventas_app2];
+GRANT VIEW DEFINITION ON SCHEMA::dbo TO [ventas_app2];
+GO
+
+3. COMPROBAR LA CONEXION EN LA MISMA PC SERVIDORA
+-------------------------------------------------
+En SSMS, crear una conexión con:
+
+  Servidor: .
+  Autenticación: Autenticación de SQL Server
+  Inicio de sesión: ventas_app2
+  Contraseña: la que se configuró en el paso 2
+  Base de datos: DBSISTEMA_VENTA
+
+Una vez conectado, abrir Nueva consulta y ejecutar:
+
+SELECT @@SERVERNAME AS Servidor, DB_NAME() AS Base, SUSER_SNAME() AS Usuario;
+SELECT name FROM sys.tables ORDER BY name;
+
+Las tablas del sistema deben aparecer en DBSISTEMA_VENTA, no en master.
+
+4. CONFIGURAR LAS COMPUTADORAS CLIENTE
+--------------------------------------
+Junto al ejecutable de Sistema de Ventas debe estar el archivo conexion.txt.
+Ese archivo contiene una sola línea con la cadena de conexión. Ejemplo:
+
+Data Source=IP_DEL_SERVIDOR,1433;Initial Catalog=DBSISTEMA_VENTA;User ID=ventas_app2;Password=CONTRASENA_CONFIGURADA;Encrypt=False;TrustServerCertificate=True;
+
+Sustituir IP_DEL_SERVIDOR, el puerto y CONTRASENA_CONFIGURADA por los valores
+reales. Para cambiar la IP del servidor en el futuro, editar únicamente esa
+línea de conexion.txt; no es necesario recompilar el programa.
+
+El proyecto incluye conexion.ejemplo.txt como plantilla. En la carpeta del
+proyecto, copiarla como CapaPresentacion\conexion.txt y configurarla antes de
+ejecutar. conexion.txt está excluido de Git porque contiene credenciales; no
+subir una contraseña real a GitHub. El instalador deberá colocar conexion.txt
+junto al ejecutable para que la aplicación pueda leerlo.
+
+No usar la contraseña de ventas_app2 para iniciar sesión en la pantalla de
+usuarios del sistema.

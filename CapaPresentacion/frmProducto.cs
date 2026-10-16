@@ -60,7 +60,7 @@ namespace CapaPresentacion
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message + Environment.NewLine + ex.InnerException?.Message,
+                CapaPresentacion.DialogoSistema.Show(ex.Message + Environment.NewLine + ex.InnerException?.Message,
                     "No se pudieron cargar productos", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Close();
                 return;
@@ -83,7 +83,7 @@ namespace CapaPresentacion
             string mensaje = string.Empty;
             if (!decimal.TryParse(txtPorcentaje.Text, out decimal porcentaje) || porcentaje < 0)
             {
-                MessageBox.Show("Ingrese un porcentaje válido igual o mayor a cero.", "Porcentaje inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                CapaPresentacion.DialogoSistema.Show("Ingrese un porcentaje válido igual o mayor a cero.", "Porcentaje inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtPorcentaje.Focus();
                 txtPorcentaje.SelectAll();
                 return;
@@ -105,7 +105,7 @@ namespace CapaPresentacion
 
                 if (mensaje == string.Empty && idnuevo != 0)
                 {
-                    MessageBox.Show("se ha registrado correctamente");
+                    CapaPresentacion.DialogoSistema.Show("se ha registrado correctamente");
                     dgvData.Rows.Add("",
                         idnuevo,
                         txtCodigo.Text,
@@ -124,7 +124,7 @@ namespace CapaPresentacion
                 }
                 else
                 {
-                    MessageBox.Show(mensaje, "Error del Registro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    CapaPresentacion.DialogoSistema.Show(mensaje, "Error del Registro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
             else
@@ -154,7 +154,7 @@ namespace CapaPresentacion
                 }
                 else
                 {
-                    MessageBox.Show(mensaje);
+                    CapaPresentacion.DialogoSistema.Show(mensaje);
                 }
             }
 
@@ -196,7 +196,7 @@ namespace CapaPresentacion
         {
             if (Convert.ToInt32(txtId.Text) != 0)
             {
-                if (MessageBox.Show("¿Desea Eliminar el Producto?", "Mensaje del sistema", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.OK)
+                if (CapaPresentacion.DialogoSistema.Show("¿Desea Eliminar el Producto?", "Mensaje del sistema", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.OK)
                 {
                     string mensaje = string.Empty;
                     Producto oproducto = new Producto
@@ -211,7 +211,7 @@ namespace CapaPresentacion
                         dgvData.Rows.RemoveAt(Convert.ToInt32(txtIndice.Text));
                         LimpiarTxt();
                     }
-                    else MessageBox.Show(mensaje, "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                    else CapaPresentacion.DialogoSistema.Show(mensaje, "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 }
             }
         }
@@ -310,7 +310,7 @@ namespace CapaPresentacion
         {
             if (dgvData.Rows.Count < 1)
             {
-                MessageBox.Show("No hay datos para exportar", "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("No hay datos para exportar", "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {
@@ -352,11 +352,11 @@ namespace CapaPresentacion
                         var hoja = wb.Worksheets.Add(dt, "Informe");
                         hoja.ColumnsUsed().AdjustToContents();
                         wb.SaveAs(savefile.FileName);
-                        MessageBox.Show("Reporte Generado", "mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        CapaPresentacion.DialogoSistema.Show("Reporte Generado", "mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     catch
                     {
-                        MessageBox.Show("Error al generar el reporte", "mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        CapaPresentacion.DialogoSistema.Show("Error al generar el reporte", "mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
 

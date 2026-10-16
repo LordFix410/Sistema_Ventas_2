@@ -42,7 +42,7 @@ namespace CapaPresentacion
             }
             else
             {
-                MessageBox.Show("Usuario incorrecto", "Ingreso Sistema", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                CapaPresentacion.DialogoSistema.Show("Usuario incorrecto", "Ingreso Sistema", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
            
         }
