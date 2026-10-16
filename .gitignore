@@ -31,3 +31,6 @@ CapaPresentacion/conexion.txt
 *.ndf
 *.bak
 *.trn
+
+# Ejecutables generados por el instalador
+Instalador/Salida/

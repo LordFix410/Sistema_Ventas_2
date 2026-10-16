@@ -132,7 +132,7 @@ namespace CapaPresentacion
             txtCodigoProducto.Text = producto.Codigo;
             txtProducto.Text = producto.Nombre;
             txtPrecioCompra.Text = producto.PrecioCompra.ToString("0.00");
-            txtPorcentaje.Text = producto.Porcentaje.ToString("0.##");
+            txtPorcentaje.Text = FormatoPorcentaje.ParaEditar(producto.Porcentaje, producto.PrecioCompra).ToString("0");
             txtPrecioCompra.Focus();
             txtPrecioCompra.SelectAll();
         }
@@ -188,7 +188,7 @@ namespace CapaPresentacion
                     txtCodigoProducto.Text = modal._Producto.Codigo;
                     txtProducto.Text = modal._Producto.Nombre;
                     txtPrecioCompra.Text = modal._Producto.PrecioCompra.ToString("0.00");
-                    txtPorcentaje.Text = modal._Producto.Porcentaje.ToString("0.##");
+                    txtPorcentaje.Text = FormatoPorcentaje.ParaEditar(modal._Producto.Porcentaje, modal._Producto.PrecioCompra).ToString("0");
                     txtPrecioCompra.Select();
                 }
                 else

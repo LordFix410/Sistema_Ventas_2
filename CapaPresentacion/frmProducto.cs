@@ -69,7 +69,8 @@ namespace CapaPresentacion
             foreach (Producto item in listaProductos)
             {
                 dgvData.Rows.Add(new object[] { "",item.IdProducto, item.Codigo, item.Nombre, item.Descripcion, item.oCategoria.IdCategoria,
-                    item.oCategoria.Descripcion, item.Stock, item.PrecioCompra, item.PrecioVenta, item.Porcentaje,
+                    item.oCategoria.Descripcion, item.Stock, item.PrecioCompra, item.PrecioVenta,
+                    FormatoPorcentaje.ParaMostrar(item.Porcentaje, item.PrecioCompra),
                     item.Estado == true ? 1 :0,
                     item.Estado == true? "Activo":"Inactivo"
                 });
@@ -116,7 +117,7 @@ namespace CapaPresentacion
                         "0",
                         "0.00",
                         "0.00",
-                        porcentaje,
+                        FormatoPorcentaje.ParaMostrar(porcentaje, 0m),
                         ((OpcionCombo)cboEstado.SelectedItem).Valor.ToString(),
                         ((OpcionCombo)cboEstado.SelectedItem).Texto.ToString()
                     );
@@ -148,7 +149,7 @@ namespace CapaPresentacion
                     row.Cells["PRECIOVENTA"].Value = precioVentaSugerido;
                     decimal porcentajeReal = precioCompraActual == 0 ? objProducto.Porcentaje :
                         decimal.Ceiling(((precioVentaSugerido - precioCompraActual) / precioCompraActual) * 10000m) / 10000m;
-                    row.Cells["PORCENTAJE"].Value = porcentajeReal;
+                    row.Cells["PORCENTAJE"].Value = FormatoPorcentaje.ParaMostrar(porcentajeReal, precioCompraActual);
 
                     LimpiarTxt();
                 }
@@ -282,7 +283,8 @@ namespace CapaPresentacion
                     txtCodigo.Text = dgvData.Rows[indice].Cells["Codigo"].Value.ToString();
                     txtNombre.Text = dgvData.Rows[indice].Cells["Nombre"].Value.ToString();
                     txtDescripcion.Text = dgvData.Rows[indice].Cells["Descripcion"].Value.ToString();
-                    txtPorcentaje.Text = dgvData.Rows[indice].Cells["PORCENTAJE"].Value.ToString();
+                    decimal porcentajeVisible = Convert.ToDecimal(dgvData.Rows[indice].Cells["PORCENTAJE"].Value);
+                    txtPorcentaje.Text = decimal.Ceiling(porcentajeVisible).ToString("0");
 
                     foreach (OpcionCombo oc in cboCategoria.Items)
                     {

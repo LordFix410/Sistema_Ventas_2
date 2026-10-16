@@ -1,5 +1,6 @@
 ﻿using CapaEntidad;
 using CapaNegocio;
+using CapaPresentacion.Utilidades;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
 using iTextSharp.tool.xml;
@@ -55,7 +56,8 @@ namespace CapaPresentacion
                 dataGridView1.Rows.Clear();
                 foreach(Detalle_Compra dc in oCompra.oDetalleCompras)
                 {
-                    dataGridView1.Rows.Add(new object[] { dc.oProducto.Nombre, dc.PrecioCompra, dc.Porcentaje, dc.Cantidad, dc.MontoTotal });
+                    dataGridView1.Rows.Add(new object[] { dc.oProducto.Nombre, dc.PrecioCompra,
+                        FormatoPorcentaje.ParaMostrar(dc.Porcentaje, dc.PrecioCompra), dc.Cantidad, dc.MontoTotal });
                 }
 
                 txtTotalPagar.Text = oCompra.MontoTotal.ToString("0.00");

@@ -57,7 +57,7 @@ namespace CapaPresentacion.Modales
             {
                 dgvData.Rows.Add(new object[] { item.IdProducto, item.Codigo, item.Nombre,
                     item.oCategoria.Descripcion, item.Stock, item.PrecioCompra, item.PrecioVenta
-                    , item.Porcentaje
+                    , FormatoPorcentaje.ParaMostrar(item.Porcentaje, item.PrecioCompra)
                 });
             }
             txtBusqueda.Select();
@@ -128,7 +128,8 @@ namespace CapaPresentacion.Modales
                 Stock = Convert.ToInt32(fila.Cells["Stock"].Value),
                 PrecioCompra = Convert.ToDecimal(fila.Cells["PRECIOCOMPRA"].Value),
                 PrecioVenta = Convert.ToDecimal(fila.Cells["PRECIOVENTA"].Value),
-                Porcentaje = Convert.ToDecimal(fila.Cells["PORCENTAJE"].Value)
+                Porcentaje = Convert.ToDecimal(fila.Cells["PORCENTAJE"].Value) /
+                    (Convert.ToDecimal(fila.Cells["PRECIOCOMPRA"].Value) > 0 ? 100m : 1m)
             };
             DialogResult = DialogResult.OK;
             Close();

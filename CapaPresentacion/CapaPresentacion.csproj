@@ -227,6 +227,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utilidades\OpcionCombo.cs" />
     <Compile Include="Utilidades\ExperienciaUsuario.cs" />
+    <Compile Include="Utilidades\FormatoPorcentaje.cs" />
     <EmbeddedResource Include="frmCategoria.resx">
       <DependentUpon>frmCategoria.cs</DependentUpon>
     </EmbeddedResource>
