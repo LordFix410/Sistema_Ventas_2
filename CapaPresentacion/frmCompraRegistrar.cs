@@ -25,6 +25,7 @@ namespace CapaPresentacion
         private decimal costoOriginalProducto;
         private decimal precioVentaOriginalProducto;
         private decimal margenOriginalProducto;
+        private int indiceProductoEditando = -1;
         public frmCompraRegistrar(Usuario oUsuario = null)
         {
             _Usuario = oUsuario;
@@ -38,6 +39,13 @@ namespace CapaPresentacion
             txtPrecioCompra.Leave += PrecioCompra_Leave;
             txtCantidad.Enter += delegate { txtCantidad.Select(0, txtCantidad.Text.Length); };
             txtCantidad.KeyDown += TxtCantidad_KeyDown;
+            txtPrecioCompra.Enter += delegate { txtPrecioCompra.SelectAll(); };
+            txtPorcentaje.Enter += delegate { txtPorcentaje.SelectAll(); };
+            txtPrecioVenta.Enter += delegate { txtPrecioVenta.SelectAll(); };
+            txtPrecioCompra.KeyDown += PrecioCompra_KeyDown;
+            txtPorcentaje.KeyDown += Porcentaje_KeyDown;
+            txtPrecioVenta.KeyDown += PrecioVenta_KeyDown;
+            dataGridView1.CellDoubleClick += dataGridView1_CellDoubleClick;
             ExperienciaUsuario.Aplicar(this, txtCodigoProducto, txtCodigoProducto, txtNuevoDocumento, txtRazonSocial);
         }
 
@@ -47,8 +55,32 @@ namespace CapaPresentacion
             {
                 e.Handled = true;
                 e.SuppressKeyPress = true;
-                btnAgregar.PerformClick();
+                txtPrecioCompra.Focus();
             }
+        }
+
+        private void PrecioCompra_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter) return;
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            txtPorcentaje.Focus();
+        }
+
+        private void Porcentaje_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter) return;
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            txtPrecioVenta.Focus();
+        }
+
+        private void PrecioVenta_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter) return;
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            btnAgregar.PerformClick();
         }
 
         private void TxtCodigoProducto_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
@@ -150,6 +182,7 @@ namespace CapaPresentacion
             txtIdProducto.Text = producto.IdProducto.ToString();
             txtCodigoProducto.Text = producto.Codigo;
             txtProducto.Text = producto.Nombre;
+            sincronizandoPrecios = true;
             txtPrecioCompra.Text = producto.PrecioCompra.ToString("0.00");
             costoOriginalProducto = producto.PrecioCompra;
             precioVentaOriginalProducto = producto.PrecioVenta;
@@ -157,6 +190,8 @@ namespace CapaPresentacion
             evaluandoCambioCosto = false;
             txtPorcentaje.Text = FormatoPorcentaje.ParaMostrar(producto.Porcentaje, producto.PrecioCompra).ToString("0.##");
             txtPrecioVenta.Text = producto.PrecioVenta.ToString("0.00");
+            sincronizandoPrecios = false;
+            ActualizarMargenDesdePrecios();
             txtCantidad.Focus();
             txtCantidad.Select(0, txtCantidad.Text.Length);
         }
@@ -211,6 +246,7 @@ namespace CapaPresentacion
                     txtIdProducto.Text = modal._Producto.IdProducto.ToString();
                     txtCodigoProducto.Text = modal._Producto.Codigo;
                     txtProducto.Text = modal._Producto.Nombre;
+                    sincronizandoPrecios = true;
                     txtPrecioCompra.Text = modal._Producto.PrecioCompra.ToString("0.00");
                     costoOriginalProducto = modal._Producto.PrecioCompra;
                     precioVentaOriginalProducto = modal._Producto.PrecioVenta;
@@ -218,6 +254,8 @@ namespace CapaPresentacion
                     evaluandoCambioCosto = false;
                     txtPorcentaje.Text = FormatoPorcentaje.ParaMostrar(modal._Producto.Porcentaje, modal._Producto.PrecioCompra).ToString("0.##");
                     txtPrecioVenta.Text = modal._Producto.PrecioVenta.ToString("0.00");
+                    sincronizandoPrecios = false;
+                    ActualizarMargenDesdePrecios();
                     txtCantidad.Focus();
                     txtCantidad.Select(0, txtCantidad.Text.Length);
                 }
@@ -311,27 +349,30 @@ namespace CapaPresentacion
                 dialogo.Text = "Confirmar total de factura";
                 dialogo.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialogo.StartPosition = FormStartPosition.CenterParent;
-                dialogo.ClientSize = new Size(430, 155);
+                dialogo.ClientSize = new Size(520, 180);
                 dialogo.MinimizeBox = false;
                 dialogo.MaximizeBox = false;
                 etiqueta.Text = "Total de productos cargados: Q " + totalProductos.ToString("N2") +
                     "\nEscriba el total que aparece en la factura:";
-                etiqueta.SetBounds(16, 14, 398, 42);
-                entrada.SetBounds(18, 62, 190, 26);
-                entrada.Text = totalProductos.ToString("0.00");
+                etiqueta.AutoSize = false;
+                etiqueta.SetBounds(18, 14, 480, 52);
+                entrada.SetBounds(20, 76, 210, 28);
+                entrada.Text = string.Empty;
                 entrada.TextAlign = HorizontalAlignment.Right;
                 aceptar.Text = "Continuar";
                 aceptar.DialogResult = DialogResult.OK;
-                aceptar.SetBounds(218, 108, 95, 30);
+                aceptar.SetBounds(308, 132, 95, 32);
                 cancelar.Text = "Cancelar";
                 cancelar.DialogResult = DialogResult.Cancel;
-                cancelar.SetBounds(319, 108, 95, 30);
+                cancelar.SetBounds(410, 132, 95, 32);
                 dialogo.Controls.AddRange(new System.Windows.Forms.Control[] { etiqueta, entrada, aceptar, cancelar });
                 dialogo.AcceptButton = aceptar;
                 dialogo.CancelButton = cancelar;
                 dialogo.Shown += delegate { entrada.Focus(); entrada.SelectAll(); };
 
-                if (dialogo.ShowDialog(this) != DialogResult.OK ||
+                if (dialogo.ShowDialog(this) != DialogResult.OK)
+                    return false;
+                if (string.IsNullOrWhiteSpace(entrada.Text) ||
                     !decimal.TryParse(entrada.Text.Trim(), out totalFactura) || totalFactura < 0)
                 {
                     CapaPresentacion.DialogoSistema.Show("Ingrese un total de factura válido.", "Total inválido",
@@ -372,29 +413,38 @@ namespace CapaPresentacion
                 dialogo.Text = "Importe fuera del inventario";
                 dialogo.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialogo.StartPosition = FormStartPosition.CenterParent;
-                dialogo.ClientSize = new Size(480, 175);
+                dialogo.ClientSize = new Size(600, 220);
                 dialogo.MinimizeBox = false;
                 dialogo.MaximizeBox = false;
-                etiqueta.Text = "La factura supera los productos cargados por Q " + diferencia.ToString("N2") +
-                    ".\nIndique cuánto corresponde a artículos o cargos que no se controlan en inventario:";
-                etiqueta.SetBounds(16, 14, 448, 52);
-                entrada.SetBounds(18, 72, 190, 26);
-                entrada.Text = diferencia.ToString("0.00");
+                etiqueta.AutoSize = false;
+                etiqueta.TextAlign = ContentAlignment.MiddleLeft;
+                etiqueta.Text = "La factura supera en Q " + diferencia.ToString("N2") + " el total de productos cargados.\n" +
+                    "Escriba el importe exacto de los artículos o cargos que no se controlan en inventario.\n" +
+                    "No incluya aquí productos que sí deban registrarse en el inventario.";
+                etiqueta.SetBounds(18, 14, 560, 82);
+                entrada.SetBounds(20, 106, 210, 28);
+                entrada.Text = string.Empty;
                 entrada.TextAlign = HorizontalAlignment.Right;
                 aceptar.Text = "Validar";
                 aceptar.DialogResult = DialogResult.OK;
-                aceptar.SetBounds(258, 126, 95, 30);
+                aceptar.SetBounds(378, 170, 95, 32);
                 cancelar.Text = "Volver";
                 cancelar.DialogResult = DialogResult.Cancel;
-                cancelar.SetBounds(359, 126, 95, 30);
+                cancelar.SetBounds(480, 170, 95, 32);
                 dialogo.Controls.AddRange(new System.Windows.Forms.Control[] { etiqueta, entrada, aceptar, cancelar });
                 dialogo.AcceptButton = aceptar;
                 dialogo.CancelButton = cancelar;
                 dialogo.Shown += delegate { entrada.Focus(); entrada.SelectAll(); };
 
-                if (dialogo.ShowDialog(this) != DialogResult.OK ||
-                    !decimal.TryParse(entrada.Text.Trim(), out importeNoInventariable) || importeNoInventariable < 0)
+                if (dialogo.ShowDialog(this) != DialogResult.OK)
                     return false;
+                if (string.IsNullOrWhiteSpace(entrada.Text) ||
+                    !decimal.TryParse(entrada.Text.Trim(), out importeNoInventariable) || importeNoInventariable < 0)
+                {
+                    CapaPresentacion.DialogoSistema.Show("Escriba el importe que no se cargó al inventario.",
+                        "Importe requerido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
             }
 
             decimal diferenciaFinal = totalFactura - importeNoInventariable - totalProductos;
@@ -414,6 +464,7 @@ namespace CapaPresentacion
             decimal precioVenta = 0;
             decimal porcentajeSolicitado = 0;
             bool producto_existente = false;
+            int indiceDuplicado = -1;
 
             if(!int.TryParse(txtIdProducto.Text, out int idProductoSeleccionado) || idProductoSeleccionado <= 0)
             {
@@ -461,37 +512,88 @@ namespace CapaPresentacion
 
             foreach(DataGridViewRow fila in dataGridView1.Rows)
             {
-                if (fila.Cells["IdProducto"].Value.ToString() == txtIdProducto.Text)
+                if (fila.Cells["IdProducto"].Value.ToString() == txtIdProducto.Text && fila.Index != indiceProductoEditando)
                 {
                     producto_existente = true;
+                    indiceDuplicado = fila.Index;
                     break;
                 }
             }
 
             if (!producto_existente)
             {
-                dataGridView1.Rows.Add(new object[]
+                object[] valores = new object[]
                 {
                     txtIdProducto.Text,
                     txtProducto.Text,
-                        precioCompra.ToString("0.00"),
-                        precioVenta.ToString("0.00"),
+                    precioCompra.ToString("0.00"),
+                    precioVenta.ToString("0.00"),
                     porcentajeReal.ToString("0.####"),
                     txtCantidad.Value.ToString(),
-                    (txtCantidad.Value*precioCompra).ToString("0.00")
-                });
+                    (txtCantidad.Value * precioCompra).ToString("0.00")
+                };
+
+                if (indiceProductoEditando >= 0 && indiceProductoEditando < dataGridView1.Rows.Count)
+                    for (int columna = 0; columna < valores.Length; columna++)
+                        dataGridView1.Rows[indiceProductoEditando].Cells[columna].Value = valores[columna];
+                else
+                    dataGridView1.Rows.Add(valores);
+
                 calculatTotal();
                 limpiarProducto();
                 txtCodigoProducto.Select();
             }
             else
             {
-                CapaPresentacion.DialogoSistema.Show("El producto ya está agregado a la compra", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("El producto ya está agregado en la fila " + (indiceDuplicado + 1) +
+                    ". Para modificarlo, haga doble clic en esa fila.", "Producto repetido", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+        }
+
+        private void dataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.RowIndex >= dataGridView1.Rows.Count) return;
+            if (indiceProductoEditando >= 0 && indiceProductoEditando != e.RowIndex)
+            {
+                CapaPresentacion.DialogoSistema.Show("Termine de editar el producto seleccionado antes de abrir otro.",
+                    "Edición en curso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            DataGridViewRow fila = dataGridView1.Rows[e.RowIndex];
+            int id = Convert.ToInt32(fila.Cells["IdProducto"].Value);
+            Producto producto = new CN_Producto().Listar().FirstOrDefault(p => p.IdProducto == id);
+            if (producto == null)
+            {
+                CapaPresentacion.DialogoSistema.Show("No se pudo volver a cargar el producto seleccionado.",
+                    "Producto no encontrado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            indiceProductoEditando = e.RowIndex;
+            txtIdProducto.Text = id.ToString();
+            txtCodigoProducto.Text = producto.Codigo;
+            txtProducto.Text = Convert.ToString(fila.Cells["Producto"].Value);
+            sincronizandoPrecios = true;
+            txtPrecioCompra.Text = Convert.ToDecimal(fila.Cells["PrecioCompra"].Value).ToString("0.00");
+            txtPrecioVenta.Text = Convert.ToDecimal(fila.Cells["PrecioVenta"].Value).ToString("0.00");
+            txtPorcentaje.Text = Convert.ToDecimal(fila.Cells["Porcentaje"].Value).ToString("0.##");
+            sincronizandoPrecios = false;
+            ActualizarMargenDesdePrecios();
+            decimal cantidad = Convert.ToDecimal(fila.Cells["Cantidad"].Value);
+            txtCantidad.Value = Math.Min(txtCantidad.Maximum, Math.Max(txtCantidad.Minimum, cantidad));
+            costoOriginalProducto = Convert.ToDecimal(fila.Cells["PrecioCompra"].Value);
+            precioVentaOriginalProducto = Convert.ToDecimal(fila.Cells["PrecioVenta"].Value);
+            margenOriginalProducto = costoOriginalProducto <= 0 ? 0 :
+                (precioVentaOriginalProducto - costoOriginalProducto) / costoOriginalProducto;
+            evaluandoCambioCosto = false;
+            txtCantidad.Focus();
+            txtCantidad.Select(0, txtCantidad.Text.Length);
         }
 
         private void limpiarProducto()
         {
+            indiceProductoEditando = -1;
             txtIdProducto.Text = "";
             txtProducto.Text = "";
             txtPrecioCompra.Text = "";
@@ -528,6 +630,14 @@ namespace CapaPresentacion
 
             if (dataGridView1.Rows.Count < 1) {
                 CapaPresentacion.DialogoSistema.Show("Debe ingresar productos en la compra", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            if (indiceProductoEditando >= 0)
+            {
+                CapaPresentacion.DialogoSistema.Show("Confirme la edición del producto con Enter en Precio Venta antes de registrar la compra.",
+                    "Edición pendiente", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                txtPrecioVenta.Focus();
+                txtPrecioVenta.SelectAll();
                 return;
             }
 

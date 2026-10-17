@@ -2,7 +2,10 @@
     INSTALACIÓN LIMPIA: ejecutar este único archivo en SQL Server Management Studio.
     Crea DBSISTEMA_VENTA, estructura, procedimientos y datos iniciales.
     No lo ejecutes sobre una base ya creada ni contiene DROP DATABASE.
-    Para actualizar una base anterior, usa migracion_porcentaje_compra.sql.
+    Incluye las tablas de obligaciones personales y permisos de Finanzas.
+    Al final crea o actualiza el login de aplicación ventas_app2.
+    Ejecutar con una cuenta administradora del servidor SQL.
+    Para una base ya existente usa migracion_finanzas.sql, no vuelvas a crearla.
 */
 create database DBSISTEMA_VENTA
 go
@@ -93,6 +96,7 @@ IdProveedor int references PROVEEDOR(IdProveedor),
 TipoDocumento varchar(50),
 NumeroDocumento varchar(50),
 MontoTotal decimal(10,2),
+MontoNoInventariable decimal(10,2) NOT NULL CONSTRAINT DF_COMPRA_MontoNoInventariable DEFAULT (0),
 FechaRegistro datetime default getdate()
 )
 go
@@ -147,18 +151,128 @@ Logo varbinary(max) NULL
 go
 
 -- =============================================
--- CREACIÓN DE TIPOS DE DATOS PERSONALIZADOS
+-- OBLIGACIONES Y PAGOS PERSONALES
 -- =============================================
 
-CREATE TYPE [dbo].[EDetalle_Compra] AS TABLE(
-	[IdProducto] int NULL,
-	[PrecioCompra] decimal(18,2) NULL,
-	[PrecioVenta] decimal(18,2) NULL,
-	[Porcentaje] decimal(9,4) NULL,
-	[Cantidad] int NULL,
-	[MontoTotal] decimal(18,2) NULL
+-- Catálogo que el administrador llenará con las obligaciones personales
+-- mensuales. MontoMensual alimenta la meta mensual de ganancia disponible.
+CREATE TABLE GASTO_PERSONAL(
+    IdGastoPersonal int primary key identity(1,1),
+    Nombre varchar(100) not null,
+    MontoMensual decimal(10,2) not null,
+    DiaVencimiento tinyint null,
+    Activo bit not null constraint DF_GASTO_PERSONAL_Activo default (1),
+    Observaciones varchar(250) null,
+    FechaRegistro datetime2(0) not null constraint DF_GASTO_PERSONAL_FechaRegistro default (sysdatetime()),
+    constraint CK_GASTO_PERSONAL_MontoMensual check (MontoMensual >= 0),
+    constraint CK_GASTO_PERSONAL_DiaVencimiento check (DiaVencimiento is null or DiaVencimiento between 1 and 31)
 )
-GO
+go
+
+-- Copia mensual del importe y vencimiento. Así, si cambia el monto del
+-- catálogo, los períodos anteriores conservan lo que correspondía pagar.
+CREATE TABLE GASTO_PERSONAL_PERIODO(
+    IdPeriodoGastoPersonal int primary key identity(1,1),
+    IdGastoPersonal int not null references GASTO_PERSONAL(IdGastoPersonal),
+    Anio smallint not null,
+    Mes tinyint not null,
+    MontoProgramado decimal(10,2) not null,
+    FechaVencimiento date null,
+    FechaRegistro datetime2(0) not null constraint DF_GASTO_PERSONAL_PERIODO_FechaRegistro default (sysdatetime()),
+    constraint UQ_GASTO_PERSONAL_PERIODO unique (IdGastoPersonal, Anio, Mes),
+    constraint CK_GASTO_PERSONAL_PERIODO_Mes check (Mes between 1 and 12),
+    constraint CK_GASTO_PERSONAL_PERIODO_Monto check (MontoProgramado >= 0)
+)
+go
+
+-- Los pagos pueden ser parciales. El saldo pendiente se calculará como
+-- MontoProgramado menos la suma de los pagos asociados al período.
+CREATE TABLE PAGO_GASTO_PERSONAL(
+    IdPagoGastoPersonal int primary key identity(1,1),
+    IdPeriodoGastoPersonal int not null references GASTO_PERSONAL_PERIODO(IdPeriodoGastoPersonal),
+    IdUsuario int null references USUARIO(IdUsuario),
+    Monto decimal(10,2) not null,
+    FechaPago datetime2(0) not null constraint DF_PAGO_GASTO_PERSONAL_FechaPago default (sysdatetime()),
+    MedioPago varchar(20) not null constraint DF_PAGO_GASTO_PERSONAL_MedioPago default ('Efectivo'),
+    Referencia varchar(100) null,
+    Observaciones varchar(250) null,
+    FechaRegistro datetime2(0) not null constraint DF_PAGO_GASTO_PERSONAL_FechaRegistro default (sysdatetime()),
+    constraint CK_PAGO_GASTO_PERSONAL_Monto check (Monto > 0),
+    constraint CK_PAGO_GASTO_PERSONAL_MedioPago check (MedioPago in ('Efectivo', 'Transferencia', 'Tarjeta', 'Otro'))
+)
+go
+
+CREATE INDEX IX_GASTO_PERSONAL_PERIODO_Vencimiento
+    ON GASTO_PERSONAL_PERIODO(FechaVencimiento, IdGastoPersonal)
+go
+
+CREATE INDEX IX_PAGO_GASTO_PERSONAL_PeriodoFecha
+    ON PAGO_GASTO_PERSONAL(IdPeriodoGastoPersonal, FechaPago)
+go
+
+-- Cierres independientes por turno/día y movimientos pagados.
+CREATE TABLE FIN_CIERRE_CAJA(
+    IdCierre int primary key identity(1,1),
+    IdUsuario int null references USUARIO(IdUsuario),
+    FechaInicio datetime2(0) not null,
+    FechaCierre datetime2(0) not null,
+    FondoInicial decimal(12,2) not null,
+    Ventas decimal(12,2) not null,
+    CostoProductos decimal(12,2) not null,
+    GananciaBruta decimal(12,2) not null,
+    ReservaCapital decimal(12,2) not null,
+    CapitalGenerado decimal(12,2) not null,
+    GananciaGenerada decimal(12,2) not null,
+    EfectivoEsperado decimal(12,2) not null,
+    EfectivoContado decimal(12,2) not null,
+    Diferencia decimal(12,2) not null,
+    DescuentoGanancia decimal(12,2) not null,
+    DescuentoCapital decimal(12,2) not null,
+    Sobrante decimal(12,2) not null,
+    Observaciones varchar(250) null,
+    CONSTRAINT CK_FIN_CIERRE_Rango CHECK(FechaCierre > FechaInicio),
+    CONSTRAINT CK_FIN_CIERRE_NoNegativos CHECK(FondoInicial >= 0 AND Ventas >= 0 AND CostoProductos >= 0 AND EfectivoContado >= 0)
+)
+go
+
+CREATE TABLE FIN_MOVIMIENTO(
+    IdMovimiento int primary key identity(1,1),
+    Tipo varchar(20) not null,
+    IdCompra int null references COMPRA(IdCompra),
+    IdUsuario int null references USUARIO(IdUsuario),
+    Fecha datetime2(0) not null constraint DF_FIN_MOVIMIENTO_Fecha default(sysdatetime()),
+    Concepto varchar(150) not null,
+    Monto decimal(12,2) not null,
+    MedioPago varchar(20) not null constraint DF_FIN_MOVIMIENTO_Medio default('Efectivo'),
+    Referencia varchar(100) null,
+    CONSTRAINT CK_FIN_MOVIMIENTO_Tipo CHECK(Tipo in ('Empresa','Proveedor')),
+    CONSTRAINT CK_FIN_MOVIMIENTO_Monto CHECK(Monto > 0),
+    CONSTRAINT CK_FIN_MOVIMIENTO_Medio CHECK(MedioPago in ('Efectivo','Transferencia','Tarjeta','Otro'))
+)
+go
+
+CREATE TABLE FIN_DEPOSITO(
+    IdDeposito int primary key identity(1,1),
+    IdCierre int not null references FIN_CIERRE_CAJA(IdCierre),
+    IdUsuario int null references USUARIO(IdUsuario),
+    Fecha datetime2(0) not null constraint DF_FIN_DEPOSITO_Fecha default(sysdatetime()),
+    Capital decimal(12,2) not null constraint DF_FIN_DEPOSITO_Capital default(0),
+    Ganancia decimal(12,2) not null constraint DF_FIN_DEPOSITO_Ganancia default(0),
+    Referencia varchar(100) null,
+    CONSTRAINT CK_FIN_DEPOSITO_Montos CHECK(Capital >= 0 AND Ganancia >= 0 AND Capital + Ganancia > 0)
+)
+go
+
+CREATE INDEX IX_FIN_CIERRE_Fecha ON FIN_CIERRE_CAJA(FechaCierre)
+go
+CREATE INDEX IX_FIN_MOVIMIENTO_Fecha ON FIN_MOVIMIENTO(Fecha)
+go
+CREATE INDEX IX_FIN_MOVIMIENTO_Compra ON FIN_MOVIMIENTO(IdCompra)
+go
+
+-- =============================================
+-- CREACIÓN DE TIPOS DE DATOS PERSONALIZADOS
+-- =============================================
 
 CREATE TYPE [dbo].[EDetalle_Venta] AS TABLE(
 	[IdProducto] int NULL,
@@ -556,69 +670,6 @@ begin
 end
 go
 
--- PROCEDIMIENTO PARA REGISTRAR COMPRA
-CREATE PROCEDURE sp_RegistrarCompra(
-@IdUsuario int,
-@IdProveedor int,
-@TipoDocumento varchar(500),
-@NumeroDocumento varchar(500) OUTPUT,
-@MontoTotal decimal(18,2),
-@DetalleCompra [EDetalle_Compra] READONLY,
-@Resultado bit output,
-@Mensaje varchar(500) output
-)
-as
-begin
-	begin try
-		declare @idcompra int = 0
-		set @Resultado = 1
-		set @Mensaje = ''
-
-		begin transaction registro
-
-		DECLARE @SiguienteCompra bigint;
-		SELECT @SiguienteCompra = ISNULL(MAX(TRY_CONVERT(bigint, NumeroDocumento)), 0) + 1
-		FROM COMPRA WITH (TABLOCKX, HOLDLOCK);
-		SET @NumeroDocumento = CASE WHEN @SiguienteCompra < 100000
-			THEN RIGHT('00000' + CONVERT(varchar(20), @SiguienteCompra), 5)
-			ELSE CONVERT(varchar(20), @SiguienteCompra) END;
-
-		IF NOT EXISTS (SELECT 1 FROM @DetalleCompra)
-			THROW 50001, 'La compra debe incluir al menos un producto', 1;
-
-		IF EXISTS (SELECT 1 FROM @DetalleCompra WHERE IdProducto IS NULL OR Cantidad IS NULL OR Cantidad <= 0 OR PrecioCompra IS NULL OR PrecioVenta IS NULL OR MontoTotal IS NULL OR PrecioCompra < 0 OR PrecioVenta < 0 OR MontoTotal < 0 OR ABS(MontoTotal - ROUND(PrecioCompra * Cantidad, 2)) > 0.01)
-			THROW 50002, 'El detalle de compra contiene cantidades o precios inválidos', 1;
-
-		IF EXISTS (SELECT IdProducto FROM @DetalleCompra GROUP BY IdProducto HAVING COUNT(*) > 1)
-			THROW 50003, 'No se puede repetir un producto en el detalle de compra', 1;
-
-		IF ABS(@MontoTotal - (SELECT SUM(MontoTotal) FROM @DetalleCompra)) > 0.01
-			THROW 50004, 'El total de la compra no coincide con el detalle', 1;
-
-		insert into COMPRA(IdUsuario,IdProveedor,TipoDocumento,NumeroDocumento,MontoTotal)
-		values(@IdUsuario,@IdProveedor,@TipoDocumento,@NumeroDocumento,@MontoTotal)
-
-		set @idcompra = SCOPE_IDENTITY()
-
-		insert into DETALLE_COMPRA(IdCompra,IdProducto,PrecioCompra,PrecioVenta,Cantidad,MontoTotal)
-		select @idcompra,IdProducto,PrecioCompra,PrecioVenta,Cantidad,MontoTotal from @DetalleCompra
-
-		update p set p.Stock = p.Stock + dc.Cantidad, 
-		p.PrecioCompra = dc.PrecioCompra,
-		p.PrecioVenta = dc.PrecioVenta
-		from PRODUCTO p
-		inner join @DetalleCompra dc on dc.IdProducto= p.IdProducto
-
-		commit transaction registro
-	end try
-	begin catch
-		set @Resultado = 0
-		set @Mensaje = ERROR_MESSAGE()
-		IF XACT_STATE() <> 0 ROLLBACK TRANSACTION registro
-	end catch
-end
-GO
-
 -- PROCEDIMIENTO PARA REGISTRAR VENTA
 CREATE PROCEDURE usp_RegistrarVenta(
 @IdUsuario int,
@@ -758,14 +809,14 @@ INSERT INTO PERMISO(IdRol, NombreMenu) VALUES
 (1, 'menuClientes'),
 (1, 'menuProveedores'),
 (1, 'menuReportes'),
+(1, 'menuFinanzas'),
 (1, 'menuAcercaDe')
 GO
 
 -- 3. Permisos para Empleado (IdRol = 2)
 INSERT INTO PERMISO(IdRol, NombreMenu) values
 (2, 'menuVentas'),
-(2, 'menuClientes'),
-(2, 'menuAcercaDe')
+(2, 'menuClientes')
 GO
 
 -- 4. Usuarios (Admin con clave '123' como se solicitó)
@@ -1025,6 +1076,7 @@ CREATE PROCEDURE dbo.sp_RegistrarCompra
     @TipoDocumento varchar(500),
     @NumeroDocumento varchar(500) OUTPUT,
     @MontoTotal decimal(18,2),
+    @MontoNoInventariable decimal(18,2),
     @DetalleCompra dbo.EDetalle_Compra READONLY,
     @Resultado bit OUTPUT,
     @Mensaje varchar(500) OUTPUT
@@ -1057,18 +1109,21 @@ BEGIN
                OR Porcentaje < 0 OR MontoTotal < 0
                OR ABS(MontoTotal - ROUND(PrecioCompra * Cantidad, 2)) > 0.01
                OR ABS(PrecioVenta * 4 - ROUND(PrecioVenta * 4, 0)) > 0.0001
-               OR PrecioVenta + 0.0001 < CEILING(PrecioCompra * (1 + Porcentaje / 100.0) * 4) / 4.0
+               OR (PrecioCompra > 0 AND ABS(Porcentaje - ((PrecioVenta - PrecioCompra) / PrecioCompra * 100.0)) > 0.01)
         )
             THROW 50002, 'El detalle de compra contiene precios, porcentajes o cantidades inválidos', 1;
 
         IF EXISTS (SELECT IdProducto FROM @DetalleCompra GROUP BY IdProducto HAVING COUNT(*) > 1)
             THROW 50003, 'No se puede repetir un producto en el detalle de compra', 1;
 
-        IF ABS(@MontoTotal - (SELECT SUM(MontoTotal) FROM @DetalleCompra)) > 0.01
-            THROW 50004, 'El total de la compra no coincide con el detalle', 1;
+        IF @MontoNoInventariable IS NULL OR @MontoNoInventariable < 0
+            THROW 50004, 'El importe no inventariable no es válido', 1;
 
-        INSERT INTO dbo.COMPRA(IdUsuario, IdProveedor, TipoDocumento, NumeroDocumento, MontoTotal)
-        VALUES(@IdUsuario, @IdProveedor, @TipoDocumento, @NumeroDocumento, @MontoTotal);
+        IF ABS(@MontoTotal - (SELECT SUM(MontoTotal) FROM @DetalleCompra) - @MontoNoInventariable) > 1.00
+            THROW 50004, 'El total de la factura no coincide con los productos y el importe no inventariable', 1;
+
+        INSERT INTO dbo.COMPRA(IdUsuario, IdProveedor, TipoDocumento, NumeroDocumento, MontoTotal, MontoNoInventariable)
+        VALUES(@IdUsuario, @IdProveedor, @TipoDocumento, @NumeroDocumento, @MontoTotal, @MontoNoInventariable);
         SET @idcompra = SCOPE_IDENTITY();
 
         INSERT INTO dbo.DETALLE_COMPRA(IdCompra, IdProducto, PrecioCompra, PrecioVenta, Porcentaje, Cantidad, MontoTotal)
@@ -1150,4 +1205,45 @@ BEGIN
     INNER JOIN dbo.CATEGORIA ca ON ca.IdCategoria = p.IdCategoria
     WHERE CONVERT(date, v.FechaRegistro) BETWEEN @fechainicio AND @fechafin;
 END;
+GO
+
+-- =============================================
+-- LOGIN DE APLICACIÓN PARA CONEXIÓN EN RED
+-- =============================================
+-- Ejecuta este archivo conectado al servidor con una cuenta administradora.
+-- Este login solo tendrá permisos de trabajo dentro de DBSISTEMA_VENTA;
+-- no es administrador del servidor.
+USE master;
+GO
+
+IF SUSER_ID(N'ventas_app2') IS NULL
+BEGIN
+    CREATE LOGIN [ventas_app2]
+    WITH PASSWORD = N'Temporal#Ventas2026!',
+         DEFAULT_DATABASE = [DBSISTEMA_VENTA],
+         CHECK_POLICY = ON,
+         CHECK_EXPIRATION = OFF;
+END
+ELSE
+BEGIN
+    ALTER LOGIN [ventas_app2]
+    WITH PASSWORD = N'Temporal#Ventas2026!',
+         DEFAULT_DATABASE = [DBSISTEMA_VENTA],
+         CHECK_POLICY = ON,
+         CHECK_EXPIRATION = OFF;
+    ALTER LOGIN [ventas_app2] ENABLE;
+END;
+GO
+
+USE [DBSISTEMA_VENTA];
+GO
+
+IF USER_ID(N'ventas_app2') IS NULL
+    CREATE USER [ventas_app2] FOR LOGIN [ventas_app2];
+ELSE
+    ALTER USER [ventas_app2] WITH LOGIN = [ventas_app2];
+GO
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::[dbo] TO [ventas_app2];
+GRANT EXECUTE ON SCHEMA::[dbo] TO [ventas_app2];
 GO

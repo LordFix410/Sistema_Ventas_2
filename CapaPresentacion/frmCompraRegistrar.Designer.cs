@@ -47,10 +47,10 @@
             this.label11 = new System.Windows.Forms.Label();
             this.txtPrecioVenta = new System.Windows.Forms.TextBox();
             this.label9 = new System.Windows.Forms.Label();
-            this.txtPrecioCompra = new System.Windows.Forms.TextBox();
-            this.label8 = new System.Windows.Forms.Label();
             this.txtPorcentaje = new System.Windows.Forms.TextBox();
             this.labelPorcentaje = new System.Windows.Forms.Label();
+            this.txtPrecioCompra = new System.Windows.Forms.TextBox();
+            this.label8 = new System.Windows.Forms.Label();
             this.btnBuscarProducto = new FontAwesome.Sharp.IconButton();
             this.txtIdProducto = new System.Windows.Forms.TextBox();
             this.txtProducto = new System.Windows.Forms.TextBox();
@@ -58,10 +58,6 @@
             this.txtCodigoProducto = new System.Windows.Forms.TextBox();
             this.label7 = new System.Windows.Forms.Label();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
-            this.txtTotalPagar = new System.Windows.Forms.TextBox();
-            this.label12 = new System.Windows.Forms.Label();
-            this.btnRegistrar = new FontAwesome.Sharp.IconButton();
-            this.btnAgregar = new FontAwesome.Sharp.IconButton();
             this.IdProducto = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Producto = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.PrecioCompra = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -70,6 +66,10 @@
             this.Cantidad = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.SubTotal = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.btnEliminar = new System.Windows.Forms.DataGridViewButtonColumn();
+            this.txtTotalPagar = new System.Windows.Forms.TextBox();
+            this.label12 = new System.Windows.Forms.Label();
+            this.btnRegistrar = new FontAwesome.Sharp.IconButton();
+            this.btnAgregar = new FontAwesome.Sharp.IconButton();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -257,14 +257,14 @@
             this.groupBox3.Margin = new System.Windows.Forms.Padding(4);
             this.groupBox3.Name = "groupBox3";
             this.groupBox3.Padding = new System.Windows.Forms.Padding(4);
-            this.groupBox3.Size = new System.Drawing.Size(1048, 87);
+            this.groupBox3.Size = new System.Drawing.Size(1121, 87);
             this.groupBox3.TabIndex = 31;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Información de Producto:";
             // 
             // txtCantidad
             // 
-            this.txtCantidad.Location = new System.Drawing.Point(934, 47);
+            this.txtCantidad.Location = new System.Drawing.Point(540, 46);
             this.txtCantidad.Margin = new System.Windows.Forms.Padding(4);
             this.txtCantidad.Maximum = new decimal(new int[] {
             1000,
@@ -290,7 +290,7 @@
             // 
             this.label11.AutoSize = true;
             this.label11.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label11.Location = new System.Drawing.Point(933, 26);
+            this.label11.Location = new System.Drawing.Point(539, 25);
             this.label11.Name = "label11";
             this.label11.Size = new System.Drawing.Size(64, 16);
             this.label11.TabIndex = 35;
@@ -298,7 +298,7 @@
             // 
             // txtPrecioVenta
             // 
-            this.txtPrecioVenta.Location = new System.Drawing.Point(658, 47);
+            this.txtPrecioVenta.Location = new System.Drawing.Point(947, 45);
             this.txtPrecioVenta.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtPrecioVenta.Name = "txtPrecioVenta";
             this.txtPrecioVenta.Size = new System.Drawing.Size(101, 22);
@@ -308,15 +308,33 @@
             // 
             this.label9.AutoSize = true;
             this.label9.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label9.Location = new System.Drawing.Point(655, 27);
+            this.label9.Location = new System.Drawing.Point(944, 25);
             this.label9.Name = "label9";
             this.label9.Size = new System.Drawing.Size(87, 16);
             this.label9.TabIndex = 33;
             this.label9.Text = "Precio Venta:";
             // 
+            // txtPorcentaje
+            // 
+            this.txtPorcentaje.Location = new System.Drawing.Point(806, 45);
+            this.txtPorcentaje.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.txtPorcentaje.Name = "txtPorcentaje";
+            this.txtPorcentaje.Size = new System.Drawing.Size(101, 22);
+            this.txtPorcentaje.TabIndex = 34;
+            // 
+            // labelPorcentaje
+            // 
+            this.labelPorcentaje.AutoSize = true;
+            this.labelPorcentaje.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.labelPorcentaje.Location = new System.Drawing.Point(803, 25);
+            this.labelPorcentaje.Name = "labelPorcentaje";
+            this.labelPorcentaje.Size = new System.Drawing.Size(71, 16);
+            this.labelPorcentaje.TabIndex = 33;
+            this.labelPorcentaje.Text = "Margen %:";
+            // 
             // txtPrecioCompra
             // 
-            this.txtPrecioCompra.Location = new System.Drawing.Point(524, 47);
+            this.txtPrecioCompra.Location = new System.Drawing.Point(671, 48);
             this.txtPrecioCompra.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtPrecioCompra.Name = "txtPrecioCompra";
             this.txtPrecioCompra.Size = new System.Drawing.Size(101, 22);
@@ -326,30 +344,11 @@
             // 
             this.label8.AutoSize = true;
             this.label8.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label8.Location = new System.Drawing.Point(521, 27);
+            this.label8.Location = new System.Drawing.Point(668, 28);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(100, 16);
             this.label8.TabIndex = 31;
             this.label8.Text = "Precio Compra:";
-            // txtPorcentaje
-            this.txtPorcentaje.Location = new System.Drawing.Point(658, 47);
-            this.txtPorcentaje.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
-            this.txtPorcentaje.Name = "txtPorcentaje";
-            this.txtPorcentaje.Size = new System.Drawing.Size(101, 22);
-            this.txtPorcentaje.TabIndex = 34;
-            // labelPorcentaje
-            this.labelPorcentaje.AutoSize = true;
-            this.labelPorcentaje.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.labelPorcentaje.Location = new System.Drawing.Point(655, 27);
-            this.labelPorcentaje.Name = "labelPorcentaje";
-            this.labelPorcentaje.Size = new System.Drawing.Size(68, 16);
-            this.labelPorcentaje.TabIndex = 33;
-            this.labelPorcentaje.Text = "Margen %:";
-            // reubicar precio venta y cantidad para dar espacio al porcentaje
-            this.txtPrecioVenta.Location = new System.Drawing.Point(799, 47);
-            this.label9.Location = new System.Drawing.Point(796, 27);
-            this.txtCantidad.Location = new System.Drawing.Point(934, 47);
-            this.label11.Location = new System.Drawing.Point(933, 26);
             // 
             // btnBuscarProducto
             // 
@@ -443,6 +442,73 @@
             this.dataGridView1.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellContentClick);
             this.dataGridView1.CellPainting += new System.Windows.Forms.DataGridViewCellPaintingEventHandler(this.dataGridView1_CellPainting);
             // 
+            // IdProducto
+            // 
+            this.IdProducto.HeaderText = "IdProducto";
+            this.IdProducto.MinimumWidth = 6;
+            this.IdProducto.Name = "IdProducto";
+            this.IdProducto.ReadOnly = true;
+            this.IdProducto.Visible = false;
+            this.IdProducto.Width = 125;
+            // 
+            // Producto
+            // 
+            this.Producto.HeaderText = "PRODUCTO";
+            this.Producto.MinimumWidth = 6;
+            this.Producto.Name = "Producto";
+            this.Producto.ReadOnly = true;
+            this.Producto.Width = 200;
+            // 
+            // PrecioCompra
+            // 
+            this.PrecioCompra.HeaderText = "PRECIO COMPRA";
+            this.PrecioCompra.MinimumWidth = 6;
+            this.PrecioCompra.Name = "PrecioCompra";
+            this.PrecioCompra.ReadOnly = true;
+            this.PrecioCompra.Width = 125;
+            // 
+            // PrecioVenta
+            // 
+            this.PrecioVenta.HeaderText = "PRECIO VENTA";
+            this.PrecioVenta.MinimumWidth = 6;
+            this.PrecioVenta.Name = "PrecioVenta";
+            this.PrecioVenta.ReadOnly = true;
+            this.PrecioVenta.Visible = false;
+            this.PrecioVenta.Width = 125;
+            // 
+            // Porcentaje
+            // 
+            this.Porcentaje.HeaderText = "MARGEN %";
+            this.Porcentaje.MinimumWidth = 6;
+            this.Porcentaje.Name = "Porcentaje";
+            this.Porcentaje.ReadOnly = true;
+            // 
+            // Cantidad
+            // 
+            this.Cantidad.HeaderText = "CANTIDAD";
+            this.Cantidad.MinimumWidth = 6;
+            this.Cantidad.Name = "Cantidad";
+            this.Cantidad.ReadOnly = true;
+            this.Cantidad.Width = 125;
+            // 
+            // SubTotal
+            // 
+            this.SubTotal.HeaderText = "SUB TOTAL";
+            this.SubTotal.MinimumWidth = 6;
+            this.SubTotal.Name = "SubTotal";
+            this.SubTotal.ReadOnly = true;
+            this.SubTotal.Width = 125;
+            // 
+            // btnEliminar
+            // 
+            this.btnEliminar.HeaderText = "";
+            this.btnEliminar.MinimumWidth = 6;
+            this.btnEliminar.Name = "btnEliminar";
+            this.btnEliminar.ReadOnly = true;
+            this.btnEliminar.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.btnEliminar.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            this.btnEliminar.Width = 125;
+            // 
             // txtTotalPagar
             // 
             this.txtTotalPagar.Location = new System.Drawing.Point(1211, 454);
@@ -493,72 +559,6 @@
             this.btnAgregar.TextAlign = System.Drawing.ContentAlignment.BottomCenter;
             this.btnAgregar.UseVisualStyleBackColor = true;
             this.btnAgregar.Click += new System.EventHandler(this.btnAgregar_Click);
-            // 
-            // IdProducto
-            // 
-            this.IdProducto.HeaderText = "IdProducto";
-            this.IdProducto.MinimumWidth = 6;
-            this.IdProducto.Name = "IdProducto";
-            this.IdProducto.ReadOnly = true;
-            this.IdProducto.Visible = false;
-            this.IdProducto.Width = 125;
-            // 
-            // Producto
-            // 
-            this.Producto.HeaderText = "PRODUCTO";
-            this.Producto.MinimumWidth = 6;
-            this.Producto.Name = "Producto";
-            this.Producto.ReadOnly = true;
-            this.Producto.Width = 200;
-            // 
-            // PrecioCompra
-            // 
-            this.PrecioCompra.HeaderText = "PRECIO COMPRA";
-            this.PrecioCompra.MinimumWidth = 6;
-            this.PrecioCompra.Name = "PrecioCompra";
-            this.PrecioCompra.ReadOnly = true;
-            this.PrecioCompra.Width = 125;
-            // 
-            // PrecioVenta
-            // 
-            this.PrecioVenta.HeaderText = "PRECIO VENTA";
-            this.PrecioVenta.MinimumWidth = 6;
-            this.PrecioVenta.Name = "PrecioVenta";
-            this.PrecioVenta.ReadOnly = true;
-            this.PrecioVenta.Visible = false;
-            this.PrecioVenta.Width = 125;
-            // 
-            // Cantidad
-            // 
-            this.Cantidad.HeaderText = "CANTIDAD";
-            this.Cantidad.MinimumWidth = 6;
-            this.Cantidad.Name = "Cantidad";
-            this.Cantidad.ReadOnly = true;
-            this.Cantidad.Width = 125;
-            // Porcentaje
-            this.Porcentaje.HeaderText = "MARGEN %";
-            this.Porcentaje.MinimumWidth = 6;
-            this.Porcentaje.Name = "Porcentaje";
-            this.Porcentaje.ReadOnly = true;
-            this.Porcentaje.Width = 100;
-            // 
-            // SubTotal
-            // 
-            this.SubTotal.HeaderText = "SUB TOTAL";
-            this.SubTotal.MinimumWidth = 6;
-            this.SubTotal.Name = "SubTotal";
-            this.SubTotal.ReadOnly = true;
-            this.SubTotal.Width = 125;
-            // 
-            // btnEliminar
-            // 
-            this.btnEliminar.HeaderText = "";
-            this.btnEliminar.MinimumWidth = 6;
-            this.btnEliminar.Name = "btnEliminar";
-            this.btnEliminar.ReadOnly = true;
-            this.btnEliminar.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.btnEliminar.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
-            this.btnEliminar.Width = 125;
             // 
             // frmCompraRegistrar
             // 

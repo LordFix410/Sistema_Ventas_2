@@ -51,7 +51,7 @@ namespace CapaDatos
             {
                 try
                 {
-                    SqlCommand cmd = new SqlCommand("sp_RegistrarCompra", oconexion);
+                    SqlCommand cmd = new SqlCommand("dbo.sp_RegistrarCompra", oconexion);
                     cmd.Parameters.AddWithValue("IdUsuario",obj.oUsuario.IdUsuario);
                     cmd.Parameters.AddWithValue("IdProveedor", obj.oProveedor.IdProveedor);
                     cmd.Parameters.AddWithValue("TipoDocumento",obj.TipoDocumento);
