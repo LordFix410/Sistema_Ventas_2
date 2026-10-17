@@ -56,6 +56,7 @@
     <Compile Include="CN_Proveedor.cs" />
     <Compile Include="CN_Reporte.cs" />
     <Compile Include="CN_ReporteNegocio.cs" />
+    <Compile Include="CN_Finanzas.cs" />
     <Compile Include="CN_Rol.cs" />
     <Compile Include="CN_Usuario.cs" />
     <Compile Include="CN_Venta.cs" />

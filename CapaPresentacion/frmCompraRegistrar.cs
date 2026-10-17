@@ -20,6 +20,11 @@ namespace CapaPresentacion
     public partial class frmCompraRegistrar : Form
     {
         private Usuario _Usuario;
+        private bool sincronizandoPrecios;
+        private bool evaluandoCambioCosto;
+        private decimal costoOriginalProducto;
+        private decimal precioVentaOriginalProducto;
+        private decimal margenOriginalProducto;
         public frmCompraRegistrar(Usuario oUsuario = null)
         {
             _Usuario = oUsuario;
@@ -27,9 +32,23 @@ namespace CapaPresentacion
             txtCodigoProducto.KeyDown += TxtCodigoProducto_KeyDown;
             txtNuevoDocumento.KeyDown += TxtProveedor_KeyDown;
             txtRazonSocial.KeyDown += TxtProveedor_KeyDown;
-            txtPrecioCompra.TextChanged += PrecioYPorcentaje_TextChanged;
-            txtPorcentaje.TextChanged += PrecioYPorcentaje_TextChanged;
+            txtPrecioCompra.TextChanged += PrecioCompra_TextChanged;
+            txtPrecioVenta.TextChanged += PrecioVenta_TextChanged;
+            txtPorcentaje.TextChanged += Porcentaje_TextChanged;
+            txtPrecioCompra.Leave += PrecioCompra_Leave;
+            txtCantidad.Enter += delegate { txtCantidad.Select(0, txtCantidad.Text.Length); };
+            txtCantidad.KeyDown += TxtCantidad_KeyDown;
             ExperienciaUsuario.Aplicar(this, txtCodigoProducto, txtCodigoProducto, txtNuevoDocumento, txtRazonSocial);
+        }
+
+        private void TxtCantidad_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                btnAgregar.PerformClick();
+            }
         }
 
         private void TxtCodigoProducto_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
@@ -132,9 +151,14 @@ namespace CapaPresentacion
             txtCodigoProducto.Text = producto.Codigo;
             txtProducto.Text = producto.Nombre;
             txtPrecioCompra.Text = producto.PrecioCompra.ToString("0.00");
-            txtPorcentaje.Text = FormatoPorcentaje.ParaEditar(producto.Porcentaje, producto.PrecioCompra).ToString("0");
-            txtPrecioCompra.Focus();
-            txtPrecioCompra.SelectAll();
+            costoOriginalProducto = producto.PrecioCompra;
+            precioVentaOriginalProducto = producto.PrecioVenta;
+            margenOriginalProducto = producto.Porcentaje;
+            evaluandoCambioCosto = false;
+            txtPorcentaje.Text = FormatoPorcentaje.ParaMostrar(producto.Porcentaje, producto.PrecioCompra).ToString("0.##");
+            txtPrecioVenta.Text = producto.PrecioVenta.ToString("0.00");
+            txtCantidad.Focus();
+            txtCantidad.Select(0, txtCantidad.Text.Length);
         }
 
         private void frmCompraRegistrar_Load(object sender, EventArgs e)
@@ -188,8 +212,14 @@ namespace CapaPresentacion
                     txtCodigoProducto.Text = modal._Producto.Codigo;
                     txtProducto.Text = modal._Producto.Nombre;
                     txtPrecioCompra.Text = modal._Producto.PrecioCompra.ToString("0.00");
-                    txtPorcentaje.Text = FormatoPorcentaje.ParaEditar(modal._Producto.Porcentaje, modal._Producto.PrecioCompra).ToString("0");
-                    txtPrecioCompra.Select();
+                    costoOriginalProducto = modal._Producto.PrecioCompra;
+                    precioVentaOriginalProducto = modal._Producto.PrecioVenta;
+                    margenOriginalProducto = modal._Producto.Porcentaje;
+                    evaluandoCambioCosto = false;
+                    txtPorcentaje.Text = FormatoPorcentaje.ParaMostrar(modal._Producto.Porcentaje, modal._Producto.PrecioCompra).ToString("0.##");
+                    txtPrecioVenta.Text = modal._Producto.PrecioVenta.ToString("0.00");
+                    txtCantidad.Focus();
+                    txtCantidad.Select(0, txtCantidad.Text.Length);
                 }
                 else
                 {
@@ -203,15 +233,179 @@ namespace CapaPresentacion
 
         }
 
-        private void PrecioYPorcentaje_TextChanged(object sender, EventArgs e)
+        private void PrecioCompra_TextChanged(object sender, EventArgs e)
         {
-            if (!decimal.TryParse(txtPrecioCompra.Text, out decimal precioCompra) || precioCompra < 0 ||
+            ActualizarMargenDesdePrecios();
+        }
+
+        private void PrecioVenta_TextChanged(object sender, EventArgs e)
+        {
+            ActualizarMargenDesdePrecios();
+        }
+
+        private void Porcentaje_TextChanged(object sender, EventArgs e)
+        {
+            if (sincronizandoPrecios || !decimal.TryParse(txtPrecioCompra.Text, out decimal costo) || costo < 0 ||
                 !decimal.TryParse(txtPorcentaje.Text, out decimal porcentaje) || porcentaje < 0)
                 return;
 
-            decimal precioObjetivo = precioCompra * (1m + porcentaje / 100m);
-            decimal precioRedondeado = Math.Ceiling(precioObjetivo * 4m) / 4m;
-            txtPrecioVenta.Text = precioRedondeado.ToString("0.00");
+            decimal objetivo = costo * (1m + porcentaje / 100m);
+            decimal ventaRedondeada = Math.Ceiling(objetivo * 4m) / 4m;
+            sincronizandoPrecios = true;
+            txtPrecioVenta.Text = ventaRedondeada.ToString("0.00");
+            sincronizandoPrecios = false;
+            ActualizarMargenDesdePrecios();
+        }
+
+        private void ActualizarMargenDesdePrecios()
+        {
+            if (sincronizandoPrecios || !decimal.TryParse(txtPrecioCompra.Text, out decimal costo) || costo <= 0 ||
+                !decimal.TryParse(txtPrecioVenta.Text, out decimal venta) || venta < 0)
+                return;
+
+            decimal margen = (venta - costo) / costo * 100m;
+            sincronizandoPrecios = true;
+            txtPorcentaje.Text = margen.ToString("0.##");
+            sincronizandoPrecios = false;
+        }
+
+        private void PrecioCompra_Leave(object sender, EventArgs e)
+        {
+            if (evaluandoCambioCosto || !decimal.TryParse(txtPrecioCompra.Text, out decimal costoNuevo) ||
+                costoNuevo < 0 || costoNuevo == costoOriginalProducto || costoOriginalProducto <= 0 ||
+                !decimal.TryParse(txtPrecioVenta.Text, out decimal precioVentaActual))
+                return;
+
+            evaluandoCambioCosto = true;
+            var botones = MessageBoxButtons.YesNo;
+            DialogResult actualizarPrecio = CapaPresentacion.DialogoSistema.Show(this,
+                "El costo registrado era " + costoOriginalProducto.ToString("Q 0.00") +
+                " y el nuevo costo es " + costoNuevo.ToString("Q 0.00") + ".\n\n" +
+                "¿Desea ajustar también el precio de venta conservando el margen anterior?\n" +
+                "Si elige No, se conservará el precio de venta actual y se recalculará el margen.",
+                "Cambio de costo", botones, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
+
+            if (actualizarPrecio == DialogResult.Yes)
+            {
+                decimal margenAnterior = margenOriginalProducto * 100m;
+                decimal ventaObjetivo = Math.Ceiling((costoNuevo * (1m + margenAnterior / 100m)) * 4m) / 4m;
+                txtPrecioVenta.Text = ventaObjetivo.ToString("0.00");
+            }
+            else
+            {
+                txtPrecioVenta.Text = precioVentaOriginalProducto.ToString("0.00");
+                ActualizarMargenDesdePrecios();
+            }
+        }
+
+        private bool SolicitarTotalFactura(decimal totalProductos, out decimal totalFactura, out decimal importeNoInventariable)
+        {
+            totalFactura = 0;
+            importeNoInventariable = 0;
+            using (var dialogo = new Form())
+            using (var etiqueta = new Label())
+            using (var entrada = new TextBox())
+            using (var aceptar = new Button())
+            using (var cancelar = new Button())
+            {
+                dialogo.Text = "Confirmar total de factura";
+                dialogo.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialogo.StartPosition = FormStartPosition.CenterParent;
+                dialogo.ClientSize = new Size(430, 155);
+                dialogo.MinimizeBox = false;
+                dialogo.MaximizeBox = false;
+                etiqueta.Text = "Total de productos cargados: Q " + totalProductos.ToString("N2") +
+                    "\nEscriba el total que aparece en la factura:";
+                etiqueta.SetBounds(16, 14, 398, 42);
+                entrada.SetBounds(18, 62, 190, 26);
+                entrada.Text = totalProductos.ToString("0.00");
+                entrada.TextAlign = HorizontalAlignment.Right;
+                aceptar.Text = "Continuar";
+                aceptar.DialogResult = DialogResult.OK;
+                aceptar.SetBounds(218, 108, 95, 30);
+                cancelar.Text = "Cancelar";
+                cancelar.DialogResult = DialogResult.Cancel;
+                cancelar.SetBounds(319, 108, 95, 30);
+                dialogo.Controls.AddRange(new System.Windows.Forms.Control[] { etiqueta, entrada, aceptar, cancelar });
+                dialogo.AcceptButton = aceptar;
+                dialogo.CancelButton = cancelar;
+                dialogo.Shown += delegate { entrada.Focus(); entrada.SelectAll(); };
+
+                if (dialogo.ShowDialog(this) != DialogResult.OK ||
+                    !decimal.TryParse(entrada.Text.Trim(), out totalFactura) || totalFactura < 0)
+                {
+                    CapaPresentacion.DialogoSistema.Show("Ingrese un total de factura válido.", "Total inválido",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+            }
+
+            decimal diferencia = totalFactura - totalProductos;
+            if (Math.Abs(diferencia) <= 1.00m)
+            {
+                importeNoInventariable = Math.Max(0, diferencia);
+                return true;
+            }
+
+            if (diferencia < 0)
+            {
+                CapaPresentacion.DialogoSistema.Show("Los productos cargados superan el total de la factura por " +
+                    (-diferencia).ToString("Q 0.00") + ". Revise cantidades y precios antes de registrar.",
+                    "La compra no cuadra", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            DialogResult productosCompletos = CapaPresentacion.DialogoSistema.Show(this,
+                "La factura supera en Q " + diferencia.ToString("N2") + " los productos cargados.\n\n" +
+                "¿Ya agregó todos los productos que deben entrar al inventario?\n" +
+                "Si falta alguno, elija No para volver a la compra y agregarlo.",
+                "Revisar productos", MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button2);
+            if (productosCompletos != DialogResult.Yes) return false;
+
+            using (var dialogo = new Form())
+            using (var etiqueta = new Label())
+            using (var entrada = new TextBox())
+            using (var aceptar = new Button())
+            using (var cancelar = new Button())
+            {
+                dialogo.Text = "Importe fuera del inventario";
+                dialogo.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialogo.StartPosition = FormStartPosition.CenterParent;
+                dialogo.ClientSize = new Size(480, 175);
+                dialogo.MinimizeBox = false;
+                dialogo.MaximizeBox = false;
+                etiqueta.Text = "La factura supera los productos cargados por Q " + diferencia.ToString("N2") +
+                    ".\nIndique cuánto corresponde a artículos o cargos que no se controlan en inventario:";
+                etiqueta.SetBounds(16, 14, 448, 52);
+                entrada.SetBounds(18, 72, 190, 26);
+                entrada.Text = diferencia.ToString("0.00");
+                entrada.TextAlign = HorizontalAlignment.Right;
+                aceptar.Text = "Validar";
+                aceptar.DialogResult = DialogResult.OK;
+                aceptar.SetBounds(258, 126, 95, 30);
+                cancelar.Text = "Volver";
+                cancelar.DialogResult = DialogResult.Cancel;
+                cancelar.SetBounds(359, 126, 95, 30);
+                dialogo.Controls.AddRange(new System.Windows.Forms.Control[] { etiqueta, entrada, aceptar, cancelar });
+                dialogo.AcceptButton = aceptar;
+                dialogo.CancelButton = cancelar;
+                dialogo.Shown += delegate { entrada.Focus(); entrada.SelectAll(); };
+
+                if (dialogo.ShowDialog(this) != DialogResult.OK ||
+                    !decimal.TryParse(entrada.Text.Trim(), out importeNoInventariable) || importeNoInventariable < 0)
+                    return false;
+            }
+
+            decimal diferenciaFinal = totalFactura - importeNoInventariable - totalProductos;
+            if (Math.Abs(diferenciaFinal) > 1.00m)
+            {
+                CapaPresentacion.DialogoSistema.Show("La factura aún difiere en Q " + diferenciaFinal.ToString("N2") +
+                    ". Corrija el importe no inventariable o vuelva a revisar los productos.",
+                    "La compra no cuadra", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+            return true;
         }
 
         private void btnAgregar_Click(object sender, EventArgs e)
@@ -253,10 +447,9 @@ namespace CapaPresentacion
                 return;
             }
 
-            decimal precioVentaMinimo = Math.Ceiling(precioCompra * (1m + porcentajeSolicitado / 100m) * 4m) / 4m;
-            if (precioVenta + 0.0001m < precioVentaMinimo || Math.Abs(precioVenta * 4m - decimal.Round(precioVenta * 4m, 0)) > 0.0001m)
+            if (Math.Abs(precioVenta * 4m - decimal.Round(precioVenta * 4m, 0)) > 0.0001m)
             {
-                CapaPresentacion.DialogoSistema.Show("El precio de venta debe respetar el margen mínimo y terminar en .00, .25, .50 o .75.", "Precio de venta inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                CapaPresentacion.DialogoSistema.Show("El precio de venta debe terminar en .00, .25, .50 o .75.", "Precio de venta inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtPrecioVenta.Focus();
                 txtPrecioVenta.SelectAll();
                 return;
@@ -338,6 +531,20 @@ namespace CapaPresentacion
                 return;
             }
 
+            decimal subtotalProductos = Convert.ToDecimal(txtTotalPagar.Text);
+            if (!SolicitarTotalFactura(subtotalProductos, out decimal totalFactura, out decimal montoNoInventariable))
+                return;
+
+            DialogResult confirmar = CapaPresentacion.DialogoSistema.Show(this,
+                "Revise la compra antes de registrarla:\n\n" +
+                "Productos cargados: Q " + subtotalProductos.ToString("N2") + "\n" +
+                "Importe fuera de inventario: Q " + montoNoInventariable.ToString("N2") + "\n" +
+                "Total de factura: Q " + totalFactura.ToString("N2") + "\n\n" +
+                "¿Confirma el registro?",
+                "Confirmar compra", MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button2);
+            if (confirmar != DialogResult.Yes) return;
+
             DataTable detalle_compra = new DataTable();
 
             detalle_compra.Columns.Add("IdProducto", typeof(int));
@@ -368,7 +575,8 @@ namespace CapaPresentacion
                 oProveedor = new Proveedor() { IdProveedor = Convert.ToInt32(txtIdProveedor.Text) },
                 TipoDocumento = ((OpcionCombo)cboTipoDocumento.SelectedItem).Texto,
                 NumeroDocumento = string.Empty,
-                MontoTotal = Convert.ToDecimal(txtTotalPagar.Text)
+                MontoTotal = totalFactura,
+                MontoNoInventariable = montoNoInventariable
             };
 
 

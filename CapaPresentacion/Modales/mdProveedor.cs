@@ -84,7 +84,9 @@ namespace CapaPresentacion.Modales
             }
             cboBuscar.DisplayMember = "Texto";
             cboBuscar.ValueMember = "Valor";
-            cboBuscar.SelectedIndex = 0;
+            int indiceRazonSocial = cboBuscar.Items.Cast<OpcionCombo>()
+                .ToList().FindIndex(opcion => string.Equals(Convert.ToString(opcion.Valor), "RazonSocial", StringComparison.OrdinalIgnoreCase));
+            cboBuscar.SelectedIndex = indiceRazonSocial >= 0 ? indiceRazonSocial : 0;
 
             //Mostrar todos los usuarios:
             List<Proveedor> listaUsuarios = new CN_Proveedor().Listar();

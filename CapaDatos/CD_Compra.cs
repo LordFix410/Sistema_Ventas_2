@@ -59,6 +59,7 @@ namespace CapaDatos
                     numeroDocumento.Direction = ParameterDirection.InputOutput;
                     numeroDocumento.Value = obj.NumeroDocumento;
                     cmd.Parameters.AddWithValue("MontoTotal",obj.MontoTotal);
+                    cmd.Parameters.AddWithValue("MontoNoInventariable", obj.MontoNoInventariable);
                     SqlParameter parametroDetalle = cmd.Parameters.AddWithValue("DetalleCompra", detalleCompra);
                     parametroDetalle.SqlDbType = SqlDbType.Structured;
                     parametroDetalle.TypeName = "dbo.EDetalle_Compra";

@@ -14,6 +14,7 @@ namespace CapaEntidad
         public string TipoDocumento {  get; set; }
         public string NumeroDocumento {  get; set; }
         public decimal MontoTotal {  get; set; }
+        public decimal MontoNoInventariable { get; set; }
         public List<Detalle_Compra> oDetalleCompras { get; set; }
         public string FechaRegistro {  get; set; }
     }

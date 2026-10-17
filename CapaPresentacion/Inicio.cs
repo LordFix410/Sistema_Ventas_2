@@ -41,6 +41,8 @@ namespace CapaPresentacion
                     iconmenu.Enabled = false;
                 }
             }
+            finanzasToolStripMenuItem.Visible = listaPermisos.Any(m => m.NombreMenu == finanzasToolStripMenuItem.Name);
+            menuAcercaDe.Visible = listaPermisos.Any(m => m.NombreMenu == menuAcercaDe.Name);
             lblNombreUsuario.Text = usuarioActual.NombreCompleto.ToString();
         }
         private void AbrirFrm(IconMenuItem menu, Form formulario)
@@ -114,6 +116,11 @@ namespace CapaPresentacion
         private void menuMantenedor_Click(object sender, EventArgs e)
         {
             
+        }
+
+        private void finanzasToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            AbrirFrm(menuMantenedor, new frmFinanzas(usuarioActual));
         }
 
         private void menuAcercaDe_Click(object sender, EventArgs e)

@@ -33,6 +33,7 @@
             this.menuMantenedor = new FontAwesome.Sharp.IconMenuItem();
             this.btnCategoria = new FontAwesome.Sharp.IconMenuItem();
             this.btnProducto = new FontAwesome.Sharp.IconMenuItem();
+            this.finanzasToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.negocioToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuVentas = new FontAwesome.Sharp.IconMenuItem();
             this.registrarToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -53,9 +54,9 @@
             this.lblNombreUsuario = new System.Windows.Forms.Label();
             this.menuTitulo.SuspendLayout();
             this.SuspendLayout();
-            // 
+            //
             // menuTitulo
-            // 
+            //
             this.menuTitulo.BackColor = System.Drawing.Color.White;
             this.menuTitulo.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.menuTitulo.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -94,6 +95,7 @@
             this.menuMantenedor.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.btnCategoria,
             this.btnProducto,
+            this.finanzasToolStripMenuItem,
             this.negocioToolStripMenuItem});
             this.menuMantenedor.IconChar = FontAwesome.Sharp.IconChar.ScrewdriverWrench;
             this.menuMantenedor.IconColor = System.Drawing.Color.Black;
@@ -125,9 +127,16 @@
             this.btnProducto.Size = new System.Drawing.Size(224, 26);
             this.btnProducto.Text = "Producto";
             this.btnProducto.Click += new System.EventHandler(this.btnProducto_Click);
-            // 
+            //
+            // finanzasToolStripMenuItem
+            //
+            this.finanzasToolStripMenuItem.Name = "menuFinanzas";
+            this.finanzasToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.finanzasToolStripMenuItem.Text = "Cierre de caja y finanzas";
+            this.finanzasToolStripMenuItem.Click += new System.EventHandler(this.finanzasToolStripMenuItem_Click);
+            //
             // negocioToolStripMenuItem
-            // 
+            //
             this.negocioToolStripMenuItem.Name = "negocioToolStripMenuItem";
             this.negocioToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
             this.negocioToolStripMenuItem.Text = "Negocio";
@@ -373,6 +382,7 @@
         private System.Windows.Forms.Label lblNombreUsuario;
         private FontAwesome.Sharp.IconMenuItem btnCategoria;
         private FontAwesome.Sharp.IconMenuItem btnProducto;
+        private System.Windows.Forms.ToolStripMenuItem finanzasToolStripMenuItem;
         private FontAwesome.Sharp.IconMenuItem submRegistrarCompra;
         private FontAwesome.Sharp.IconMenuItem iconDetalleCompra;
         private System.Windows.Forms.ToolStripMenuItem registrarToolStripMenuItem;
