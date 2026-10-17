@@ -5,7 +5,7 @@
     Incluye las tablas de obligaciones personales y permisos de Finanzas.
     Al final crea o actualiza el login de aplicación ventas_app2.
     Ejecutar con una cuenta administradora del servidor SQL.
-    Para una base ya existente usa migracion_finanzas.sql, no vuelvas a crearla.
+    Para una base ya existente ejecuta migracion_finanzas.sql y migracion_reposicion_cotizaciones.sql según corresponda.
 */
 create database DBSISTEMA_VENTA
 go
@@ -80,6 +80,10 @@ Codigo varchar(50),
 Nombre varchar(50),
 Descripcion varchar(50),
 IdCategoria int references CATEGORIA(IdCategoria),
+IdGrupoReposicion int NULL,
+CantidadMinima int NULL,
+CantidadMaxima int NULL,
+IdGrupoProveedor int NULL,
 Stock int not null default 0,
 PrecioCompra decimal(10,2) default 0,
 PrecioVenta decimal(10,2) default 0,
@@ -88,6 +92,60 @@ Estado bit,
 FechaRegistro datetime default getdate()
 )
 go
+
+-- Grupos de productos sustituibles para reposición. Los límites pertenecen
+-- al grupo completo y el stock se suma entre todos sus productos.
+CREATE TABLE GRUPO_REPOSICION(
+    IdGrupoReposicion int IDENTITY(1,1) PRIMARY KEY,
+    Nombre varchar(100) NOT NULL,
+    CantidadMinima int NOT NULL,
+    CantidadMaxima int NOT NULL,
+    Activo bit NOT NULL CONSTRAINT DF_GRUPO_REPOSICION_Activo DEFAULT(1),
+    FechaRegistro datetime2(0) NOT NULL CONSTRAINT DF_GRUPO_REPOSICION_Fecha DEFAULT(SYSDATETIME()),
+    CONSTRAINT UQ_GRUPO_REPOSICION_Nombre UNIQUE(Nombre),
+    CONSTRAINT CK_GRUPO_REPOSICION_Cantidades CHECK(CantidadMinima >= 0 AND CantidadMaxima >= CantidadMinima)
+)
+GO
+
+-- Perfiles reutilizables de proveedores. Un perfil contiene varios proveedores;
+-- cada producto se vincula al perfil cuyos proveedores son válidos para cotizarlo.
+CREATE TABLE GRUPO_PROVEEDOR(
+    IdGrupoProveedor int IDENTITY(1,1) PRIMARY KEY,
+    Nombre varchar(100) NOT NULL,
+    Activo bit NOT NULL CONSTRAINT DF_GRUPO_PROVEEDOR_Activo DEFAULT(1),
+    FechaRegistro datetime2(0) NOT NULL CONSTRAINT DF_GRUPO_PROVEEDOR_Fecha DEFAULT(SYSDATETIME()),
+    CONSTRAINT UQ_GRUPO_PROVEEDOR_Nombre UNIQUE(Nombre)
+)
+GO
+
+CREATE TABLE GRUPO_PROVEEDOR_DETALLE(
+    IdGrupoProveedor int NOT NULL REFERENCES GRUPO_PROVEEDOR(IdGrupoProveedor),
+    IdProveedor int NOT NULL REFERENCES PROVEEDOR(IdProveedor),
+    FechaRegistro datetime2(0) NOT NULL CONSTRAINT DF_GRUPO_PROVEEDOR_DETALLE_Fecha DEFAULT(SYSDATETIME()),
+    CONSTRAINT PK_GRUPO_PROVEEDOR_DETALLE PRIMARY KEY(IdGrupoProveedor, IdProveedor)
+)
+GO
+
+ALTER TABLE dbo.PRODUCTO ADD CONSTRAINT FK_PRODUCTO_GrupoReposicion
+    FOREIGN KEY(IdGrupoReposicion) REFERENCES dbo.GRUPO_REPOSICION(IdGrupoReposicion)
+GO
+ALTER TABLE dbo.PRODUCTO ADD CONSTRAINT FK_PRODUCTO_GrupoProveedor
+    FOREIGN KEY(IdGrupoProveedor) REFERENCES dbo.GRUPO_PROVEEDOR(IdGrupoProveedor)
+GO
+ALTER TABLE dbo.PRODUCTO ADD CONSTRAINT CK_PRODUCTO_Reposicion
+    CHECK (
+        (IdGrupoReposicion IS NOT NULL AND CantidadMinima IS NULL AND CantidadMaxima IS NULL)
+        OR
+        (IdGrupoReposicion IS NULL AND
+            ((CantidadMinima IS NULL AND CantidadMaxima IS NULL)
+             OR (CantidadMinima IS NOT NULL AND CantidadMaxima IS NOT NULL
+                 AND CantidadMinima >= 0 AND CantidadMaxima >= CantidadMinima)))
+    )
+GO
+CREATE INDEX IX_PRODUCTO_GrupoReposicion ON dbo.PRODUCTO(IdGrupoReposicion, Estado, Stock)
+GO
+CREATE INDEX IX_PRODUCTO_GrupoProveedor ON dbo.PRODUCTO(IdGrupoProveedor, Estado)
+GO
 
 create table COMPRA(
 IdCompra int primary key identity,
@@ -1204,6 +1262,84 @@ BEGIN
     INNER JOIN dbo.PRODUCTO p ON p.IdProducto = dv.IdProducto
     INNER JOIN dbo.CATEGORIA ca ON ca.IdCategoria = p.IdCategoria
     WHERE CONVERT(date, v.FechaRegistro) BETWEEN @fechainicio AND @fechafin;
+END;
+GO
+
+-- Lista preliminar para cotizar. CantidadFaltante y CantidadMaxima son
+-- referencias; el usuario decide cuánto pedir y no se crea ninguna compra.
+IF OBJECT_ID('dbo.sp_ReporteReposicionPorProveedor', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_ReporteReposicionPorProveedor;
+GO
+CREATE PROCEDURE dbo.sp_ReporteReposicionPorProveedor
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    ;WITH StockGrupo AS
+    (
+        SELECT gr.IdGrupoReposicion, gr.Nombre AS GrupoReposicion,
+               gr.CantidadMinima, gr.CantidadMaxima,
+               SUM(p.Stock) AS StockActual
+        FROM dbo.GRUPO_REPOSICION gr
+        INNER JOIN dbo.PRODUCTO p ON p.IdGrupoReposicion = gr.IdGrupoReposicion
+        WHERE gr.Activo = 1 AND p.Estado = 1
+        GROUP BY gr.IdGrupoReposicion, gr.Nombre, gr.CantidadMinima, gr.CantidadMaxima
+    ),
+    ProductosPendientes AS
+    (
+        SELECT p.IdProducto, p.Codigo, p.Nombre,
+               sg.IdGrupoReposicion, sg.GrupoReposicion,
+               sg.StockActual, sg.CantidadMinima, sg.CantidadMaxima,
+               sg.CantidadMinima - sg.StockActual AS CantidadFaltante,
+               p.IdGrupoProveedor
+        FROM StockGrupo sg
+        INNER JOIN dbo.PRODUCTO p ON p.IdGrupoReposicion = sg.IdGrupoReposicion
+        WHERE sg.StockActual < sg.CantidadMinima AND p.Estado = 1
+
+        UNION ALL
+
+        SELECT p.IdProducto, p.Codigo, p.Nombre,
+               CAST(NULL AS int), CAST(NULL AS varchar(100)),
+               p.Stock, p.CantidadMinima, p.CantidadMaxima,
+               p.CantidadMinima - p.Stock, p.IdGrupoProveedor
+        FROM dbo.PRODUCTO p
+        WHERE p.Estado = 1 AND p.IdGrupoReposicion IS NULL
+          AND p.CantidadMinima IS NOT NULL AND p.CantidadMaxima IS NOT NULL
+          AND p.Stock < p.CantidadMinima
+    )
+    SELECT pp.IdGrupoReposicion, pp.GrupoReposicion,
+           gp.IdGrupoProveedor, gp.Nombre AS GrupoProveedores,
+           pr.IdProveedor, pr.RazonSocial AS Proveedor,
+           pp.IdProducto, pp.Codigo, pp.Nombre AS Producto,
+           pp.StockActual, pp.CantidadMinima, pp.CantidadMaxima,
+           pp.CantidadFaltante AS FaltanteReferencia,
+           ultimo.PrecioCompra AS UltimoPrecioConEsteProveedor,
+           ultimo.FechaCompra AS FechaUltimaCompraConEsteProveedor,
+           historico.PrecioCompra AS UltimoPrecioHistorico,
+           historico.RazonSocial AS UltimoProveedorHistorico,
+           historico.FechaCompra AS FechaUltimoPrecioHistorico
+    FROM ProductosPendientes pp
+    INNER JOIN dbo.GRUPO_PROVEEDOR gp ON gp.IdGrupoProveedor = pp.IdGrupoProveedor AND gp.Activo = 1
+    INNER JOIN dbo.GRUPO_PROVEEDOR_DETALLE gpd ON gpd.IdGrupoProveedor = gp.IdGrupoProveedor
+    INNER JOIN dbo.PROVEEDOR pr ON pr.IdProveedor = gpd.IdProveedor AND pr.Estado = 1
+    OUTER APPLY
+    (
+        SELECT TOP (1) dc.PrecioCompra, c.FechaRegistro AS FechaCompra
+        FROM dbo.DETALLE_COMPRA dc
+        INNER JOIN dbo.COMPRA c ON c.IdCompra = dc.IdCompra
+        WHERE dc.IdProducto = pp.IdProducto AND c.IdProveedor = pr.IdProveedor
+        ORDER BY c.FechaRegistro DESC, dc.IdDetalleCompra DESC
+    ) ultimo
+    OUTER APPLY
+    (
+        SELECT TOP (1) dc.PrecioCompra, prh.RazonSocial, c.FechaRegistro AS FechaCompra
+        FROM dbo.DETALLE_COMPRA dc
+        INNER JOIN dbo.COMPRA c ON c.IdCompra = dc.IdCompra
+        INNER JOIN dbo.PROVEEDOR prh ON prh.IdProveedor = c.IdProveedor
+        WHERE dc.IdProducto = pp.IdProducto
+        ORDER BY c.FechaRegistro DESC, dc.IdDetalleCompra DESC
+    ) historico
+    ORDER BY gp.Nombre, pr.RazonSocial, pp.GrupoReposicion, pp.Nombre;
 END;
 GO
 
