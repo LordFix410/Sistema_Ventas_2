@@ -165,7 +165,7 @@ namespace CapaPresentacion
 
         private void negocioToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            AbrirFrm(menuVentas, new frmNegocio());
+            AbrirFrm(menuMantenedor, new frmNegocio());
         }
 
         private void reporteComprasToolStripMenuItem_Click(object sender, EventArgs e)
