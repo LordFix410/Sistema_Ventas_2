@@ -26,7 +26,12 @@ namespace CapaPresentacion
         private decimal precioVentaOriginalProducto;
         private decimal margenOriginalProducto;
         private int indiceProductoEditando = -1;
-        public frmCompraRegistrar(Usuario oUsuario = null)
+        // Visual Studio WinForms Designer requires a real parameterless constructor.
+        public frmCompraRegistrar() : this(null)
+        {
+        }
+
+        public frmCompraRegistrar(Usuario oUsuario)
         {
             _Usuario = oUsuario;
             InitializeComponent();

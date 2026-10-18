@@ -58,6 +58,7 @@
     <Compile Include="CD_Reporte.cs" />
     <Compile Include="CD_ReporteDatos.cs" />
     <Compile Include="CD_Finanzas.cs" />
+    <Compile Include="CD_Reposicion.cs" />
     <Compile Include="CD_Rol.cs" />
     <Compile Include="CD_Usuario.cs" />
     <Compile Include="CD_Venta.cs" />

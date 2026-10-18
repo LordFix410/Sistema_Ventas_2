@@ -42,6 +42,7 @@ namespace CapaPresentacion
                 }
             }
             finanzasToolStripMenuItem.Visible = listaPermisos.Any(m => m.NombreMenu == finanzasToolStripMenuItem.Name);
+            reposicionToolStripMenuItem.Visible = finanzasToolStripMenuItem.Visible;
             menuAcercaDe.Visible = listaPermisos.Any(m => m.NombreMenu == menuAcercaDe.Name);
             lblNombreUsuario.Text = usuarioActual.NombreCompleto.ToString();
         }
@@ -121,6 +122,11 @@ namespace CapaPresentacion
         private void finanzasToolStripMenuItem_Click(object sender, EventArgs e)
         {
             AbrirFrm(menuMantenedor, new frmFinanzas(usuarioActual));
+        }
+
+        private void reposicionToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            AbrirFrm(menuMantenedor, new frmReposicion());
         }
 
         private void menuAcercaDe_Click(object sender, EventArgs e)

@@ -34,6 +34,7 @@
             this.btnCategoria = new FontAwesome.Sharp.IconMenuItem();
             this.btnProducto = new FontAwesome.Sharp.IconMenuItem();
             this.finanzasToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.reposicionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.negocioToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuVentas = new FontAwesome.Sharp.IconMenuItem();
             this.registrarToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -96,6 +97,7 @@
             this.btnCategoria,
             this.btnProducto,
             this.finanzasToolStripMenuItem,
+            this.reposicionToolStripMenuItem,
             this.negocioToolStripMenuItem});
             this.menuMantenedor.IconChar = FontAwesome.Sharp.IconChar.ScrewdriverWrench;
             this.menuMantenedor.IconColor = System.Drawing.Color.Black;
@@ -134,6 +136,13 @@
             this.finanzasToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
             this.finanzasToolStripMenuItem.Text = "Cierre de caja y finanzas";
             this.finanzasToolStripMenuItem.Click += new System.EventHandler(this.finanzasToolStripMenuItem_Click);
+            //
+            // reposicionToolStripMenuItem
+            //
+            this.reposicionToolStripMenuItem.Name = "menuReposicion";
+            this.reposicionToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.reposicionToolStripMenuItem.Text = "Reposición y cotizaciones";
+            this.reposicionToolStripMenuItem.Click += new System.EventHandler(this.reposicionToolStripMenuItem_Click);
             //
             // negocioToolStripMenuItem
             //
@@ -383,6 +392,7 @@
         private FontAwesome.Sharp.IconMenuItem btnCategoria;
         private FontAwesome.Sharp.IconMenuItem btnProducto;
         private System.Windows.Forms.ToolStripMenuItem finanzasToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem reposicionToolStripMenuItem;
         private FontAwesome.Sharp.IconMenuItem submRegistrarCompra;
         private FontAwesome.Sharp.IconMenuItem iconDetalleCompra;
         private System.Windows.Forms.ToolStripMenuItem registrarToolStripMenuItem;

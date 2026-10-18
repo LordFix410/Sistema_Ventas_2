@@ -69,6 +69,11 @@ namespace CapaPresentacion
         private decimal gastosMensualesActuales;
         private decimal ventaHoyActual;
 
+        // Allows Visual Studio to instantiate the form in its WinForms Designer.
+        public frmFinanzas() : this(null)
+        {
+        }
+
         public frmFinanzas(Usuario usuario)
         {
             usuarioActual = usuario;
