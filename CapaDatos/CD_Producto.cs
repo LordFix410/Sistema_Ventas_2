@@ -126,8 +126,9 @@ namespace CapaDatos
                     
 
                     StringBuilder query = new StringBuilder();
-                    query.AppendLine("select IdProducto, Codigo, Nombre, p.Descripcion,c.IdCategoria, c.DESCRIPCION[DescripcionCategoria], Stock, PrecioCompra, PrecioVenta, Porcentaje, p.Estado from PRODUCTO p");
+                    query.AppendLine("select p.IdProducto, p.Codigo, p.Nombre, p.Descripcion, c.IdCategoria, c.DESCRIPCION[DescripcionCategoria], p.Stock, p.PrecioCompra, p.PrecioVenta, p.Porcentaje, p.Estado, p.IdGrupoReposicion, COALESCE(p.CantidadMinima, gr.CantidadMinima) CantidadMinima, COALESCE(p.CantidadMaxima, gr.CantidadMaxima) CantidadMaxima, p.IdGrupoProveedor, ISNULL(gr.Nombre,'') GrupoReposicion, ISNULL(gp.Nombre,'') GrupoProveedores from PRODUCTO p");
                     query.AppendLine("inner join CATEGORIA c on c.IdCategoria = p.IdCategoria");
+                    query.AppendLine("left join dbo.GRUPO_REPOSICION gr on gr.IdGrupoReposicion=p.IdGrupoReposicion left join dbo.GRUPO_PROVEEDOR gp on gp.IdGrupoProveedor=p.IdGrupoProveedor");
 
                     SqlCommand cmd = new SqlCommand(query.ToString(), oconexion);
                     cmd.CommandType = CommandType.Text;
@@ -149,7 +150,12 @@ namespace CapaDatos
                                 PrecioCompra = Convert.ToDecimal(dr["PrecioCompra"].ToString()),
                                 PrecioVenta = Convert.ToDecimal(dr["PrecioVenta"].ToString()),
                                 Porcentaje = Convert.ToDecimal(dr["Porcentaje"]),
-                                Estado = Convert.ToBoolean(dr["Estado"])    
+                                Estado = Convert.ToBoolean(dr["Estado"]),
+                                IdGrupoReposicion = dr["IdGrupoReposicion"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoReposicion"]),
+                                CantidadMinima = dr["CantidadMinima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMinima"]),
+                                CantidadMaxima = dr["CantidadMaxima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMaxima"]),
+                                IdGrupoProveedor = dr["IdGrupoProveedor"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoProveedor"]),
+                                GrupoReposicion = dr["GrupoReposicion"].ToString(), GrupoProveedores = dr["GrupoProveedores"].ToString()
                             });
                         }
                     }
@@ -157,7 +163,7 @@ namespace CapaDatos
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException("No se pudieron cargar los productos. Verifica que hayas ejecutado migracion_porcentaje_compra.sql en DBSISTEMA_VENTA.", ex);
+                    throw new InvalidOperationException("No se pudieron cargar los productos. Verifica que hayas ejecutado migracion_reposicion_cotizaciones.sql en DBSISTEMA_VENTA.", ex);
                 }
             }
             return lista;
@@ -181,6 +187,7 @@ namespace CapaDatos
                     cmd.Parameters.AddWithValue("Descripcion", obj.Descripcion);
                     cmd.Parameters.AddWithValue("IdCategoria", obj.oCategoria.IdCategoria);
                     AgregarParametroPorcentaje(cmd, obj.Porcentaje);
+                    AgregarParametrosReposicion(cmd, obj);
                     cmd.Parameters.AddWithValue("Estado", obj.Estado);
                     cmd.Parameters.Add("Resultado", SqlDbType.Int).Direction = ParameterDirection.Output;
                     cmd.Parameters.Add("Mensaje", SqlDbType.VarChar, 500).Direction = ParameterDirection.Output;
@@ -219,6 +226,7 @@ namespace CapaDatos
                     cmd.Parameters.AddWithValue("Descripcion", obj.Descripcion);
                     cmd.Parameters.AddWithValue("IdCategoria", obj.oCategoria.IdCategoria);
                     AgregarParametroPorcentaje(cmd, obj.Porcentaje);
+                    AgregarParametrosReposicion(cmd, obj);
                     cmd.Parameters.AddWithValue("Estado", obj.Estado);
                     cmd.Parameters.Add("Resultado", SqlDbType.Int).Direction = ParameterDirection.Output;
                     cmd.Parameters.Add("Mensaje", SqlDbType.VarChar, 500).Direction = ParameterDirection.Output;
@@ -236,6 +244,14 @@ namespace CapaDatos
                 Mensaje = ex.Message;
             }
             return respuesta;
+        }
+
+        private static void AgregarParametrosReposicion(SqlCommand cmd, Producto obj)
+        {
+            cmd.Parameters.Add("IdGrupoReposicion", SqlDbType.Int).Value = (object)obj.IdGrupoReposicion ?? DBNull.Value;
+            cmd.Parameters.Add("CantidadMinima", SqlDbType.Int).Value = (object)obj.CantidadMinima ?? DBNull.Value;
+            cmd.Parameters.Add("CantidadMaxima", SqlDbType.Int).Value = (object)obj.CantidadMaxima ?? DBNull.Value;
+            cmd.Parameters.Add("IdGrupoProveedor", SqlDbType.Int).Value = (object)obj.IdGrupoProveedor ?? DBNull.Value;
         }
 
         //------------Eliminar---------

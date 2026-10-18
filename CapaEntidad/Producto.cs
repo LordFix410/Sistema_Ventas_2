@@ -18,6 +18,12 @@ namespace CapaEntidad
         public decimal PrecioCompra {  get; set; }
         public decimal PrecioVenta {  get; set; }
         public decimal Porcentaje { get; set; }
+        public int? IdGrupoReposicion { get; set; }
+        public int? CantidadMinima { get; set; }
+        public int? CantidadMaxima { get; set; }
+        public int? IdGrupoProveedor { get; set; }
+        public string GrupoReposicion { get; set; }
+        public string GrupoProveedores { get; set; }
         public bool Estado {  get; set; }
         public string FechaRegistro {  get; set; }
 

@@ -304,7 +304,7 @@
             // 
             this.cboEstado.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboEstado.FormattingEnabled = true;
-            this.cboEstado.Location = new System.Drawing.Point(43, 139);
+            this.cboEstado.Location = new System.Drawing.Point(43, 148);
             this.cboEstado.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.cboEstado.Name = "cboEstado";
             this.cboEstado.Size = new System.Drawing.Size(177, 24);
@@ -314,7 +314,7 @@
             // 
             this.label8.AutoSize = true;
             this.label8.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label8.Location = new System.Drawing.Point(43, 118);
+            this.label8.Location = new System.Drawing.Point(43, 122);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(53, 16);
             this.label8.TabIndex = 64;
@@ -322,7 +322,7 @@
             // 
             // txtNombreGrupo
             // 
-            this.txtNombreGrupo.Location = new System.Drawing.Point(43, 84);
+            this.txtNombreGrupo.Location = new System.Drawing.Point(43, 88);
             this.txtNombreGrupo.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtNombreGrupo.Name = "txtNombreGrupo";
             this.txtNombreGrupo.Size = new System.Drawing.Size(177, 22);
@@ -350,14 +350,14 @@
             // 
             // numMinimoGrupo
             // 
-            this.numMinimoGrupo.Location = new System.Drawing.Point(47, 208);
+            this.numMinimoGrupo.Location = new System.Drawing.Point(47, 214);
             this.numMinimoGrupo.Name = "numMinimoGrupo";
             this.numMinimoGrupo.Size = new System.Drawing.Size(120, 22);
             this.numMinimoGrupo.TabIndex = 79;
             // 
             // numMaximoGrupo
             // 
-            this.numMaximoGrupo.Location = new System.Drawing.Point(47, 272);
+            this.numMaximoGrupo.Location = new System.Drawing.Point(47, 278);
             this.numMaximoGrupo.Name = "numMaximoGrupo";
             this.numMaximoGrupo.Size = new System.Drawing.Size(120, 22);
             this.numMaximoGrupo.TabIndex = 80;

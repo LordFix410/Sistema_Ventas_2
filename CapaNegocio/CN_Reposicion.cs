@@ -8,7 +8,9 @@ namespace CapaNegocio
         private readonly CD_Reposicion datos = new CD_Reposicion();
 
         public DataTable ListarGrupos() { return datos.ListarGrupos(); }
+        public void CambiarEstadoGrupo(int id, bool activo) { datos.CambiarEstadoGrupo(id, activo); }
         public DataTable ListarPerfiles() { return datos.ListarPerfiles(); }
+        public void CambiarEstadoPerfil(int id, bool activo) { datos.CambiarEstadoPerfil(id, activo); }
         public DataTable ListarProveedores() { return datos.ListarProveedores(); }
         public DataTable ProveedoresDePerfil(int id) { return datos.ProveedoresDePerfil(id); }
         public DataTable ListarProductos() { return datos.ListarProductos(); }

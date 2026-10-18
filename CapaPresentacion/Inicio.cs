@@ -20,11 +20,24 @@ namespace CapaPresentacion
         private static Usuario usuarioActual;
         private static IconMenuItem botonActual = null;
         private static Form FormularioActivo=null;
+        private readonly ToolStripMenuItem gruposProveedoresMenu = new ToolStripMenuItem("Perfiles de proveedores");
+        private readonly ToolStripMenuItem listaProveedoresMenu = new ToolStripMenuItem("Administrar proveedores");
+        private readonly ToolStripMenuItem gruposProductoMenu = new ToolStripMenuItem("Grupos de productos");
+        private readonly ToolStripMenuItem reportePedidosMenu = new ToolStripMenuItem("Productos por reponer / pedidos");
 
         public Inicio(Usuario ousuario)
         {
             usuarioActual = ousuario;
             InitializeComponent();
+            // Ubicamos cada herramienta en el módulo donde se administra su información.
+            menuMantenedor.DropDownItems.Remove(reposicionToolStripMenuItem);
+            btnProducto.DropDownItems.AddRange(new ToolStripItem[] { gruposProductoMenu, reportePedidosMenu });
+            menuProveedores.Click -= menuProveedores_Click;
+            menuProveedores.DropDownItems.AddRange(new ToolStripItem[] { listaProveedoresMenu, gruposProveedoresMenu });
+            listaProveedoresMenu.Click += (s, ev) => AbrirFrm(menuProveedores, new frmProveedores());
+            gruposProductoMenu.Click += (s, ev) => AbrirFrm(btnProducto, new frmGruposReposicion());
+            reportePedidosMenu.Click += (s, ev) => AbrirFrm(btnProducto, new frmReporteReposicion());
+            gruposProveedoresMenu.Click += (s, ev) => AbrirFrm(menuProveedores, new frmGruposProveedores());
             
         }
 
@@ -42,7 +55,7 @@ namespace CapaPresentacion
                 }
             }
             finanzasToolStripMenuItem.Visible = listaPermisos.Any(m => m.NombreMenu == finanzasToolStripMenuItem.Name);
-            reposicionToolStripMenuItem.Visible = finanzasToolStripMenuItem.Visible;
+            reposicionToolStripMenuItem.Visible = false;
             menuAcercaDe.Visible = listaPermisos.Any(m => m.NombreMenu == menuAcercaDe.Name);
             lblNombreUsuario.Text = usuarioActual.NombreCompleto.ToString();
         }
@@ -126,7 +139,7 @@ namespace CapaPresentacion
 
         private void reposicionToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            AbrirFrm(menuMantenedor, new frmReposicion());
+            AbrirFrm(menuMantenedor, new frmReporteReposicion());
         }
 
         private void menuAcercaDe_Click(object sender, EventArgs e)

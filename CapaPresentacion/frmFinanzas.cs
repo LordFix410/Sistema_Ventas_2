@@ -280,10 +280,10 @@ namespace CapaPresentacion
             contenedor.Controls.Add(grupoFacturas, 0, 0);
 
             var grupoCierre = CrearGrupo("Cierre de caja");
-            var tablaCierre = CrearTabla(2, 7);
+            var tablaCierre = CrearTabla(2, 6);
             tablaCierre.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55F));
             tablaCierre.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45F));
-            for (int i = 0; i < 7; i++) tablaCierre.RowStyles.Add(new RowStyle(SizeType.Percent, 14.28F));
+            for (int i = 0; i < 6; i++) tablaCierre.RowStyles.Add(new RowStyle(SizeType.Percent, 16.66F));
 
             txtFondoInicial = CrearCaja(false);
             txtEfectivoEsperado = CrearCaja(true);
@@ -313,15 +313,6 @@ namespace CapaPresentacion
             tablaCierre.Controls.Add(botones, 0, 5);
             tablaCierre.SetColumnSpan(botones, 2);
 
-            var nota = new Label
-            {
-                Text = "Cada cierre continuará desde la hora del cierre anterior.",
-                Dock = DockStyle.Fill,
-                ForeColor = Color.DimGray,
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-            tablaCierre.Controls.Add(nota, 0, 6);
-            tablaCierre.SetColumnSpan(nota, 2);
             grupoCierre.Controls.Add(tablaCierre);
             contenedor.Controls.Add(grupoCierre, 1, 0);
             return contenedor;
@@ -778,11 +769,56 @@ namespace CapaPresentacion
                 MessageBox.Show("Escribe el monto realmente depositado en ambas casillas; usa 0 si no depositaste una parte.", "Depósito", MessageBoxButtons.OK, MessageBoxIcon.Warning); return;
             }
             if (MessageBox.Show("¿Registrar el depósito de capital y ganancia indicado?", "Confirmar depósito", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+            Usuario responsable;
+            using (var dialogo = new DialogoResponsableDeposito())
+            {
+                if (dialogo.ShowDialog(this) != DialogResult.OK) return;
+                System.Collections.Generic.List<Usuario> coincidencias;
+                try { coincidencias = new CN_Usuario().ListarActivosPorClave(dialogo.Clave); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("No fue posible validar al responsable: " + ex.Message, "Validar depósito", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                if (coincidencias.Count != 1)
+                {
+                    string aviso = coincidencias.Count == 0
+                        ? "La contraseña no corresponde a un usuario activo. No se registró el depósito."
+                        : "La contraseña está asignada a más de un usuario activo. Debe ser única para identificar al responsable.";
+                    MessageBox.Show(aviso, "Responsable no validado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                responsable = coincidencias[0];
+            }
             string mensaje;
-            if (!finanzas.RegistrarDeposito(idCierreDeposito, usuarioActual.IdUsuario, capital, ganancia, txtReferenciaDeposito.Text.Trim(), out mensaje))
+            if (!finanzas.RegistrarDeposito(idCierreDeposito, responsable.IdUsuario, capital, ganancia, txtReferenciaDeposito.Text.Trim(), out mensaje))
             { MessageBox.Show(mensaje, "Depósito", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
-            MessageBox.Show("Depósito registrado para auditoría.", "Depósito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("Depósito registrado para auditoría.\nResponsable: " + responsable.NombreCompleto, "Depósito", MessageBoxButtons.OK, MessageBoxIcon.Information);
             CargarPanel();
+        }
+
+        private sealed class DialogoResponsableDeposito : Form
+        {
+            private readonly TextBox txtClave = new TextBox();
+            public string Clave { get { return txtClave.Text; } }
+
+            public DialogoResponsableDeposito()
+            {
+                Text = "Validar responsable del depósito";
+                FormBorderStyle = FormBorderStyle.FixedDialog;
+                StartPosition = FormStartPosition.CenterParent;
+                MinimizeBox = false; MaximizeBox = false; ShowInTaskbar = false;
+                ClientSize = new Size(390, 155);
+                Controls.Add(new Label { Text = "Contraseña de quien realizó o subió el comprobante:", Left = 18, Top = 18, Width = 350, Height = 38 });
+                txtClave.SetBounds(18, 58, 350, 27); txtClave.MaxLength = 50; txtClave.UseSystemPasswordChar = true;
+                Controls.Add(txtClave);
+                var cancelar = new Button { Text = "Cancelar", DialogResult = DialogResult.Cancel };
+                cancelar.SetBounds(190, 105, 82, 30); Controls.Add(cancelar);
+                var confirmar = new Button { Text = "Validar", DialogResult = DialogResult.OK };
+                confirmar.SetBounds(280, 105, 88, 30); Controls.Add(confirmar);
+                AcceptButton = confirmar; CancelButton = cancelar;
+                Shown += (s, e) => txtClave.Focus();
+            }
         }
 
         private void cboCierreDeposito_SelectedIndexChanged(object sender, EventArgs e)

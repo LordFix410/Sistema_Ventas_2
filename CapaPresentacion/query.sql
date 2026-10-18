@@ -973,7 +973,11 @@ CREATE PROCEDURE dbo.sp_RegistrarProducto
     @Porcentaje decimal(9,4),
     @Estado bit,
     @Resultado int OUTPUT,
-    @Mensaje varchar(500) OUTPUT
+    @Mensaje varchar(500) OUTPUT,
+    @IdGrupoReposicion int = NULL,
+    @CantidadMinima int = NULL,
+    @CantidadMaxima int = NULL,
+    @IdGrupoProveedor int = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -986,8 +990,10 @@ BEGIN
     END;
     IF NOT EXISTS (SELECT 1 FROM dbo.PRODUCTO WHERE Codigo = @Codigo)
     BEGIN
-        INSERT INTO dbo.PRODUCTO(Codigo, Nombre, Descripcion, IdCategoria, Porcentaje, Estado)
-        VALUES(@Codigo, @Nombre, @Descripcion, @IdCategoria, @Porcentaje, @Estado);
+        INSERT INTO dbo.PRODUCTO(Codigo, Nombre, Descripcion, IdCategoria, Porcentaje, Estado,
+            IdGrupoReposicion, CantidadMinima, CantidadMaxima, IdGrupoProveedor)
+        VALUES(@Codigo, @Nombre, @Descripcion, @IdCategoria, @Porcentaje, @Estado,
+            @IdGrupoReposicion, @CantidadMinima, @CantidadMaxima, @IdGrupoProveedor);
         SET @Resultado = SCOPE_IDENTITY();
     END
     ELSE
@@ -1006,7 +1012,11 @@ CREATE PROCEDURE dbo.sp_ModificarProducto
     @Porcentaje decimal(9,4),
     @Estado bit,
     @Resultado bit OUTPUT,
-    @Mensaje varchar(500) OUTPUT
+    @Mensaje varchar(500) OUTPUT,
+    @IdGrupoReposicion int = NULL,
+    @CantidadMinima int = NULL,
+    @CantidadMaxima int = NULL,
+    @IdGrupoProveedor int = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1028,6 +1038,10 @@ BEGIN
         Nombre = @Nombre,
         Descripcion = @Descripcion,
         IdCategoria = @IdCategoria,
+        IdGrupoReposicion = @IdGrupoReposicion,
+        CantidadMinima = @CantidadMinima,
+        CantidadMaxima = @CantidadMaxima,
+        IdGrupoProveedor = @IdGrupoProveedor,
         PrecioVenta = CASE WHEN PrecioCompra = 0 THEN 0
             ELSE CEILING(PrecioCompra * (1 + @Porcentaje / 100.0) * 4) / 4.0 END,
         Porcentaje = CASE WHEN PrecioCompra = 0 THEN @Porcentaje

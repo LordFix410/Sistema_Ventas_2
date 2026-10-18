@@ -299,7 +299,7 @@
             // 
             this.cboEstado.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboEstado.FormattingEnabled = true;
-            this.cboEstado.Location = new System.Drawing.Point(52, 487);
+            this.cboEstado.Location = new System.Drawing.Point(52, 500);
             this.cboEstado.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.cboEstado.Name = "cboEstado";
             this.cboEstado.Size = new System.Drawing.Size(177, 24);
@@ -309,7 +309,7 @@
             // 
             this.label8.AutoSize = true;
             this.label8.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label8.Location = new System.Drawing.Point(52, 466);
+            this.label8.Location = new System.Drawing.Point(52, 479);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(53, 16);
             this.label8.TabIndex = 64;
@@ -317,7 +317,7 @@
             // 
             // txtNombreGrupoProveedor
             // 
-            this.txtNombreGrupoProveedor.Location = new System.Drawing.Point(55, 101);
+            this.txtNombreGrupoProveedor.Location = new System.Drawing.Point(52, 78);
             this.txtNombreGrupoProveedor.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtNombreGrupoProveedor.Name = "txtNombreGrupoProveedor";
             this.txtNombreGrupoProveedor.Size = new System.Drawing.Size(177, 22);
@@ -327,7 +327,7 @@
             // 
             this.label2.AutoSize = true;
             this.label2.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label2.Location = new System.Drawing.Point(52, 81);
+            this.label2.Location = new System.Drawing.Point(49, 58);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(59, 16);
             this.label2.TabIndex = 62;
@@ -346,9 +346,9 @@
             // clbProveedores
             // 
             this.clbProveedores.FormattingEnabled = true;
-            this.clbProveedores.Location = new System.Drawing.Point(35, 154);
+            this.clbProveedores.Location = new System.Drawing.Point(35, 109);
             this.clbProveedores.Name = "clbProveedores";
-            this.clbProveedores.Size = new System.Drawing.Size(120, 89);
+            this.clbProveedores.Size = new System.Drawing.Size(218, 72);
             this.clbProveedores.TabIndex = 79;
             // 
             // frmGruposProveedores

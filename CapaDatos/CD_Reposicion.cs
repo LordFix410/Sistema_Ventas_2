@@ -12,11 +12,21 @@ namespace CapaDatos
 FROM dbo.GRUPO_REPOSICION ORDER BY Nombre;");
         }
 
+        public void CambiarEstadoGrupo(int id, bool activo) { ActualizarEstado("GRUPO_REPOSICION", "IdGrupoReposicion", id, activo); }
+
         public DataTable ListarPerfiles()
         {
-            return Consultar(@"SELECT IdGrupoProveedor, Nombre, Activo
-FROM dbo.GRUPO_PROVEEDOR ORDER BY Nombre;");
+            return Consultar(@"SELECT gp.IdGrupoProveedor, gp.Nombre, gp.Activo,
+    ISNULL(STUFF((SELECT ', ' + pr.RazonSocial
+                  FROM dbo.GRUPO_PROVEEDOR_DETALLE gpd
+                  INNER JOIN dbo.PROVEEDOR pr ON pr.IdProveedor=gpd.IdProveedor
+                  WHERE gpd.IdGrupoProveedor=gp.IdGrupoProveedor
+                  ORDER BY pr.RazonSocial
+                  FOR XML PATH(''), TYPE).value('.', 'nvarchar(max)'), 1, 2, ''), '') AS Proveedores
+FROM dbo.GRUPO_PROVEEDOR gp ORDER BY gp.Nombre;");
         }
+
+        public void CambiarEstadoPerfil(int id, bool activo) { ActualizarEstado("GRUPO_PROVEEDOR", "IdGrupoProveedor", id, activo); }
 
         public DataTable ListarProveedores()
         {
@@ -180,6 +190,18 @@ WHERE IdProducto=@producto AND Estado=1;", cn))
                 DataTable tabla = new DataTable();
                 da.Fill(tabla);
                 return tabla;
+            }
+        }
+
+        private void ActualizarEstado(string tabla, string columnaId, int id, bool activo)
+        {
+            using (SqlConnection cn = new SqlConnection(Conexion.cadena))
+            using (SqlCommand cmd = new SqlCommand("UPDATE dbo." + tabla + " SET Activo=@activo WHERE " + columnaId + "=@id;", cn))
+            {
+                cmd.Parameters.Add("@id", SqlDbType.Int).Value = id;
+                cmd.Parameters.Add("@activo", SqlDbType.Bit).Value = activo;
+                cn.Open();
+                if (cmd.ExecuteNonQuery() != 1) throw new InvalidOperationException("No se encontró el registro seleccionado.");
             }
         }
     }

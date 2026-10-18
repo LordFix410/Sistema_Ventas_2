@@ -79,11 +79,11 @@
             this.Stock = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.PRECIOCOMPRA = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.PRECIOVENTA = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.PORCENTAJE = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.GrupoReposicion = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.CantidadMinima = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.GrupoProveedores = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.CantidadMaxima = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.GrupoReposicion = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.GrupoProveedores = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.PORCENTAJE = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.EstadoValor = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Estado = new System.Windows.Forms.DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.dgvData)).BeginInit();
@@ -306,11 +306,11 @@
             this.Stock,
             this.PRECIOCOMPRA,
             this.PRECIOVENTA,
-            this.PORCENTAJE,
-            this.GrupoReposicion,
             this.CantidadMinima,
-            this.GrupoProveedores,
             this.CantidadMaxima,
+            this.GrupoReposicion,
+            this.GrupoProveedores,
+            this.PORCENTAJE,
             this.EstadoValor,
             this.Estado});
             this.dgvData.EditMode = System.Windows.Forms.DataGridViewEditMode.EditOnEnter;
@@ -666,12 +666,21 @@
             this.PRECIOVENTA.ReadOnly = true;
             this.PRECIOVENTA.Width = 125;
             // 
-            // PORCENTAJE
+            // CantidadMinima
             // 
-            this.PORCENTAJE.HeaderText = "MARGEN %";
-            this.PORCENTAJE.MinimumWidth = 6;
-            this.PORCENTAJE.Name = "PORCENTAJE";
-            this.PORCENTAJE.ReadOnly = true;
+            this.CantidadMinima.HeaderText = "MINIMO";
+            this.CantidadMinima.MinimumWidth = 6;
+            this.CantidadMinima.Name = "CantidadMinima";
+            this.CantidadMinima.ReadOnly = true;
+            this.CantidadMinima.Width = 125;
+            // 
+            // CantidadMaxima
+            // 
+            this.CantidadMaxima.HeaderText = "MAXIMA";
+            this.CantidadMaxima.MinimumWidth = 6;
+            this.CantidadMaxima.Name = "CantidadMaxima";
+            this.CantidadMaxima.ReadOnly = true;
+            this.CantidadMaxima.Width = 125;
             // 
             // GrupoReposicion
             // 
@@ -681,14 +690,6 @@
             this.GrupoReposicion.ReadOnly = true;
             this.GrupoReposicion.Width = 125;
             // 
-            // CantidadMinima
-            // 
-            this.CantidadMinima.HeaderText = "MINIMO";
-            this.CantidadMinima.MinimumWidth = 6;
-            this.CantidadMinima.Name = "CantidadMinima";
-            this.CantidadMinima.ReadOnly = true;
-            this.CantidadMinima.Width = 125;
-            // 
             // GrupoProveedores
             // 
             this.GrupoProveedores.HeaderText = "GRUPO PROVEEDORES";
@@ -697,13 +698,13 @@
             this.GrupoProveedores.ReadOnly = true;
             this.GrupoProveedores.Width = 125;
             // 
-            // CantidadMaxima
+            // PORCENTAJE
             // 
-            this.CantidadMaxima.HeaderText = "MAXIMA";
-            this.CantidadMaxima.MinimumWidth = 6;
-            this.CantidadMaxima.Name = "CantidadMaxima";
-            this.CantidadMaxima.ReadOnly = true;
-            this.CantidadMaxima.Width = 125;
+            this.PORCENTAJE.HeaderText = "MARGEN %";
+            this.PORCENTAJE.MinimumWidth = 6;
+            this.PORCENTAJE.Name = "PORCENTAJE";
+            this.PORCENTAJE.ReadOnly = true;
+            this.PORCENTAJE.Width = 125;
             // 
             // EstadoValor
             // 
@@ -829,11 +830,11 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn Stock;
         private System.Windows.Forms.DataGridViewTextBoxColumn PRECIOCOMPRA;
         private System.Windows.Forms.DataGridViewTextBoxColumn PRECIOVENTA;
-        private System.Windows.Forms.DataGridViewTextBoxColumn PORCENTAJE;
-        private System.Windows.Forms.DataGridViewTextBoxColumn GrupoReposicion;
         private System.Windows.Forms.DataGridViewTextBoxColumn CantidadMinima;
-        private System.Windows.Forms.DataGridViewTextBoxColumn GrupoProveedores;
         private System.Windows.Forms.DataGridViewTextBoxColumn CantidadMaxima;
+        private System.Windows.Forms.DataGridViewTextBoxColumn GrupoReposicion;
+        private System.Windows.Forms.DataGridViewTextBoxColumn GrupoProveedores;
+        private System.Windows.Forms.DataGridViewTextBoxColumn PORCENTAJE;
         private System.Windows.Forms.DataGridViewTextBoxColumn EstadoValor;
         private System.Windows.Forms.DataGridViewTextBoxColumn Estado;
     }

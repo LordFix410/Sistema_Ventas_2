@@ -156,6 +156,12 @@
     <Compile Include="frmGruposReposicion.Designer.cs">
       <DependentUpon>frmGruposReposicion.cs</DependentUpon>
     </Compile>
+    <Compile Include="frmReporteReposicion.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmReporteReposicion.Designer.cs">
+      <DependentUpon>frmReporteReposicion.cs</DependentUpon>
+    </Compile>
     <Compile Include="frmReposicion.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -278,6 +284,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="frmReporteCompras.resx">
       <DependentUpon>frmReporteCompras.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmReporteReposicion.resx">
+      <DependentUpon>frmReporteReposicion.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="frmReportes.resx">
       <DependentUpon>frmReportes.cs</DependentUpon>
