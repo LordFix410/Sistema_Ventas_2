@@ -21,6 +21,14 @@ namespace CapaDatos
             parametro.Value = porcentaje;
         }
 
+        private static void AgregarParametroPrecio(SqlCommand comando, string nombre, decimal precio)
+        {
+            SqlParameter parametro = comando.Parameters.Add(nombre, SqlDbType.Decimal);
+            parametro.Precision = 10;
+            parametro.Scale = 2;
+            parametro.Value = precio;
+        }
+
         public int RegistrarTemporal(Producto obj, int cantidad, out string Mensaje)
         {
             int idProducto = 0;
@@ -54,6 +62,8 @@ namespace CapaDatos
                         comando.Parameters.Add("Descripcion", SqlDbType.VarChar, 30).Value = obj.Descripcion;
                         comando.Parameters.Add("IdCategoria", SqlDbType.Int).Value = idCategoria;
                         AgregarParametroPorcentaje(comando, obj.Porcentaje);
+                        AgregarParametroPrecio(comando, "PrecioCompra", 0m);
+                        AgregarParametroPrecio(comando, "PrecioVenta", 0m);
                         comando.Parameters.Add("Estado", SqlDbType.Bit).Value = false;
                         comando.Parameters.Add("Resultado", SqlDbType.Int).Direction = ParameterDirection.Output;
                         comando.Parameters.Add("Mensaje", SqlDbType.VarChar, 500).Direction = ParameterDirection.Output;
@@ -169,6 +179,182 @@ namespace CapaDatos
             return lista;
         }
 
+        public Producto BuscarPorCodigo(string codigo)
+        {
+            if (string.IsNullOrWhiteSpace(codigo)) return null;
+
+            var encontrados = new List<Producto>();
+            using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+            using (SqlCommand comando = new SqlCommand("dbo.sp_BuscarProductoPorCodigo", conexion))
+            {
+                comando.CommandType = CommandType.StoredProcedure;
+                comando.Parameters.Add("Codigo", SqlDbType.VarChar, 50).Value = codigo.Trim();
+                try
+                {
+                    conexion.Open();
+                    using (SqlDataReader dr = comando.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            encontrados.Add(new Producto
+                            {
+                                IdProducto = Convert.ToInt32(dr["IdProducto"]),
+                                Codigo = Convert.ToString(dr["Codigo"]),
+                                Nombre = Convert.ToString(dr["Nombre"]),
+                                Descripcion = Convert.ToString(dr["Descripcion"]),
+                                oCategoria = new Categoria
+                                {
+                                    IdCategoria = Convert.ToInt32(dr["IdCategoria"]),
+                                    Descripcion = Convert.ToString(dr["DescripcionCategoria"])
+                                },
+                                Stock = Convert.ToInt32(dr["Stock"]),
+                                PrecioCompra = Convert.ToDecimal(dr["PrecioCompra"]),
+                                PrecioVenta = Convert.ToDecimal(dr["PrecioVenta"]),
+                                Porcentaje = Convert.ToDecimal(dr["Porcentaje"]),
+                                Estado = Convert.ToBoolean(dr["Estado"]),
+                                IdGrupoReposicion = dr["IdGrupoReposicion"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoReposicion"]),
+                                CantidadMinima = dr["CantidadMinima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMinima"]),
+                                CantidadMaxima = dr["CantidadMaxima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMaxima"]),
+                                IdGrupoProveedor = dr["IdGrupoProveedor"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoProveedor"]),
+                                GrupoReposicion = Convert.ToString(dr["GrupoReposicion"]),
+                                GrupoProveedores = Convert.ToString(dr["GrupoProveedores"])
+                            });
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("No se pudo buscar el producto por código. Verifica que hayas ejecutado migracion_busqueda_productos.sql en DBSISTEMA_VENTA.", ex);
+                }
+            }
+
+            if (encontrados.Count > 1)
+                throw new InvalidOperationException("Hay más de un producto activo con el código '" + codigo.Trim() + "'. Corrige los códigos duplicados antes de continuar.");
+
+            return encontrados.FirstOrDefault();
+        }
+
+        public Producto BuscarPorId(int idProducto)
+        {
+            if (idProducto <= 0) return null;
+            const string consulta = @"SELECT TOP (1) p.IdProducto, p.Codigo, p.Nombre, p.Descripcion,
+                c.IdCategoria, c.Descripcion AS DescripcionCategoria, p.Stock, p.PrecioCompra, p.PrecioVenta,
+                p.Porcentaje, p.Estado, p.IdGrupoReposicion,
+                COALESCE(p.CantidadMinima, gr.CantidadMinima) AS CantidadMinima,
+                COALESCE(p.CantidadMaxima, gr.CantidadMaxima) AS CantidadMaxima,
+                p.IdGrupoProveedor, ISNULL(gr.Nombre, '') AS GrupoReposicion,
+                ISNULL(gp.Nombre, '') AS GrupoProveedores
+                FROM dbo.PRODUCTO p
+                INNER JOIN dbo.CATEGORIA c ON c.IdCategoria = p.IdCategoria
+                LEFT JOIN dbo.GRUPO_REPOSICION gr ON gr.IdGrupoReposicion = p.IdGrupoReposicion
+                LEFT JOIN dbo.GRUPO_PROVEEDOR gp ON gp.IdGrupoProveedor = p.IdGrupoProveedor
+                WHERE p.IdProducto = @IdProducto";
+            using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+            using (SqlCommand comando = new SqlCommand(consulta, conexion))
+            {
+                comando.Parameters.Add("@IdProducto", SqlDbType.Int).Value = idProducto;
+                conexion.Open();
+                using (SqlDataReader dr = comando.ExecuteReader())
+                {
+                    if (!dr.Read()) return null;
+                    return new Producto
+                    {
+                        IdProducto = Convert.ToInt32(dr["IdProducto"]),
+                        Codigo = Convert.ToString(dr["Codigo"]),
+                        Nombre = Convert.ToString(dr["Nombre"]),
+                        Descripcion = Convert.ToString(dr["Descripcion"]),
+                        oCategoria = new Categoria
+                        {
+                            IdCategoria = Convert.ToInt32(dr["IdCategoria"]),
+                            Descripcion = Convert.ToString(dr["DescripcionCategoria"])
+                        },
+                        Stock = Convert.ToInt32(dr["Stock"]),
+                        PrecioCompra = Convert.ToDecimal(dr["PrecioCompra"]),
+                        PrecioVenta = Convert.ToDecimal(dr["PrecioVenta"]),
+                        Porcentaje = Convert.ToDecimal(dr["Porcentaje"]),
+                        Estado = Convert.ToBoolean(dr["Estado"]),
+                        IdGrupoReposicion = dr["IdGrupoReposicion"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoReposicion"]),
+                        CantidadMinima = dr["CantidadMinima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMinima"]),
+                        CantidadMaxima = dr["CantidadMaxima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMaxima"]),
+                        IdGrupoProveedor = dr["IdGrupoProveedor"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoProveedor"]),
+                        GrupoReposicion = Convert.ToString(dr["GrupoReposicion"]),
+                        GrupoProveedores = Convert.ToString(dr["GrupoProveedores"])
+                    };
+                }
+            }
+        }
+
+        public List<Producto> Buscar(string columna, string termino, bool soloActivos = false)
+        {
+            var expresiones = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Codigo"] = "p.Codigo",
+                ["Nombre"] = "p.Nombre",
+                ["Descripcion"] = "p.Descripcion",
+                ["Categoria"] = "c.DESCRIPCION",
+                ["Stock"] = "CONVERT(varchar(20), p.Stock)",
+                ["PRECIOCOMPRA"] = "CONVERT(varchar(30), p.PrecioCompra)",
+                ["PRECIOVENTA"] = "CONVERT(varchar(30), p.PrecioVenta)",
+                ["PORCENTAJE"] = "CONVERT(varchar(30), p.Porcentaje * 100)",
+                ["GrupoReposicion"] = "gr.Nombre",
+                ["GrupoProveedores"] = "gp.Nombre",
+                ["CantidadMinima"] = "CONVERT(varchar(20), COALESCE(p.CantidadMinima, gr.CantidadMinima))",
+                ["CantidadMaxima"] = "CONVERT(varchar(20), COALESCE(p.CantidadMaxima, gr.CantidadMaxima))",
+                ["Estado"] = "CASE WHEN p.Estado = 1 THEN 'Activo' ELSE 'Inactivo' END"
+            };
+            if (!expresiones.TryGetValue(columna ?? string.Empty, out string expresion))
+                throw new ArgumentException("El campo de búsqueda no es válido.");
+
+            var lista = new List<Producto>();
+            const string columnas = @"SELECT TOP (500) p.IdProducto, p.Codigo, p.Nombre, p.Descripcion,
+                c.IdCategoria, c.DESCRIPCION AS DescripcionCategoria, p.Stock, p.PrecioCompra, p.PrecioVenta,
+                p.Porcentaje, p.Estado, p.IdGrupoReposicion,
+                COALESCE(p.CantidadMinima, gr.CantidadMinima) AS CantidadMinima,
+                COALESCE(p.CantidadMaxima, gr.CantidadMaxima) AS CantidadMaxima,
+                p.IdGrupoProveedor, ISNULL(gr.Nombre, '') AS GrupoReposicion,
+                ISNULL(gp.Nombre, '') AS GrupoProveedores
+                FROM dbo.PRODUCTO p
+                INNER JOIN dbo.CATEGORIA c ON c.IdCategoria = p.IdCategoria
+                LEFT JOIN dbo.GRUPO_REPOSICION gr ON gr.IdGrupoReposicion = p.IdGrupoReposicion
+                LEFT JOIN dbo.GRUPO_PROVEEDOR gp ON gp.IdGrupoProveedor = p.IdGrupoProveedor";
+
+            string filtroEstado = soloActivos ? " AND p.Estado = 1" : string.Empty;
+            string expresionNormalizada = "dbo.fn_NormalizarTextoBusqueda(" + expresion + ")";
+            using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+            using (SqlCommand comando = new SqlCommand(columnas + " WHERE " + expresionNormalizada +
+                " LIKE '%' + dbo.fn_NormalizarTextoBusqueda(@Busqueda) + '%'" + filtroEstado + " ORDER BY p.Nombre, p.Codigo", conexion))
+            {
+                comando.Parameters.Add("@Busqueda", SqlDbType.VarChar, 100).Value = termino ?? string.Empty;
+                conexion.Open();
+                using (SqlDataReader dr = comando.ExecuteReader())
+                {
+                    while (dr.Read())
+                    {
+                        lista.Add(new Producto
+                        {
+                            IdProducto = Convert.ToInt32(dr["IdProducto"]),
+                            Codigo = Convert.ToString(dr["Codigo"]),
+                            Nombre = Convert.ToString(dr["Nombre"]),
+                            Descripcion = Convert.ToString(dr["Descripcion"]),
+                            oCategoria = new Categoria { IdCategoria = Convert.ToInt32(dr["IdCategoria"]), Descripcion = Convert.ToString(dr["DescripcionCategoria"]) },
+                            Stock = Convert.ToInt32(dr["Stock"]),
+                            PrecioCompra = Convert.ToDecimal(dr["PrecioCompra"]),
+                            PrecioVenta = Convert.ToDecimal(dr["PrecioVenta"]),
+                            Porcentaje = Convert.ToDecimal(dr["Porcentaje"]),
+                            Estado = Convert.ToBoolean(dr["Estado"]),
+                            IdGrupoReposicion = dr["IdGrupoReposicion"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoReposicion"]),
+                            CantidadMinima = dr["CantidadMinima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMinima"]),
+                            CantidadMaxima = dr["CantidadMaxima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMaxima"]),
+                            IdGrupoProveedor = dr["IdGrupoProveedor"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoProveedor"]),
+                            GrupoReposicion = Convert.ToString(dr["GrupoReposicion"]),
+                            GrupoProveedores = Convert.ToString(dr["GrupoProveedores"])
+                        });
+                    }
+                }
+            }
+            return lista;
+        }
+
         //-----------Registrar---------
 
         public int Registrar(Producto obj, out string Mensaje)
@@ -187,6 +373,8 @@ namespace CapaDatos
                     cmd.Parameters.AddWithValue("Descripcion", obj.Descripcion);
                     cmd.Parameters.AddWithValue("IdCategoria", obj.oCategoria.IdCategoria);
                     AgregarParametroPorcentaje(cmd, obj.Porcentaje);
+                    AgregarParametroPrecio(cmd, "PrecioCompra", obj.PrecioCompra);
+                    AgregarParametroPrecio(cmd, "PrecioVenta", obj.PrecioVenta);
                     AgregarParametrosReposicion(cmd, obj);
                     cmd.Parameters.AddWithValue("Estado", obj.Estado);
                     cmd.Parameters.Add("Resultado", SqlDbType.Int).Direction = ParameterDirection.Output;
@@ -226,6 +414,8 @@ namespace CapaDatos
                     cmd.Parameters.AddWithValue("Descripcion", obj.Descripcion);
                     cmd.Parameters.AddWithValue("IdCategoria", obj.oCategoria.IdCategoria);
                     AgregarParametroPorcentaje(cmd, obj.Porcentaje);
+                    AgregarParametroPrecio(cmd, "PrecioCompra", obj.PrecioCompra);
+                    AgregarParametroPrecio(cmd, "PrecioVenta", obj.PrecioVenta);
                     AgregarParametrosReposicion(cmd, obj);
                     cmd.Parameters.AddWithValue("Estado", obj.Estado);
                     cmd.Parameters.Add("Resultado", SqlDbType.Int).Direction = ParameterDirection.Output;

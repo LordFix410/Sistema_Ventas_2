@@ -16,11 +16,146 @@ namespace CapaPresentacion
 {
     public partial class frmProducto : Form
     {
+        private bool sincronizandoPreciosProducto;
+
         public frmProducto()
         {
             InitializeComponent();
-            ExperienciaUsuario.Aplicar(this, txtCodigo, txtBusqueda);
+            txtPrecioVentaProducto.KeyDown += PrecioVentaProducto_KeyDown;
+            txtCostoProducto.Leave += delegate { ActualizarPorcentajeProducto(); };
+            txtPorcentaje.KeyDown += PorcentajeProducto_KeyDown;
+            txtCostoProducto.Enter += delegate { txtCostoProducto.SelectAll(); };
+            txtPrecioVentaProducto.Enter += delegate { txtPrecioVentaProducto.SelectAll(); };
+            txtPorcentaje.Enter += delegate { txtPorcentaje.SelectAll(); };
+            txtPrecioVentaProducto.Leave += delegate { ActualizarPorcentajeProducto(); };
+            txtPorcentaje.Leave += delegate { ActualizarPrecioDesdeMargenSinAviso(); };
+            ConfigurarOrdenCaptura();
             ConfigurarOrdenColumnas();
+            ExperienciaUsuario.Aplicar(this, txtCodigo, txtBusqueda, txtPorcentaje);
+        }
+
+        private void ConfigurarOrdenCaptura()
+        {
+            Control[] orden = { txtCodigo, txtNombre, txtDescripcion, cboCategoria, txtCostoProducto,
+                txtPorcentaje, txtPrecioVentaProducto, cboGrupoProveedor, cboGrupoReposicion,
+                txtCantidadMinima, txtCantidadMaxima, cboEstado, btnGuardar, btnCancelarUsuario, btnEliminar };
+            for (int i = 0; i < orden.Length; i++)
+            {
+                orden[i].TabIndex = i;
+                orden[i].TabStop = true;
+            }
+            txtBusqueda.TabIndex = orden.Length + 2;
+            cboBuscar.TabIndex = orden.Length + 1;
+        }
+
+        private void PrecioVentaProducto_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter) return;
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            if (!decimal.TryParse(txtPrecioVentaProducto.Text, out decimal venta) || venta < 0)
+            {
+                CapaPresentacion.DialogoSistema.Show("Ingresa un precio de venta válido.", "Precio inválido",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPrecioVentaProducto.Focus();
+                txtPrecioVentaProducto.SelectAll();
+                return;
+            }
+            ActualizarPorcentajeProducto();
+            cboGrupoProveedor.Focus();
+        }
+
+        private void ActualizarPrecioDesdeMargenSinAviso()
+        {
+            if (sincronizandoPreciosProducto ||
+                !decimal.TryParse(txtCostoProducto.Text, out decimal costo) || costo <= 0 ||
+                !decimal.TryParse(txtPorcentaje.Text, out decimal margen) || margen < 0)
+                return;
+            decimal venta = Math.Ceiling(costo * (1m + margen / 100m) * 4m) / 4m;
+            sincronizandoPreciosProducto = true;
+            txtPrecioVentaProducto.Text = venta.ToString("0.00");
+            sincronizandoPreciosProducto = false;
+        }
+
+        private void ActualizarPorcentajeProducto()
+        {
+            if (sincronizandoPreciosProducto ||
+                !decimal.TryParse(txtCostoProducto.Text, out decimal costo) || costo <= 0 ||
+                !decimal.TryParse(txtPrecioVentaProducto.Text, out decimal venta)) return;
+
+            decimal margen = (venta - costo) / costo * 100m;
+            sincronizandoPreciosProducto = true;
+            txtPorcentaje.Text = margen.ToString("0.##");
+            sincronizandoPreciosProducto = false;
+        }
+
+        private void PorcentajeProducto_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter) return;
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            if (!decimal.TryParse(txtCostoProducto.Text, out decimal costo) || costo < 0 ||
+                !decimal.TryParse(txtPorcentaje.Text, out decimal margen) || margen < 0)
+            {
+                CapaPresentacion.DialogoSistema.Show("Ingresa un costo y un margen válidos.", "Precios inválidos",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPorcentaje.Focus();
+                txtPorcentaje.SelectAll();
+                return;
+            }
+
+            if (costo == 0)
+            {
+                if (margen <= 0 || !decimal.TryParse(txtPrecioVentaProducto.Text, out decimal ventaExistente) || ventaExistente <= 0)
+                {
+                    CapaPresentacion.DialogoSistema.Show(
+                        "Para calcular el costo, ingresa un margen mayor que cero y un precio de venta mayor que cero.",
+                        "Datos incompletos", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    if (margen <= 0)
+                    {
+                        txtPorcentaje.Focus();
+                        txtPorcentaje.SelectAll();
+                    }
+                    else
+                    {
+                        txtPrecioVentaProducto.Focus();
+                        txtPrecioVentaProducto.SelectAll();
+                    }
+                    return;
+                }
+
+                costo = Math.Round(ventaExistente / (1m + margen / 100m), 2, MidpointRounding.AwayFromZero);
+                if (costo <= 0)
+                {
+                    CapaPresentacion.DialogoSistema.Show("Con esos valores el costo calculado queda en cero. Revisa el precio y el margen.",
+                        "Costo calculado inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtPrecioVentaProducto.Focus();
+                    txtPrecioVentaProducto.SelectAll();
+                    return;
+                }
+
+                sincronizandoPreciosProducto = true;
+                txtCostoProducto.Text = costo.ToString("0.00");
+                sincronizandoPreciosProducto = false;
+                ActualizarPorcentajeProducto();
+                txtPrecioVentaProducto.Focus();
+                txtPrecioVentaProducto.SelectAll();
+                return;
+            }
+
+            decimal venta = Math.Ceiling(costo * (1m + margen / 100m) * 4m) / 4m;
+            sincronizandoPreciosProducto = true;
+            txtPrecioVentaProducto.Text = venta.ToString("0.00");
+            sincronizandoPreciosProducto = false;
+            ActualizarPorcentajeProducto();
+            txtPrecioVentaProducto.Focus();
+            txtPrecioVentaProducto.SelectAll();
+        }
+
+        private static decimal PorcentajeGuardado(decimal costo, decimal venta, decimal porcentajeSinCosto)
+        {
+            return costo <= 0 ? porcentajeSinCosto :
+                decimal.Ceiling(((venta - costo) / costo) * 10000m) / 10000m;
         }
 
         private void ConfigurarOrdenColumnas()
@@ -67,6 +202,10 @@ namespace CapaPresentacion
             cboEstado.ValueMember = "Valor";
             cboEstado.SelectedIndex = 0;
             txtPorcentaje.Text = "0";
+            txtCostoProducto.Text = "0.00";
+            txtPrecioVentaProducto.Text = "0.00";
+            txtCostoProducto.Text = "0.00";
+            txtPrecioVentaProducto.Text = "0.00";
 
             CargarGruposReposicion();
             CargarPerfilesProveedor();
@@ -93,27 +232,18 @@ namespace CapaPresentacion
             cboBuscar.ValueMember = "Valor";
             cboBuscar.SelectedIndex = 0;
 
-            //Mostrar todos los productos:
-            List<Producto> listaProductos;
-            try
+            // La lista se consulta solo cuando el usuario busca; abrir el mantenedor no lee todo PRODUCTO.
+            dgvData.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+            var anchos = new Dictionary<string, int>
             {
-                listaProductos = new CN_Producto().Listar();
-            }
-            catch (Exception ex)
-            {
-                CapaPresentacion.DialogoSistema.Show(ex.Message + Environment.NewLine + ex.InnerException?.Message,
-                    "No se pudieron cargar productos", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            foreach (Producto item in listaProductos)
-            {
-                AgregarFilaProducto(item, item.IdProducto, item.Codigo, item.Nombre, item.Descripcion,
-                    item.oCategoria.IdCategoria, item.oCategoria.Descripcion, item.Stock, item.PrecioCompra,
-                    item.PrecioVenta, item.Porcentaje, item.CantidadMinima, item.CantidadMaxima,
-                    item.GrupoReposicion ?? "", item.GrupoProveedores ?? "", item.Estado);
-            }
-            dgvData.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+                ["Codigo"] = 85, ["Nombre"] = 145, ["Descripcion"] = 160, ["Categoria"] = 105,
+                ["Stock"] = 60, ["CantidadMinima"] = 65, ["CantidadMaxima"] = 65,
+                ["PRECIOCOMPRA"] = 85, ["PRECIOVENTA"] = 85, ["PORCENTAJE"] = 80,
+                ["GrupoReposicion"] = 125, ["GrupoProveedores"] = 125, ["Estado"] = 70
+            };
+            foreach (var ancho in anchos)
+                if (dgvData.Columns.Contains(ancho.Key)) dgvData.Columns[ancho.Key].Width = ancho.Value;
+            if (dgvData.Columns.Contains("btnSeleccionar")) dgvData.Columns["btnSeleccionar"].Width = 38;
             ActualizarLimitesReposicion();
 
         }
@@ -126,6 +256,32 @@ namespace CapaPresentacion
                 CapaPresentacion.DialogoSistema.Show("Ingrese un porcentaje válido igual o mayor a cero.", "Porcentaje inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtPorcentaje.Focus();
                 txtPorcentaje.SelectAll();
+                return;
+            }
+
+            if (!decimal.TryParse(txtCostoProducto.Text, out decimal costo) || costo < 0 ||
+                !decimal.TryParse(txtPrecioVentaProducto.Text, out decimal precioVenta) || precioVenta < 0)
+            {
+                CapaPresentacion.DialogoSistema.Show("Ingresa un costo y precio de venta válidos, iguales o mayores a cero.",
+                    "Precios inválidos", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtCostoProducto.Focus();
+                txtCostoProducto.SelectAll();
+                return;
+            }
+            if (costo > 0 && precioVenta < costo)
+            {
+                CapaPresentacion.DialogoSistema.Show("El precio de venta no puede ser menor al costo.",
+                    "Margen negativo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPrecioVentaProducto.Focus();
+                txtPrecioVentaProducto.SelectAll();
+                return;
+            }
+            if (Math.Abs(precioVenta * 4m - decimal.Round(precioVenta * 4m, 0)) > 0.0001m)
+            {
+                CapaPresentacion.DialogoSistema.Show("El precio de venta debe terminar en .00, .25, .50 o .75.",
+                    "Precio inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPrecioVentaProducto.Focus();
+                txtPrecioVentaProducto.SelectAll();
                 return;
             }
 
@@ -151,6 +307,8 @@ namespace CapaPresentacion
                 oCategoria = new Categoria() { IdCategoria = Convert.ToInt32(((OpcionCombo)cboCategoria.SelectedItem).Valor) },
                 Estado = Convert.ToInt32(((OpcionCombo)cboEstado.SelectedItem).Valor) == 1,
                 Porcentaje = porcentaje,
+                PrecioCompra = costo,
+                PrecioVenta = precioVenta,
                 IdGrupoReposicion = idGrupo,
                 CantidadMinima = minimo,
                 CantidadMaxima = maximo,
@@ -166,8 +324,10 @@ namespace CapaPresentacion
                     objProducto.IdProducto = idnuevo;
                     AgregarFilaProducto(objProducto, idnuevo, txtCodigo.Text, txtNombre.Text, txtDescripcion.Text,
                         Convert.ToInt32(((OpcionCombo)cboCategoria.SelectedItem).Valor),
-                        ((OpcionCombo)cboCategoria.SelectedItem).Texto.ToString(), 0, 0m, 0m, porcentaje,
+                        ((OpcionCombo)cboCategoria.SelectedItem).Texto.ToString(), 0, costo, precioVenta,
+                        PorcentajeGuardado(costo, precioVenta, porcentaje),
                         minimo, maximo, GrupoNombre(cboGrupoReposicion), GrupoNombre(cboGrupoProveedor), objProducto.Estado);
+                    objProducto.Porcentaje = PorcentajeGuardado(costo, precioVenta, porcentaje);
                     LimpiarTxt();
                 }
                 else
@@ -190,17 +350,17 @@ namespace CapaPresentacion
                     row.Cells["EstadoValor"].Value = ((OpcionCombo)cboEstado.SelectedItem).Valor.ToString();
                     row.Cells["Estado"].Value = ((OpcionCombo)cboEstado.SelectedItem).Texto.ToString();
                     row.Cells["PORCENTAJE"].Value = objProducto.Porcentaje;
-                    decimal precioCompraActual = Convert.ToDecimal(row.Cells["PRECIOCOMPRA"].Value);
-                    decimal precioVentaSugerido = precioCompraActual == 0 ? 0 :
-                        Math.Ceiling(precioCompraActual * (1m + objProducto.Porcentaje / 100m) * 4m) / 4m;
-                    row.Cells["PRECIOVENTA"].Value = precioVentaSugerido;
-                    decimal porcentajeReal = precioCompraActual == 0 ? objProducto.Porcentaje :
-                        decimal.Ceiling(((precioVentaSugerido - precioCompraActual) / precioCompraActual) * 10000m) / 10000m;
-                    row.Cells["PORCENTAJE"].Value = FormatoPorcentaje.ParaMostrar(porcentajeReal, precioCompraActual);
+                    row.Cells["PRECIOCOMPRA"].Value = costo;
+                    row.Cells["PRECIOVENTA"].Value = precioVenta;
+                    decimal porcentajeReal = PorcentajeGuardado(costo, precioVenta, porcentaje);
+                    row.Cells["PORCENTAJE"].Value = FormatoPorcentaje.ParaMostrar(porcentajeReal, costo);
                     row.Cells["GrupoReposicion"].Value = GrupoNombre(cboGrupoReposicion);
                     row.Cells["CantidadMinima"].Value = minimo.HasValue ? minimo.Value.ToString() : "";
                     row.Cells["GrupoProveedores"].Value = GrupoNombre(cboGrupoProveedor);
                     row.Cells["CantidadMaxima"].Value = maximo.HasValue ? maximo.Value.ToString() : "";
+                    objProducto.Porcentaje = porcentajeReal;
+                    objProducto.PrecioCompra = costo;
+                    objProducto.PrecioVenta = precioVenta;
                     row.Tag = objProducto;
 
                     LimpiarTxt();
@@ -219,6 +379,8 @@ namespace CapaPresentacion
             txtNombre.Text = "";
             txtDescripcion.Text = "";
             txtPorcentaje.Text = "0";
+            txtCostoProducto.Text = "0.00";
+            txtPrecioVentaProducto.Text = "0.00";
             cboCategoria.SelectedIndex = 0;
             cboEstado.SelectedIndex = 0;
             txtCantidadMinima.Clear(); txtCantidadMaxima.Clear();
@@ -333,50 +495,45 @@ namespace CapaPresentacion
 
         private void btnBuscar_Click(object sender, EventArgs e)
         {
-            string columnaFiltro = ((OpcionCombo)cboBuscar.SelectedItem).Valor.ToString();
-            if (dgvData.Rows.Count > 0 && ((OpcionCombo)cboBuscar.SelectedItem).Valor.ToString() != "Estado")
+            string termino = txtBusqueda.Text.Trim();
+            if (termino.Length == 0 && CapaPresentacion.DialogoSistema.Show(this,
+                "El campo está vacío y se consultará toda la lista de productos. Si el inventario es grande, la carga puede tardar. ¿Deseas continuar?",
+                "Confirmar carga completa", MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                return;
+
+            try
             {
-                foreach (DataGridViewRow row in dgvData.Rows)
-                {
-                    if (row.Cells[columnaFiltro].Value.ToString().Trim().ToUpper().Contains(txtBusqueda.Text.Trim().ToUpper()))
-                        row.Visible = true;
-                    else
-                        row.Visible = false;
-                }
+                string columna = ((OpcionCombo)cboBuscar.SelectedItem).Valor.ToString();
+                List<Producto> resultados = termino.Length == 0
+                    ? new CN_Producto().Listar()
+                    : new CN_Producto().Buscar(columna, termino);
+                dgvData.Rows.Clear();
+                foreach (Producto item in resultados)
+                    AgregarFilaProducto(item, item.IdProducto, item.Codigo, item.Nombre, item.Descripcion,
+                        item.oCategoria.IdCategoria, item.oCategoria.Descripcion, item.Stock, item.PrecioCompra,
+                        item.PrecioVenta, item.Porcentaje, item.CantidadMinima, item.CantidadMaxima,
+                        item.GrupoReposicion ?? "", item.GrupoProveedores ?? "", item.Estado);
+                if (resultados.Count == 0)
+                    CapaPresentacion.DialogoSistema.Show("No se encontraron productos con ese criterio.", "Búsqueda",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                else if (resultados.Count == 500)
+                    CapaPresentacion.DialogoSistema.Show("Se muestran los primeros 500 resultados. Especifica más la búsqueda para acotar la lista.",
+                        "Resultados limitados", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-            else if (((OpcionCombo)cboBuscar.SelectedItem).Valor.ToString() == "Estado")
+            catch (Exception ex)
             {
-
-                bool buscado;
-                if (txtBusqueda.Text.ToString().Trim().ToUpper() == "INACTIVO")
-                    buscado = false;
-                else
-                    buscado = true;
-
-                foreach (DataGridViewRow row in dgvData.Rows)
-                {
-                    bool estado;
-                    if (row.Cells["Estado"].Value.ToString().Trim().ToUpper() == "INACTIVO")
-                    {
-                        estado = false;
-                    }
-                    else
-                        estado = true;
-
-                    if (buscado == estado)
-                        row.Visible = true;
-                    else
-                        row.Visible = false;
-                }
+                CapaPresentacion.DialogoSistema.Show(ex.Message + Environment.NewLine + ex.InnerException?.Message,
+                    "No se pudieron buscar productos", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void btnCancelar_Click(object sender, EventArgs e)
         {
             txtBusqueda.Text = "";
-            foreach (DataGridViewRow row in dgvData.Rows)
-                row.Visible = true;
+            dgvData.Rows.Clear();
             cboBuscar.SelectedIndex = 0;
+            txtBusqueda.Focus();
         }
 
         private void dgvData_CellContentClick(object sender, DataGridViewCellEventArgs e)
@@ -393,8 +550,12 @@ namespace CapaPresentacion
                     txtCodigo.Text = dgvData.Rows[indice].Cells["Codigo"].Value.ToString();
                     txtNombre.Text = dgvData.Rows[indice].Cells["Nombre"].Value.ToString();
                     txtDescripcion.Text = dgvData.Rows[indice].Cells["Descripcion"].Value.ToString();
+                    sincronizandoPreciosProducto = true;
+                    txtCostoProducto.Text = Convert.ToDecimal(dgvData.Rows[indice].Cells["PRECIOCOMPRA"].Value).ToString("0.00");
+                    txtPrecioVentaProducto.Text = Convert.ToDecimal(dgvData.Rows[indice].Cells["PRECIOVENTA"].Value).ToString("0.00");
                     decimal porcentajeVisible = Convert.ToDecimal(dgvData.Rows[indice].Cells["PORCENTAJE"].Value);
-                    txtPorcentaje.Text = decimal.Ceiling(porcentajeVisible).ToString("0");
+                    txtPorcentaje.Text = porcentajeVisible.ToString("0.##");
+                    sincronizandoPreciosProducto = false;
                     Producto productoFila = dgvData.Rows[indice].Tag as Producto;
                     SeleccionarCombo(cboGrupoReposicion, productoFila == null ? (int?)null : productoFila.IdGrupoReposicion);
                     SeleccionarCombo(cboGrupoProveedor, productoFila == null ? (int?)null : productoFila.IdGrupoProveedor);

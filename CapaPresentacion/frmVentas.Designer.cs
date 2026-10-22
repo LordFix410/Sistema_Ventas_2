@@ -406,6 +406,7 @@
             this.txtTotalPagar.Location = new System.Drawing.Point(1043, 370);
             this.txtTotalPagar.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtTotalPagar.Name = "txtTotalPagar";
+            this.txtTotalPagar.ReadOnly = true;
             this.txtTotalPagar.Size = new System.Drawing.Size(101, 22);
             this.txtTotalPagar.TabIndex = 37;
             this.txtTotalPagar.TextChanged += new System.EventHandler(this.txtTotalPagar_TextChanged);
@@ -426,6 +427,7 @@
             this.txtCambio.Location = new System.Drawing.Point(1043, 476);
             this.txtCambio.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtCambio.Name = "txtCambio";
+            this.txtCambio.ReadOnly = true;
             this.txtCambio.Size = new System.Drawing.Size(101, 22);
             this.txtCambio.TabIndex = 41;
             this.txtCambio.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtCambio_KeyDown);
@@ -462,8 +464,8 @@
             // 
             // btnRegistrar
             // 
-            this.btnRegistrar.IconChar = FontAwesome.Sharp.IconChar.Smile;
-            this.btnRegistrar.IconColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(0)))), ((int)(((byte)(192)))));
+            this.btnRegistrar.IconChar = FontAwesome.Sharp.IconChar.CircleCheck;
+            this.btnRegistrar.IconColor = System.Drawing.SystemColors.MenuHighlight;
             this.btnRegistrar.IconFont = FontAwesome.Sharp.IconFont.Auto;
             this.btnRegistrar.ImageAlign = System.Drawing.ContentAlignment.TopCenter;
             this.btnRegistrar.Location = new System.Drawing.Point(1043, 529);

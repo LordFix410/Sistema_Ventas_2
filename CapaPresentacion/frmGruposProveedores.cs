@@ -15,6 +15,18 @@ namespace CapaPresentacion
         public frmGruposProveedores()
         {
             InitializeComponent();
+            CapaPresentacion.Utilidades.ExperienciaUsuario.Aplicar(this, txtNombreGrupoProveedor, txtBusqueda);
+            dgvGruposProveedores.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            var etiquetaProveedores = new Label
+            {
+                Name = "lblProveedoresIntegrantes",
+                Text = "Proveedores integrantes:",
+                AutoSize = true,
+                Location = new System.Drawing.Point(52, 108),
+                BackColor = System.Drawing.Color.White
+            };
+            Controls.Add(etiquetaProveedores);
+            etiquetaProveedores.BringToFront();
             Load += (s, e) => { cboEstado.Items.Clear(); cboEstado.Items.Add("Activo"); cboEstado.Items.Add("Inactivo"); cboEstado.SelectedIndex = 0; PrepararProveedores(); Cargar(); };
             btnGuardar.Click += (s, e) => Guardar(); btnCancelarUsuario.Click += (s, e) => Limpiar(); btnEliminar.Click += (s, e) => CambiarEstado();
             dgvGruposProveedores.CellClick += (s, e) => Seleccionar(e.RowIndex);
@@ -27,7 +39,7 @@ namespace CapaPresentacion
         {
             DataTable proveedores = negocio.ListarProveedores();
             clbProveedores.DataSource = proveedores; clbProveedores.DisplayMember = "RazonSocial"; clbProveedores.ValueMember = "IdProveedor";
-            clbProveedores.Location = new System.Drawing.Point(52, 350); clbProveedores.Size = new System.Drawing.Size(210, 125);
+            clbProveedores.Location = new System.Drawing.Point(52, 130); clbProveedores.Size = new System.Drawing.Size(210, 320);
             clbProveedores.CheckOnClick = true; clbProveedores.Font = new System.Drawing.Font("Segoe UI", 9F);
             clbProveedores.HorizontalScrollbar = true; clbProveedores.IntegralHeight = false;
         }

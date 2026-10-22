@@ -10,10 +10,12 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Globalization;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Input;
+using System.Xml.Linq;
 
 namespace CapaPresentacion
 {
@@ -26,6 +28,7 @@ namespace CapaPresentacion
         private decimal precioVentaOriginalProducto;
         private decimal margenOriginalProducto;
         private int indiceProductoEditando = -1;
+        private static readonly System.Drawing.Font FuenteMargenBajo = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
         // Visual Studio WinForms Designer requires a real parameterless constructor.
         public frmCompraRegistrar() : this(null)
         {
@@ -35,12 +38,12 @@ namespace CapaPresentacion
         {
             _Usuario = oUsuario;
             InitializeComponent();
+            ConfigurarTablaCompra();
+            dataGridView1.CellFormatting += dataGridView1_CellFormatting;
             txtCodigoProducto.KeyDown += TxtCodigoProducto_KeyDown;
             txtNuevoDocumento.KeyDown += TxtProveedor_KeyDown;
             txtRazonSocial.KeyDown += TxtProveedor_KeyDown;
-            txtPrecioCompra.TextChanged += PrecioCompra_TextChanged;
             txtPrecioVenta.TextChanged += PrecioVenta_TextChanged;
-            txtPorcentaje.TextChanged += Porcentaje_TextChanged;
             txtPrecioCompra.Leave += PrecioCompra_Leave;
             txtCantidad.Enter += delegate { txtCantidad.Select(0, txtCantidad.Text.Length); };
             txtCantidad.KeyDown += TxtCantidad_KeyDown;
@@ -51,8 +54,186 @@ namespace CapaPresentacion
             txtPorcentaje.KeyDown += Porcentaje_KeyDown;
             txtPrecioVenta.KeyDown += PrecioVenta_KeyDown;
             dataGridView1.CellDoubleClick += dataGridView1_CellDoubleClick;
+            btnGuardarBorrador.Click += (s, e) => GuardarBorrador();
+            btnCargarBorrador.Click += (s, e) => CargarBorrador();
             ExperienciaUsuario.Aplicar(this, txtCodigoProducto, txtCodigoProducto, txtNuevoDocumento, txtRazonSocial);
+            if (dataGridView1.Columns.Contains("Porcentaje"))
+                dataGridView1.Columns["Porcentaje"].DefaultCellStyle.Format = "P2";
         }
+
+        private void ConfigurarTablaCompra()
+        {
+            dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dataGridView1.RowTemplate.Height = 48;
+            dataGridView1.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            dataGridView1.Columns["IdProducto"].Visible = false;
+            dataGridView1.Columns["PrecioVenta"].Visible = true;
+            string[] orden = { "Cantidad", "Producto", "PrecioCompra", "Porcentaje", "PrecioVenta", "SubTotal", "btnEliminar" };
+            for (int i = 0; i < orden.Length; i++)
+                if (dataGridView1.Columns.Contains(orden[i])) dataGridView1.Columns[orden[i]].DisplayIndex = i;
+            dataGridView1.Columns["Cantidad"].FillWeight = 60;
+            dataGridView1.Columns["Producto"].FillWeight = 190;
+            dataGridView1.Columns["PrecioCompra"].FillWeight = 90;
+            dataGridView1.Columns["Porcentaje"].FillWeight = 85;
+            dataGridView1.Columns["PrecioVenta"].FillWeight = 90;
+            dataGridView1.Columns["SubTotal"].FillWeight = 95;
+            dataGridView1.Columns["btnEliminar"].FillWeight = 60;
+            dataGridView1.Columns["Porcentaje"].DefaultCellStyle.Format = "P2";
+        }
+
+        private void dataGridView1_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0 || dataGridView1.Columns[e.ColumnIndex].Name != "Porcentaje" || e.Value == null)
+                return;
+            if (decimal.TryParse(Convert.ToString(e.Value), out decimal porcentaje))
+            {
+                bool bajo = porcentaje < 0.50m;
+                e.CellStyle.ForeColor = bajo ? System.Drawing.Color.Firebrick : dataGridView1.DefaultCellStyle.ForeColor;
+                if (bajo) e.CellStyle.Font = FuenteMargenBajo;
+            }
+        }
+
+        private void GuardarBorrador()
+        {
+            if (indiceProductoEditando >= 0)
+            {
+                CapaPresentacion.DialogoSistema.Show("Confirma o cancela la edición del producto antes de guardar el borrador.",
+                    "Edición pendiente", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (dataGridView1.Rows.Count == 0)
+            {
+                CapaPresentacion.DialogoSistema.Show("Agrega al menos un producto antes de guardar el borrador.",
+                    "Borrador vacío", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            DataGridViewRow lineaInvalida = dataGridView1.Rows.Cast<DataGridViewRow>().FirstOrDefault(f =>
+                f.IsNewRow ||
+                !decimal.TryParse(Convert.ToString(f.Cells["PrecioCompra"].Value), out decimal costo) || costo <= 0 ||
+                !decimal.TryParse(Convert.ToString(f.Cells["PrecioVenta"].Value), out decimal venta) || venta <= 0);
+            if (lineaInvalida != null)
+            {
+                CapaPresentacion.DialogoSistema.Show(
+                    "No se puede guardar el borrador: revisa que cada producto tenga precio de compra y precio de venta mayores que cero. " +
+                    "El archivo anterior contiene una línea con ambos precios en Q0.00.",
+                    "Precios incompletos", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (var dialogo = new SaveFileDialog
+            {
+                Filter = "Borrador de compra (*.xml)|*.xml",
+                FileName = "Borrador_compra_" + DateTime.Now.ToString("yyyyMMdd_HHmm") + ".xml",
+                AddExtension = true,
+                DefaultExt = "xml"
+            })
+            {
+                if (dialogo.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    var lineas = new XElement("Productos",
+                        dataGridView1.Rows.Cast<DataGridViewRow>().Select(f => new XElement("Producto",
+                            new XElement("IdProducto", Convert.ToString(f.Cells["IdProducto"].Value)),
+                            new XElement("Nombre", Convert.ToString(f.Cells["Producto"].Value)),
+                            new XElement("PrecioCompra", Convert.ToDecimal(f.Cells["PrecioCompra"].Value).ToString(CultureInfo.InvariantCulture)),
+                            new XElement("PrecioVenta", Convert.ToDecimal(f.Cells["PrecioVenta"].Value).ToString(CultureInfo.InvariantCulture)),
+                            new XElement("Porcentaje", Convert.ToDecimal(f.Cells["Porcentaje"].Value).ToString(CultureInfo.InvariantCulture)),
+                            new XElement("Cantidad", Convert.ToString(f.Cells["Cantidad"].Value)),
+                            new XElement("Subtotal", Convert.ToDecimal(f.Cells["SubTotal"].Value).ToString(CultureInfo.InvariantCulture)))));
+                    new XDocument(new XElement("BorradorCompra", new XAttribute("Version", "1"),
+                        new XElement("IdProveedor", txtIdProveedor.Text),
+                        new XElement("DocumentoProveedor", txtNuevoDocumento.Text),
+                        new XElement("RazonSocial", txtRazonSocial.Text),
+                        new XElement("TipoDocumento", (cboTipoDocumento.SelectedItem as OpcionCombo)?.Texto ?? "Boleta"),
+                        lineas)).Save(dialogo.FileName);
+                    CapaPresentacion.DialogoSistema.Show("Borrador guardado correctamente.", "Borrador de compra",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    CapaPresentacion.DialogoSistema.Show("No se pudo guardar el borrador.\n\n" + ex.Message,
+                        "Borrador de compra", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private void CargarBorrador()
+        {
+            using (var dialogo = new OpenFileDialog { Filter = "Borrador de compra (*.xml)|*.xml", CheckFileExists = true })
+            {
+                if (dialogo.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    XDocument documento = XDocument.Load(dialogo.FileName);
+                    XElement raiz = documento.Element("BorradorCompra");
+                    if (raiz == null || Convert.ToString(raiz.Attribute("Version")) != "1")
+                        throw new InvalidOperationException("El archivo no es un borrador de compra reconocido.");
+
+                    int idProveedor = EnteroBorrador(raiz, "IdProveedor", 0);
+                    Proveedor proveedor = null;
+                    if (idProveedor > 0)
+                    {
+                        proveedor = new CN_Proveedor().Listar().FirstOrDefault(p => p.IdProveedor == idProveedor && p.Estado);
+                        if (proveedor == null) throw new InvalidOperationException("El proveedor del borrador ya no existe o está inactivo.");
+                    }
+
+                    List<Producto> productosActivos = new CN_Producto().Listar().Where(p => p.Estado).ToList();
+                    var datos = new List<object[]>();
+                    var ids = new HashSet<int>();
+                    foreach (XElement x in raiz.Element("Productos")?.Elements("Producto") ?? Enumerable.Empty<XElement>())
+                    {
+                        int id = EnteroBorrador(x, "IdProducto", 0);
+                        int cantidad = EnteroBorrador(x, "Cantidad", 0);
+                        decimal costo = DecimalBorrador(x, "PrecioCompra");
+                        decimal venta = DecimalBorrador(x, "PrecioVenta");
+                        decimal margen = DecimalBorrador(x, "Porcentaje");
+                        decimal subtotal = DecimalBorrador(x, "Subtotal");
+                        Producto producto = productosActivos.FirstOrDefault(p => p.IdProducto == id);
+                        if (id <= 0 || cantidad <= 0 || producto == null || !ids.Add(id) || costo <= 0 || venta <= 0 || venta < costo || margen < 0 ||
+                            Math.Abs(venta * 4m - decimal.Round(venta * 4m, 0)) > 0.0001m ||
+                            (costo > 0 && Math.Abs(margen - ((venta - costo) / costo)) > 0.0001m) ||
+                            Math.Abs(subtotal - Math.Round(costo * cantidad, 2)) > 0.01m)
+                            throw new InvalidOperationException("El borrador contiene un producto, cantidad o precio inválido. No se cargó ningún dato.");
+
+                        datos.Add(new object[] { id, producto.Nombre, costo.ToString("0.00"), venta.ToString("0.00"),
+                            margen.ToString("0.####"), cantidad, subtotal.ToString("0.00") });
+                    }
+                    if (datos.Count == 0) throw new InvalidOperationException("El borrador no contiene productos.");
+                    if (dataGridView1.Rows.Count > 0 && CapaPresentacion.DialogoSistema.Show(this,
+                        "La compra actual tiene productos. ¿Deseas reemplazarla con el borrador?", "Cargar borrador",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                        return;
+
+                    dataGridView1.Rows.Clear();
+                    foreach (object[] fila in datos) dataGridView1.Rows.Add(fila);
+                    txtIdProveedor.Text = proveedor == null ? "0" : proveedor.IdProveedor.ToString();
+                    txtNuevoDocumento.Text = proveedor?.Documento ?? ValorBorrador(raiz, "DocumentoProveedor");
+                    txtRazonSocial.Text = proveedor?.RazonSocial ?? ValorBorrador(raiz, "RazonSocial");
+                    string tipo = ValorBorrador(raiz, "TipoDocumento");
+                    for (int i = 0; i < cboTipoDocumento.Items.Count; i++)
+                        if (string.Equals((cboTipoDocumento.Items[i] as OpcionCombo)?.Texto, tipo, StringComparison.OrdinalIgnoreCase))
+                        { cboTipoDocumento.SelectedIndex = i; break; }
+                    indiceProductoEditando = -1;
+                    calculatTotal();
+                    txtCodigoProducto.Focus();
+                    CapaPresentacion.DialogoSistema.Show("Borrador cargado. Revisa proveedor, productos, precios y total de factura antes de registrar.",
+                        "Borrador de compra", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    CapaPresentacion.DialogoSistema.Show("No se pudo cargar el borrador. La compra actual se conservó.\n\n" + ex.Message,
+                        "Borrador de compra", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private static string ValorBorrador(XElement raiz, string campo) => (string)raiz.Element(campo) ?? string.Empty;
+        private static int EnteroBorrador(XElement raiz, string campo, int predeterminado) =>
+            int.TryParse(ValorBorrador(raiz, campo), NumberStyles.Integer, CultureInfo.InvariantCulture, out int valor) ? valor : predeterminado;
+        private static decimal DecimalBorrador(XElement raiz, string campo) =>
+            decimal.TryParse(ValorBorrador(raiz, campo), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal valor)
+                ? valor : throw new InvalidOperationException("El borrador contiene un monto inválido en " + campo + ".");
 
         private void TxtCantidad_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
         {
@@ -77,7 +258,9 @@ namespace CapaPresentacion
             if (e.KeyCode != Keys.Enter) return;
             e.Handled = true;
             e.SuppressKeyPress = true;
+            if (!CalcularPrecioVentaDesdePorcentaje()) return;
             txtPrecioVenta.Focus();
+            txtPrecioVenta.SelectAll();
         }
 
         private void PrecioVenta_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
@@ -164,9 +347,7 @@ namespace CapaPresentacion
             Producto producto;
             try
             {
-                producto = new CN_Producto().Listar()
-                    .FirstOrDefault(item => item.Estado &&
-                        string.Equals(Convert.ToString(item.Codigo).Trim(), codigo, StringComparison.OrdinalIgnoreCase));
+                producto = new CN_Producto().BuscarPorCodigo(codigo);
             }
             catch (Exception ex)
             {
@@ -230,6 +411,7 @@ namespace CapaPresentacion
                     txtIdProveedor.Text = modal._Proveedor.IdProveedor.ToString();
                     txtNuevoDocumento.Text = modal._Proveedor.Documento.ToString();
                     txtRazonSocial.Text = modal._Proveedor.RazonSocial.ToString();
+                    txtCodigoProducto.Focus();
                 }
                 else
                 {
@@ -276,21 +458,67 @@ namespace CapaPresentacion
 
         }
 
-        private void PrecioCompra_TextChanged(object sender, EventArgs e)
-        {
-            ActualizarMargenDesdePrecios();
-        }
-
         private void PrecioVenta_TextChanged(object sender, EventArgs e)
         {
             ActualizarMargenDesdePrecios();
         }
 
-        private void Porcentaje_TextChanged(object sender, EventArgs e)
+        private bool CalcularPrecioVentaDesdePorcentaje()
         {
-            if (sincronizandoPrecios || !decimal.TryParse(txtPrecioCompra.Text, out decimal costo) || costo < 0 ||
-                !decimal.TryParse(txtPorcentaje.Text, out decimal porcentaje) || porcentaje < 0)
-                return;
+            if (sincronizandoPrecios) return true;
+            if (!decimal.TryParse(txtPrecioCompra.Text, out decimal costo) || costo < 0)
+            {
+                CapaPresentacion.DialogoSistema.Show("Ingrese un costo válido antes de calcular el precio de venta.",
+                    "Costo inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPrecioCompra.Focus();
+                txtPrecioCompra.SelectAll();
+                return false;
+            }
+            if (!decimal.TryParse(txtPorcentaje.Text, out decimal porcentaje) || porcentaje < 0)
+            {
+                CapaPresentacion.DialogoSistema.Show("Ingrese un margen válido igual o mayor a cero.",
+                    "Margen inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPorcentaje.Focus();
+                txtPorcentaje.SelectAll();
+                return false;
+            }
+
+            if (costo == 0)
+            {
+                if (porcentaje <= 0 || !decimal.TryParse(txtPrecioVenta.Text, out decimal ventaExistente) || ventaExistente <= 0)
+                {
+                    CapaPresentacion.DialogoSistema.Show(
+                        "Para calcular el costo, ingrese un margen mayor que cero y un precio de venta mayor que cero.",
+                        "Datos incompletos", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    if (porcentaje <= 0)
+                    {
+                        txtPorcentaje.Focus();
+                        txtPorcentaje.SelectAll();
+                    }
+                    else
+                    {
+                        txtPrecioVenta.Focus();
+                        txtPrecioVenta.SelectAll();
+                    }
+                    return false;
+                }
+
+                costo = Math.Round(ventaExistente / (1m + porcentaje / 100m), 2, MidpointRounding.AwayFromZero);
+                if (costo <= 0)
+                {
+                    CapaPresentacion.DialogoSistema.Show("Con esos valores el costo calculado queda en cero. Revise el precio y el margen.",
+                        "Costo calculado inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtPrecioVenta.Focus();
+                    txtPrecioVenta.SelectAll();
+                    return false;
+                }
+
+                sincronizandoPrecios = true;
+                txtPrecioCompra.Text = costo.ToString("0.00");
+                sincronizandoPrecios = false;
+                ActualizarMargenDesdePrecios();
+                return true;
+            }
 
             decimal objetivo = costo * (1m + porcentaje / 100m);
             decimal ventaRedondeada = Math.Ceiling(objetivo * 4m) / 4m;
@@ -298,6 +526,7 @@ namespace CapaPresentacion
             txtPrecioVenta.Text = ventaRedondeada.ToString("0.00");
             sincronizandoPrecios = false;
             ActualizarMargenDesdePrecios();
+            return true;
         }
 
         private void ActualizarMargenDesdePrecios()
@@ -497,9 +726,19 @@ namespace CapaPresentacion
                 return;
             }
 
-            if (precioCompra < 0 || precioVenta < 0)
+            if (precioCompra <= 0 || precioVenta <= 0)
             {
-                CapaPresentacion.DialogoSistema.Show("Los precios no pueden ser negativos", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("El precio de compra y el precio de venta deben ser mayores que cero.", "Precios inválidos", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (precioCompra <= 0)
+                {
+                    txtPrecioCompra.Focus();
+                    txtPrecioCompra.SelectAll();
+                }
+                else
+                {
+                    txtPrecioVenta.Focus();
+                    txtPrecioVenta.SelectAll();
+                }
                 return;
             }
 
@@ -511,9 +750,11 @@ namespace CapaPresentacion
                 return;
             }
 
+            // PRODUCTO.Porcentaje y EDetalle_Compra almacenan una fracción (0.61 = 61%).
+            // El textbox acepta puntos porcentuales, pero el detalle debe coincidir con SQL.
             decimal porcentajeReal = precioCompra == 0
                 ? 0
-                : decimal.Ceiling(((precioVenta - precioCompra) / precioCompra * 100m) * 10000m) / 10000m;
+                : decimal.Ceiling(((precioVenta - precioCompra) / precioCompra) * 10000m) / 10000m;
 
             foreach(DataGridViewRow fila in dataGridView1.Rows)
             {
@@ -567,7 +808,17 @@ namespace CapaPresentacion
 
             DataGridViewRow fila = dataGridView1.Rows[e.RowIndex];
             int id = Convert.ToInt32(fila.Cells["IdProducto"].Value);
-            Producto producto = new CN_Producto().Listar().FirstOrDefault(p => p.IdProducto == id);
+            Producto producto;
+            try
+            {
+                producto = new CN_Producto().BuscarPorId(id);
+            }
+            catch (Exception ex)
+            {
+                CapaPresentacion.DialogoSistema.Show(ex.Message + Environment.NewLine + ex.InnerException?.Message,
+                    "No se pudo cargar el producto", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
             if (producto == null)
             {
                 CapaPresentacion.DialogoSistema.Show("No se pudo volver a cargar el producto seleccionado.",
@@ -582,7 +833,9 @@ namespace CapaPresentacion
             sincronizandoPrecios = true;
             txtPrecioCompra.Text = Convert.ToDecimal(fila.Cells["PrecioCompra"].Value).ToString("0.00");
             txtPrecioVenta.Text = Convert.ToDecimal(fila.Cells["PrecioVenta"].Value).ToString("0.00");
-            txtPorcentaje.Text = Convert.ToDecimal(fila.Cells["Porcentaje"].Value).ToString("0.##");
+            txtPorcentaje.Text = FormatoPorcentaje.ParaMostrar(
+                Convert.ToDecimal(fila.Cells["Porcentaje"].Value),
+                Convert.ToDecimal(fila.Cells["PrecioCompra"].Value)).ToString("0.##");
             sincronizandoPrecios = false;
             ActualizarMargenDesdePrecios();
             decimal cantidad = Convert.ToDecimal(fila.Cells["Cantidad"].Value);
@@ -677,7 +930,9 @@ namespace CapaPresentacion
                         Convert.ToInt32(row.Cells["IdProducto"].Value.ToString()),
                         Convert.ToDecimal(row.Cells["PrecioCompra"].Value),
                         Convert.ToDecimal(row.Cells["PrecioVenta"].Value),
-                        Convert.ToDecimal(row.Cells["Porcentaje"].Value),
+                        // El TVP de SQL valida el margen en puntos porcentuales (61),
+                        // aunque PRODUCTO y la cuadrícula lo guardan como fracción (0.61).
+                        Convert.ToDecimal(row.Cells["Porcentaje"].Value) * 100m,
                         Convert.ToInt32(row.Cells["Cantidad"].Value),
                         Convert.ToDecimal(row.Cells["SubTotal"].Value),
 

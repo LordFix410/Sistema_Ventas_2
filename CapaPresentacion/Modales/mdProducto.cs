@@ -23,10 +23,36 @@ namespace CapaPresentacion.Modales
             _mostrarMargen = mostrarMargen;
             InitializeComponent();
             dgvData.Columns["PORCENTAJE"].Visible = _mostrarMargen;
+            dgvData.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvData.RowTemplate.Height = 48;
+            if (dgvData.Columns.Contains("Codigo")) dgvData.Columns["Codigo"].FillWeight = 28;
+            if (dgvData.Columns.Contains("Nombre")) dgvData.Columns["Nombre"].FillWeight = 48;
+            if (dgvData.Columns.Contains("Categoria")) dgvData.Columns["Categoria"].FillWeight = 24;
             CapaPresentacion.Utilidades.ExperienciaUsuario.Aplicar(this, txtBusqueda, txtBusqueda);
             txtBusqueda.KeyDown += txtBusqueda_KeyDown;
             dgvData.KeyDown += dgvData_KeyDown;
             Shown += mdProducto_Shown;
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (dgvData.ContainsFocus && (keyData == Keys.Tab || keyData == (Keys.Tab | Keys.Shift)))
+            {
+                bool anterior = (keyData & Keys.Shift) == Keys.Shift;
+                int indice = dgvData.CurrentCell == null ? (anterior ? dgvData.Rows.Count : -1) : dgvData.CurrentCell.RowIndex;
+                int paso = anterior ? -1 : 1;
+                for (int i = indice + paso; i >= 0 && i < dgvData.Rows.Count; i += paso)
+                {
+                    if (!dgvData.Rows[i].Visible || dgvData.Rows[i].IsNewRow) continue;
+                    DataGridViewColumn primera = dgvData.Columns.Cast<DataGridViewColumn>().FirstOrDefault(c => c.Visible);
+                    if (primera == null) break;
+                    dgvData.ClearSelection();
+                    dgvData.Rows[i].Selected = true;
+                    dgvData.CurrentCell = dgvData.Rows[i].Cells[primera.Index];
+                    return true;
+                }
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
         private void mdProducto_Load(object sender, EventArgs e)
@@ -42,27 +68,9 @@ namespace CapaPresentacion.Modales
             cboBuscar.ValueMember = "Valor";
             cboBuscar.SelectedIndex = 1;
 
-            //Mostrar todos los productos:
-            List<Producto> listaProductos;
-            try
-            {
-                listaProductos = new CN_Producto().Listar();
-            }
-            catch (Exception ex)
-            {
-                CapaPresentacion.DialogoSistema.Show(ex.Message + Environment.NewLine + ex.InnerException?.Message,
-                    "No se pudieron cargar productos", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                Close();
-                return;
-            }
-
-            foreach (Producto item in listaProductos.Where(p => p.Estado))
-            {
-                dgvData.Rows.Add(new object[] { item.IdProducto, item.Codigo, item.Nombre,
-                    item.oCategoria.Descripcion, item.Stock, item.PrecioCompra, item.PrecioVenta
-                    , FormatoPorcentaje.ParaMostrar(item.Porcentaje, item.PrecioCompra)
-                });
-            }
+            // No se carga el inventario completo al abrir el modal. El usuario
+            // puede escribir un criterio y buscarlo directamente en SQL.
+            dgvData.Rows.Clear();
             txtBusqueda.Select();
         }
 
@@ -79,7 +87,6 @@ namespace CapaPresentacion.Modales
                 e.Handled = true;
                 e.SuppressKeyPress = true;
                 btnBuscar.PerformClick();
-                EnfocarPrimerResultadoVisible();
             }
         }
 
@@ -143,19 +150,38 @@ namespace CapaPresentacion.Modales
         private void btnBuscar_Click(object sender, EventArgs e)
         {
             string columnaFiltro = ((OpcionCombo)cboBuscar.SelectedItem).Valor.ToString();
-            string busqueda = NormalizarBusqueda(txtBusqueda.Text);
-            dgvData.CurrentCell = null;
-            dgvData.ClearSelection();
-            if (dgvData.Rows.Count > 0)
+            string busqueda = txtBusqueda.Text.Trim();
+            bool busquedaVacia = NormalizarBusqueda(busqueda).Length == 0;
+            if (busquedaVacia && CapaPresentacion.DialogoSistema.Show(this,
+                "El campo está vacío y se consultará toda la lista de productos. Si el inventario es grande, la carga puede tardar. ¿Deseas continuar?",
+                "Confirmar carga completa", MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                return;
+
+            try
             {
-                foreach (DataGridViewRow row in dgvData.Rows)
-                {
-                    string valorCelda = NormalizarBusqueda(Convert.ToString(row.Cells[columnaFiltro].Value));
-                    if (busqueda.Length == 0 || valorCelda.Contains(busqueda))
-                        row.Visible = true;
-                    else
-                        row.Visible = false;
-                }
+                List<Producto> resultados = busquedaVacia
+                    ? new CN_Producto().Listar().Where(p => p.Estado).ToList()
+                    : new CN_Producto().Buscar(columnaFiltro, busqueda, true);
+
+                dgvData.Rows.Clear();
+                foreach (Producto item in resultados)
+                    dgvData.Rows.Add(new object[] { item.IdProducto, item.Codigo, item.Nombre,
+                        item.oCategoria.Descripcion, item.Stock, item.PrecioCompra, item.PrecioVenta,
+                        FormatoPorcentaje.ParaMostrar(item.Porcentaje, item.PrecioCompra) });
+
+                if (resultados.Count == 0)
+                    CapaPresentacion.DialogoSistema.Show("No se encontraron productos con ese criterio.", "Búsqueda",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                else if (resultados.Count == 500)
+                    CapaPresentacion.DialogoSistema.Show("Se muestran los primeros 500 resultados. Especifica más la búsqueda para acotar la lista.",
+                        "Resultados limitados", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                EnfocarPrimerResultadoVisible();
+            }
+            catch (Exception ex)
+            {
+                CapaPresentacion.DialogoSistema.Show(ex.Message + Environment.NewLine + ex.InnerException?.Message,
+                    "No se pudieron buscar productos", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -179,11 +205,9 @@ namespace CapaPresentacion.Modales
             if (txtBusqueda.Text != "")
             {
                 txtBusqueda.Text = "";
-                foreach (DataGridViewRow row in dgvData.Rows)
-                {
-                    row.Visible = true;
-                }
             }
+            dgvData.Rows.Clear();
+            txtBusqueda.Focus();
         }
     }
 }

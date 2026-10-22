@@ -51,7 +51,7 @@ namespace CapaDatos
                 try
                 {
                     StringBuilder query = new StringBuilder();
-                    query.AppendLine("update producto set stock = stock - @cantidad where idproducto = @idproducto and stock >= @cantidad");
+                    query.AppendLine("update producto set stock = stock - @cantidad where idproducto = @idproducto");
 
                     SqlCommand cmd = new SqlCommand(query.ToString(), oconexion);
                     cmd.Parameters.AddWithValue("@cantidad", cantidad);

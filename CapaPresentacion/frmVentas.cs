@@ -31,6 +31,7 @@ namespace CapaPresentacion
             txtDocumentoCliente.KeyDown += TxtCliente_KeyDown;
             txtNombreCliente.KeyDown += TxtCliente_KeyDown;
             txtCantidad.KeyDown += TxtCantidad_KeyDown;
+            txtPagaCon.Enter += (s, e) => txtPagaCon.SelectAll();
             Shown += frmVentas_Shown;
             ExperienciaUsuario.Aplicar(this, txtCodigoProducto, txtCodigoProducto, txtDocumentoCliente, txtNombreCliente, txtCantidad);
         }
@@ -134,9 +135,19 @@ namespace CapaPresentacion
             }
 
             txtIdProducto.Text = "0";
-            Producto producto = new CN_Producto().Listar()
-                .FirstOrDefault(item => item.Estado &&
-                    string.Equals(Convert.ToString(item.Codigo).Trim(), codigo, StringComparison.OrdinalIgnoreCase));
+            Producto producto;
+            try
+            {
+                producto = new CN_Producto().BuscarPorCodigo(codigo);
+            }
+            catch (Exception ex)
+            {
+                CapaPresentacion.DialogoSistema.Show(ex.Message + Environment.NewLine + ex.InnerException?.Message,
+                    "No se pudo buscar el producto", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                txtCodigoProducto.Focus();
+                txtCodigoProducto.SelectAll();
+                return;
+            }
 
             if (producto == null)
             {
@@ -219,11 +230,12 @@ namespace CapaPresentacion
 
         private void ConfigurarTablaVenta()
         {
+            dataGridView1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dataGridView1.RowHeadersVisible = false;
             dataGridView1.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dataGridView1.RowTemplate.Height = 32;
-            dataGridView1.ColumnHeadersHeight = 34;
+            dataGridView1.RowTemplate.Height = 48;
+            dataGridView1.ColumnHeadersHeight = 44;
             dataGridView1.DefaultCellStyle.Padding = new Padding(4, 0, 4, 0);
             dataGridView1.DefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 9F);
             dataGridView1.ColumnHeadersDefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 9F, FontStyle.Bold);
@@ -243,6 +255,15 @@ namespace CapaPresentacion
             btnEliminar.DefaultCellStyle.ForeColor = System.Drawing.Color.Firebrick;
             btnEliminar.DefaultCellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(255, 220, 220);
             btnEliminar.ToolTipText = "Quitar este producto de la venta";
+
+            foreach (System.Windows.Forms.Control control in new System.Windows.Forms.Control[] { txtTotalPagar, txtPagaCon, txtCambio, label12, label13, lblCambio, btnRegistrar })
+                control.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            txtTotalPagar.TabStop = false;
+            txtCambio.TabStop = false;
+            txtTotalPagar.ReadOnly = true;
+            txtCambio.ReadOnly = true;
+            groupBox3.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            btnAgregar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         }
 
         private void btnBuscarProveedor_Click(object sender, EventArgs e)
@@ -290,7 +311,6 @@ namespace CapaPresentacion
         private void btnAgregar_Click(object sender, EventArgs e)
         {
             decimal precioCompra = 0;
-            int stock = 0;
             int indiceProductoExistente = -1;
             int idProductoActual;
 
@@ -303,18 +323,6 @@ namespace CapaPresentacion
             if (!decimal.TryParse(txtPrecioCompra.Text, out precioCompra))
             {
                 CapaPresentacion.DialogoSistema.Show("Precio Compra - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            if (idProductoActual > 0 && !int.TryParse(txtStock.Text, out stock))
-            {
-                CapaPresentacion.DialogoSistema.Show("Stock - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            if (idProductoActual > 0 && txtCantidad.Value > stock)
-            {
-                CapaPresentacion.DialogoSistema.Show("La cantidad solicitada supera el stock disponible", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -397,8 +405,16 @@ namespace CapaPresentacion
             Producto producto = null;
             if (idProducto > 0)
             {
-                producto = new CN_Producto().Listar()
-                    .FirstOrDefault(item => item.IdProducto == idProducto);
+                try
+                {
+                    producto = new CN_Producto().BuscarPorId(idProducto);
+                }
+                catch (Exception ex)
+                {
+                    CapaPresentacion.DialogoSistema.Show(ex.Message + Environment.NewLine + ex.InnerException?.Message,
+                        "No se pudo cargar el producto", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
 
                 if (producto == null)
                 {
@@ -531,10 +547,12 @@ namespace CapaPresentacion
 
         private void txtPagaCon_KeyDown(object sender, KeyEventArgs e)
         {
-            if(e.KeyData == Keys.Enter)
+            if(e.KeyCode == Keys.Enter)
             {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
                 calcularCambio();
-                txtCambio.Select();
+                btnRegistrar.Focus();
             }
         }
 

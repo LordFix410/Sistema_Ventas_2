@@ -74,6 +74,7 @@ namespace CapaPresentacion.Utilidades
 
         private static void EstilizarTabla(DataGridView tabla)
         {
+            tabla.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             tabla.EnableHeadersVisualStyles = false;
             tabla.BackgroundColor = Color.FromArgb(242, 245, 248);
             tabla.BorderStyle = BorderStyle.FixedSingle;
@@ -82,8 +83,12 @@ namespace CapaPresentacion.Utilidades
             tabla.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             tabla.MultiSelect = false;
             tabla.AllowUserToResizeRows = false;
-            tabla.RowTemplate.Height = 30;
-            tabla.ColumnHeadersHeight = 38;
+            tabla.RowTemplate.Height = 48;
+            tabla.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
+            tabla.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            tabla.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            tabla.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            tabla.ColumnHeadersHeight = 48;
             tabla.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(48, 91, 125);
             tabla.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             tabla.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);

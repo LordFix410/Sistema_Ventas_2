@@ -18,7 +18,7 @@ namespace CapaPresentacion
         public Login()
         {
             InitializeComponent();
-            CapaPresentacion.Utilidades.ExperienciaUsuario.Aplicar(this, txtNumeroDoc, txtContrasena);
+            CapaPresentacion.Utilidades.ExperienciaUsuario.Aplicar(this, txtContrasena, txtContrasena);
         }
 
         private void btnCancelar_Click(object sender, EventArgs e)
@@ -28,17 +28,36 @@ namespace CapaPresentacion
 
         private void btnIngresar_Click(object sender, EventArgs e)
         {
-            Usuario ousuario = new CN_Usuario().Listar().Where(u => u.Estado && u.Documento == txtNumeroDoc.Text && u.Clave == txtContrasena.Text).FirstOrDefault();
-
-            if (ousuario != null)
+            List<Usuario> coincidencias;
+            try
             {
+                coincidencias = new CN_Usuario().ListarActivosPorClave(txtContrasena.Text);
+            }
+            catch (Exception ex)
+            {
+                CapaPresentacion.DialogoSistema.Show("No se pudo validar el acceso. Verifica la conexión con la base de datos.\n\n" + ex.Message,
+                    "Error de conexión", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (coincidencias.Count == 1)
+            {
+                Usuario ousuario = coincidencias[0];
                 Inicio frmInicio = new Inicio(ousuario);
+                frmInicio.WindowState = FormWindowState.Maximized;
 
                 frmInicio.Show();
                 this.Hide();
                  
                 frmInicio.FormClosing += Frm_Closing;
 
+            }
+            else if (coincidencias.Count > 1)
+            {
+                CapaPresentacion.DialogoSistema.Show("La contraseña está asignada a más de un usuario activo. Asigna una contraseña única a cada usuario.",
+                    "Contraseña duplicada", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtContrasena.Focus();
+                txtContrasena.SelectAll();
             }
             else
             {
@@ -60,6 +79,11 @@ namespace CapaPresentacion
             {
                 btnIngresar.PerformClick();
             }
+        }
+
+        private void iconPictureBox1_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

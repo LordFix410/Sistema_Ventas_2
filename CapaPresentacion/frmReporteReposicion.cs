@@ -16,6 +16,7 @@ namespace CapaPresentacion
         public frmReporteReposicion()
         {
             InitializeComponent();
+            CapaPresentacion.Utilidades.ExperienciaUsuario.Aplicar(this, cboProveedorCotizacion);
             cboProveedorCotizacion.DropDownStyle = ComboBoxStyle.DropDownList;
             btnConsultarCotizacion.Click += (s, e) => CargarReporte();
             btnExportarExcel.Click += (s, e) => Exportar();
@@ -39,6 +40,10 @@ namespace CapaPresentacion
         private void CargarReporte()
         {
             reporte = negocio.Reporte();
+            if (!reporte.Columns.Contains("RangoObjetivo"))
+                reporte.Columns.Add("RangoObjetivo", typeof(string));
+            foreach (DataRow fila in reporte.Rows)
+                fila["RangoObjetivo"] = Convert.ToString(fila["CantidadMinima"]) + " – " + Convert.ToString(fila["CantidadMaxima"]);
             MostrarFiltrado();
         }
 
@@ -52,12 +57,13 @@ namespace CapaPresentacion
                 DataView vista = new DataView(reporte) { RowFilter = "IdProveedor = " + op.Id.Value };
                 dgvCotizacion.DataSource = vista;
             }
-            foreach (string n in new[] { "IdGrupoReposicion", "IdGrupoProveedor", "IdProveedor", "IdProducto" })
+            foreach (string n in new[] { "IdGrupoReposicion", "IdGrupoProveedor", "IdProveedor", "IdProducto",
+                "CantidadMinima", "CantidadMaxima", "FaltanteReferencia" })
                 if (dgvCotizacion.Columns.Contains(n)) dgvCotizacion.Columns[n].Visible = false;
             Encabezado("GrupoReposicion", "Grupo de reposición"); Encabezado("GrupoProveedores", "Perfil proveedor");
             Encabezado("Proveedor", "Proveedor"); Encabezado("Codigo", "Código"); Encabezado("Producto", "Producto");
-            Encabezado("StockActual", "Stock actual"); Encabezado("CantidadMinima", "Mínimo"); Encabezado("CantidadMaxima", "Máximo objetivo");
-            Encabezado("FaltanteReferencia", "Faltante referencia"); Encabezado("UltimoPrecioConEsteProveedor", "Último precio proveedor");
+            Encabezado("StockActual", "Stock actual"); Encabezado("RangoObjetivo", "Rango objetivo (mínimo–máximo)");
+            Encabezado("UltimoPrecioConEsteProveedor", "Último precio proveedor");
             Encabezado("FechaUltimaCompraConEsteProveedor", "Fecha última compra"); Encabezado("UltimoPrecioHistorico", "Último precio histórico");
             Encabezado("UltimoProveedorHistorico", "Proveedor histórico"); Encabezado("FechaUltimoPrecioHistorico", "Fecha precio histórico");
             foreach (string n in new[] { "UltimoPrecioConEsteProveedor", "UltimoPrecioHistorico" })
@@ -84,9 +90,9 @@ namespace CapaPresentacion
                     using (XLWorkbook libro = new XLWorkbook())
                     {
                         var hoja = libro.Worksheets.Add("Pedidos");
-                        hoja.Column(1).Width = 18; hoja.Column(2).Width = 42; hoja.Column(3).Width = 19;
-                        hoja.Column(4).Width = 19; hoja.Column(5).Width = 24; hoja.Column(6).Width = 38;
-                        string[] encabezados = { "Código", "Producto", "Cantidad máxima", "Cantidad faltante", "Productos a pedir", "Último proveedor histórico" };
+                        hoja.Column(1).Width = 18; hoja.Column(2).Width = 42; hoja.Column(3).Width = 25;
+                        hoja.Column(4).Width = 24; hoja.Column(5).Width = 38;
+                        string[] encabezados = { "Código", "Producto", "Rango objetivo (mínimo–máximo)", "Productos a pedir", "Último proveedor histórico" };
                         int fila = 1;
                         foreach (var grupo in proveedores)
                         {
@@ -105,10 +111,9 @@ namespace CapaPresentacion
                             {
                                 hoja.Cell(fila, 1).Value = Convert.ToString(r["Codigo"]);
                                 hoja.Cell(fila, 2).Value = Convert.ToString(r["Producto"]);
-                                hoja.Cell(fila, 3).Value = Convert.ToInt32(r["CantidadMaxima"]);
-                                hoja.Cell(fila, 4).Value = Convert.ToInt32(r["FaltanteReferencia"]);
-                                hoja.Cell(fila, 5).Value = "";
-                                hoja.Cell(fila, 6).Value = r.IsNull("UltimoProveedorHistorico") ? "Sin compra registrada" : Convert.ToString(r["UltimoProveedorHistorico"]);
+                                hoja.Cell(fila, 3).Value = Convert.ToString(r["CantidadMinima"]) + " – " + Convert.ToString(r["CantidadMaxima"]);
+                                hoja.Cell(fila, 4).Value = "";
+                                hoja.Cell(fila, 5).Value = r.IsNull("UltimoProveedorHistorico") ? "Sin compra registrada" : Convert.ToString(r["UltimoProveedorHistorico"]);
                                 hoja.Row(fila).Height = 23;
                                 fila++;
                             }

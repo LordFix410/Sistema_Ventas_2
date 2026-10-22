@@ -37,6 +37,21 @@ namespace CapaNegocio
             return objcd_producto.Listar();
         }
 
+        public Producto BuscarPorCodigo(string codigo)
+        {
+            return objcd_producto.BuscarPorCodigo(codigo);
+        }
+
+        public Producto BuscarPorId(int idProducto)
+        {
+            return objcd_producto.BuscarPorId(idProducto);
+        }
+
+        public List<Producto> Buscar(string columna, string termino, bool soloActivos = false)
+        {
+            return objcd_producto.Buscar(columna, termino, soloActivos);
+        }
+
         public int Registrar(Producto obj, out string Mensaje)
         {
             Mensaje = string.Empty;

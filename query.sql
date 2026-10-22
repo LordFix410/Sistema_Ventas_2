@@ -93,6 +93,27 @@ FechaRegistro datetime default getdate()
 )
 go
 
+/* Facilita la búsqueda puntual por código desde ventas y compras. */
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.PRODUCTO') AND name = N'IX_PRODUCTO_Codigo_Estado')
+    CREATE INDEX IX_PRODUCTO_Codigo_Estado ON dbo.PRODUCTO(Codigo, Estado);
+GO
+
+CREATE OR ALTER FUNCTION dbo.fn_NormalizarTextoBusqueda(@Texto varchar(500))
+RETURNS varchar(500)
+AS
+BEGIN
+    DECLARE @Resultado varchar(500) = UPPER(ISNULL(@Texto, '')) COLLATE Latin1_General_100_CI_AI;
+    DECLARE @Posicion int;
+    SET @Posicion = PATINDEX('%[^A-Z0-9]%', @Resultado COLLATE Latin1_General_100_CI_AI);
+    WHILE @Posicion > 0
+    BEGIN
+        SET @Resultado = STUFF(@Resultado, @Posicion, 1, '');
+        SET @Posicion = PATINDEX('%[^A-Z0-9]%', @Resultado COLLATE Latin1_General_100_CI_AI);
+    END;
+    RETURN @Resultado;
+END;
+GO
+
 -- Grupos de productos sustituibles para reposición. Los límites pertenecen
 -- al grupo completo y el stock se suma entre todos sus productos.
 CREATE TABLE GRUPO_REPOSICION(
@@ -776,12 +797,11 @@ begin
 		UPDATE p
 		SET p.Stock = p.Stock - dv.Cantidad
 		FROM PRODUCTO p
-		INNER JOIN @DetalleVenta dv ON dv.IdProducto = p.IdProducto
-		WHERE p.Stock >= dv.Cantidad;
+		INNER JOIN @DetalleVenta dv ON dv.IdProducto = p.IdProducto;
 
 		SET @ProductosActualizados = @@ROWCOUNT;
 		IF @ProductosActualizados <> @ProductosSolicitados
-			THROW 50015, 'Stock insuficiente para uno o más productos', 1;
+			THROW 50015, 'Uno o más productos ya no existen', 1;
 
 		insert into VENTA(IdUsuario,TipoDocumento,NumeroDocumento,DocumentoCliente,NombreCliente,MontoPago,MontoCambio,MontoTotal)
 		values(@IdUsuario,@TipoDocumento,@NumeroDocumento,@DocumentoCliente,@NombreCliente,@MontoPago,@MontoCambio,@MontoTotal)
@@ -908,8 +928,11 @@ INSERT INTO PROVEEDOR(Documento, RazonSocial, Correo, Telefono, Estado) VALUES
 GO
 
 -- 8. Clientes de Prueba
-INSERT INTO CLIENTE(Documento, NombreCompleto, Correo, Telefono, Estado) VALUES
-('CF', 'Consumidor Final', 'cf@gmail.com', '00000000', 1)
+IF NOT EXISTS (SELECT 1 FROM CLIENTE WHERE UPPER(LTRIM(RTRIM(Documento))) = 'CF')
+BEGIN
+    INSERT INTO CLIENTE(Documento, NombreCompleto, Correo, Telefono, Estado) VALUES
+    ('CF', 'Consumidor Final', 'cf@gmail.com', '00000000', 1)
+END
 GO
 INSERT INTO CLIENTE(Documento, NombreCompleto, Correo, Telefono, Estado) VALUES
 ('30303030', 'María López', 'maria.lopez@gmail.com', '55443322', 1)
@@ -971,6 +994,8 @@ CREATE PROCEDURE dbo.sp_RegistrarProducto
     @Descripcion varchar(30),
     @IdCategoria int,
     @Porcentaje decimal(9,4),
+    @PrecioCompra decimal(10,2),
+    @PrecioVenta decimal(10,2),
     @Estado bit,
     @Resultado int OUTPUT,
     @Mensaje varchar(500) OUTPUT,
@@ -988,11 +1013,20 @@ BEGIN
         SET @Mensaje = 'El porcentaje no puede ser negativo';
         RETURN;
     END;
+    IF @PrecioCompra < 0 OR @PrecioVenta < 0
+       OR (@PrecioCompra > 0 AND @PrecioVenta < @PrecioCompra)
+       OR ABS(@PrecioVenta * 4 - ROUND(@PrecioVenta * 4, 0)) > 0.0001
+    BEGIN
+        SET @Mensaje = 'El costo y el precio de venta no son válidos';
+        RETURN;
+    END;
     IF NOT EXISTS (SELECT 1 FROM dbo.PRODUCTO WHERE Codigo = @Codigo)
     BEGIN
-        INSERT INTO dbo.PRODUCTO(Codigo, Nombre, Descripcion, IdCategoria, Porcentaje, Estado,
+        INSERT INTO dbo.PRODUCTO(Codigo, Nombre, Descripcion, IdCategoria, PrecioCompra, PrecioVenta, Porcentaje, Estado,
             IdGrupoReposicion, CantidadMinima, CantidadMaxima, IdGrupoProveedor)
-        VALUES(@Codigo, @Nombre, @Descripcion, @IdCategoria, @Porcentaje, @Estado,
+        VALUES(@Codigo, @Nombre, @Descripcion, @IdCategoria, @PrecioCompra, @PrecioVenta,
+            CASE WHEN @PrecioCompra = 0 THEN @Porcentaje
+                 ELSE CEILING(((@PrecioVenta - @PrecioCompra) / @PrecioCompra) * 10000) / 10000 END, @Estado,
             @IdGrupoReposicion, @CantidadMinima, @CantidadMaxima, @IdGrupoProveedor);
         SET @Resultado = SCOPE_IDENTITY();
     END
@@ -1010,6 +1044,8 @@ CREATE PROCEDURE dbo.sp_ModificarProducto
     @Descripcion varchar(30),
     @IdCategoria int,
     @Porcentaje decimal(9,4),
+    @PrecioCompra decimal(10,2),
+    @PrecioVenta decimal(10,2),
     @Estado bit,
     @Resultado bit OUTPUT,
     @Mensaje varchar(500) OUTPUT,
@@ -1027,6 +1063,13 @@ BEGIN
         SET @Mensaje = 'El porcentaje no puede ser negativo';
         RETURN;
     END;
+    IF @PrecioCompra < 0 OR @PrecioVenta < 0
+       OR (@PrecioCompra > 0 AND @PrecioVenta < @PrecioCompra)
+       OR ABS(@PrecioVenta * 4 - ROUND(@PrecioVenta * 4, 0)) > 0.0001
+    BEGIN
+        SET @Mensaje = 'El costo y el precio de venta no son válidos';
+        RETURN;
+    END;
     IF EXISTS (SELECT 1 FROM dbo.PRODUCTO WHERE Codigo = @Codigo AND IdProducto <> @IdProducto)
     BEGIN
         SET @Mensaje = 'Ya existe un producto con el mismo código';
@@ -1038,18 +1081,43 @@ BEGIN
         Nombre = @Nombre,
         Descripcion = @Descripcion,
         IdCategoria = @IdCategoria,
+        PrecioCompra = @PrecioCompra,
+        PrecioVenta = @PrecioVenta,
         IdGrupoReposicion = @IdGrupoReposicion,
         CantidadMinima = @CantidadMinima,
         CantidadMaxima = @CantidadMaxima,
         IdGrupoProveedor = @IdGrupoProveedor,
-        PrecioVenta = CASE WHEN PrecioCompra = 0 THEN 0
-            ELSE CEILING(PrecioCompra * (1 + @Porcentaje / 100.0) * 4) / 4.0 END,
-        Porcentaje = CASE WHEN PrecioCompra = 0 THEN @Porcentaje
-            ELSE CEILING(((CEILING(PrecioCompra * (1 + @Porcentaje / 100.0) * 4) / 4.0 - PrecioCompra) / PrecioCompra) * 10000) / 10000 END,
+        Porcentaje = CASE WHEN @PrecioCompra = 0 THEN @Porcentaje
+            ELSE CEILING(((@PrecioVenta - @PrecioCompra) / @PrecioCompra) * 10000) / 10000 END,
         Estado = @Estado
     WHERE IdProducto = @IdProducto;
     SET @Resultado = CASE WHEN @@ROWCOUNT = 1 THEN 1 ELSE 0 END;
     IF @Resultado = 0 SET @Mensaje = 'No se encontró el producto para modificar';
+END;
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_BuscarProductoPorCodigo
+    @Codigo varchar(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET @Codigo = LTRIM(RTRIM(@Codigo));
+    IF @Codigo IS NULL OR @Codigo = '' RETURN;
+
+    SELECT TOP (2) p.IdProducto, p.Codigo, p.Nombre, p.Descripcion,
+           c.IdCategoria, c.Descripcion AS DescripcionCategoria, p.Stock,
+           p.PrecioCompra, p.PrecioVenta, p.Porcentaje, p.Estado,
+           p.IdGrupoReposicion,
+           COALESCE(p.CantidadMinima, gr.CantidadMinima) AS CantidadMinima,
+           COALESCE(p.CantidadMaxima, gr.CantidadMaxima) AS CantidadMaxima,
+           p.IdGrupoProveedor, ISNULL(gr.Nombre, '') AS GrupoReposicion,
+           ISNULL(gp.Nombre, '') AS GrupoProveedores
+    FROM dbo.PRODUCTO p
+    INNER JOIN dbo.CATEGORIA c ON c.IdCategoria = p.IdCategoria
+    LEFT JOIN dbo.GRUPO_REPOSICION gr ON gr.IdGrupoReposicion = p.IdGrupoReposicion
+    LEFT JOIN dbo.GRUPO_PROVEEDOR gp ON gp.IdGrupoProveedor = p.IdGrupoProveedor
+    WHERE p.Codigo = @Codigo AND p.Estado = 1
+    ORDER BY p.IdProducto;
 END;
 GO
 
@@ -1097,11 +1165,10 @@ BEGIN
         UPDATE p
         SET p.Stock = p.Stock - dv.Cantidad
         FROM dbo.PRODUCTO p
-        INNER JOIN @DetalleVenta dv ON dv.IdProducto = p.IdProducto
-        WHERE p.Stock >= dv.Cantidad;
+        INNER JOIN @DetalleVenta dv ON dv.IdProducto = p.IdProducto;
         SET @ProductosActualizados = @@ROWCOUNT;
         IF @ProductosActualizados <> @ProductosSolicitados
-            THROW 50015, 'Stock insuficiente para uno o más productos', 1;
+            THROW 50015, 'Uno o más productos ya no existen', 1;
 
         INSERT INTO dbo.VENTA(IdUsuario, TipoDocumento, NumeroDocumento, DocumentoCliente, NombreCliente, MontoPago, MontoCambio, MontoTotal)
         VALUES(@IdUsuario, @TipoDocumento, @NumeroDocumento, @DocumentoCliente, @NombreCliente, @MontoPago, @MontoCambio, @MontoTotal);

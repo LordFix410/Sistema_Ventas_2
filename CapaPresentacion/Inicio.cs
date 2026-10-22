@@ -17,13 +17,14 @@ namespace CapaPresentacion
 {
     public partial class Inicio : Form
     {
-        private static Usuario usuarioActual;
-        private static IconMenuItem botonActual = null;
-        private static Form FormularioActivo=null;
+        private Usuario usuarioActual;
+        private IconMenuItem botonActual = null;
+        private Form FormularioActivo = null;
+        private frmCompraRegistrar formularioCompraEnCurso;
         private readonly ToolStripMenuItem gruposProveedoresMenu = new ToolStripMenuItem("Perfiles de proveedores");
         private readonly ToolStripMenuItem listaProveedoresMenu = new ToolStripMenuItem("Administrar proveedores");
         private readonly ToolStripMenuItem gruposProductoMenu = new ToolStripMenuItem("Grupos de productos");
-        private readonly ToolStripMenuItem reportePedidosMenu = new ToolStripMenuItem("Productos por reponer / pedidos");
+        private readonly ToolStripMenuItem reportePedidosMenu = new ToolStripMenuItem("Pedidos");
 
         public Inicio(Usuario ousuario)
         {
@@ -38,6 +39,10 @@ namespace CapaPresentacion
             gruposProductoMenu.Click += (s, ev) => AbrirFrm(btnProducto, new frmGruposReposicion());
             reportePedidosMenu.Click += (s, ev) => AbrirFrm(btnProducto, new frmReporteReposicion());
             gruposProveedoresMenu.Click += (s, ev) => AbrirFrm(menuProveedores, new frmGruposProveedores());
+            menuVentas.DoubleClickEnabled = true;
+            menuCompras.DoubleClickEnabled = true;
+            menuVentas.DoubleClick += (s, ev) => AbrirFrm(menuVentas, new frmVentas(usuarioActual));
+            menuCompras.DoubleClick += (s, ev) => AbrirFrm(menuCompras, new frmCompraRegistrar(usuarioActual));
             
         }
 
@@ -61,6 +66,19 @@ namespace CapaPresentacion
         }
         private void AbrirFrm(IconMenuItem menu, Form formulario)
         {
+            if (formulario is frmCompraRegistrar nuevaCompra)
+            {
+                if (formularioCompraEnCurso != null && !formularioCompraEnCurso.IsDisposed)
+                {
+                    nuevaCompra.Dispose();
+                    formulario = formularioCompraEnCurso;
+                }
+                else
+                {
+                    formularioCompraEnCurso = nuevaCompra;
+                }
+            }
+
             if(botonActual != null)
             {
                 botonActual.BackColor = Color.White;
@@ -68,19 +86,28 @@ namespace CapaPresentacion
             botonActual = menu;
             menu.BackColor = Color.BlanchedAlmond;
 
-            if(FormularioActivo != null)
+            if(FormularioActivo != null && !FormularioActivo.IsDisposed && !ReferenceEquals(FormularioActivo, formulario))
             {
-                FormularioActivo.Close();
+                if (FormularioActivo is frmCompraRegistrar)
+                    FormularioActivo.Hide();
+                else
+                {
+                    contenedor.Controls.Remove(FormularioActivo);
+                    FormularioActivo.Close();
+                }
             }
 
             FormularioActivo = formulario;
-            formulario.TopLevel=false;
-            formulario.FormBorderStyle = FormBorderStyle.None;
-            formulario.Dock = DockStyle.Fill;
-            formulario.BackColor = Color.SteelBlue;
-
-            contenedor.Controls.Add(formulario);
+            if (formulario.Parent != contenedor)
+            {
+                formulario.TopLevel = false;
+                formulario.FormBorderStyle = FormBorderStyle.None;
+                formulario.Dock = DockStyle.Fill;
+                formulario.BackColor = Color.SteelBlue;
+                contenedor.Controls.Add(formulario);
+            }
             formulario.Show();
+            formulario.BringToFront();
         }
         private void menuUsuarios_Click(object sender, EventArgs e)
         {

@@ -141,7 +141,7 @@
             //
             this.reposicionToolStripMenuItem.Name = "menuReposicion";
             this.reposicionToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
-            this.reposicionToolStripMenuItem.Text = "Reposición y cotizaciones";
+            this.reposicionToolStripMenuItem.Text = "Pedidos";
             this.reposicionToolStripMenuItem.Click += new System.EventHandler(this.reposicionToolStripMenuItem_Click);
             //
             // negocioToolStripMenuItem
