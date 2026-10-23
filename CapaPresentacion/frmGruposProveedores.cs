@@ -27,7 +27,21 @@ namespace CapaPresentacion
             };
             Controls.Add(etiquetaProveedores);
             etiquetaProveedores.BringToFront();
-            Load += (s, e) => { cboEstado.Items.Clear(); cboEstado.Items.Add("Activo"); cboEstado.Items.Add("Inactivo"); cboEstado.SelectedIndex = 0; PrepararProveedores(); Cargar(); };
+            Load += (s, e) =>
+            {
+                cboEstado.Items.Clear(); cboEstado.Items.Add("Activo"); cboEstado.Items.Add("Inactivo"); cboEstado.SelectedIndex = 0;
+                try
+                {
+                    PrepararProveedores();
+                    Cargar();
+                    if (clbProveedores.Items.Count == 0)
+                        Aviso("No hay proveedores activos para agregar a un perfil. Registra o activa proveedores primero en el formulario de Proveedores.", MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    Aviso("No se pudieron cargar proveedores o perfiles. Verifica la conexión y que ejecutaste migracion_reposicion_cotizaciones.sql.\n\n" + ex.Message, MessageBoxIcon.Error);
+                }
+            };
             btnGuardar.Click += (s, e) => Guardar(); btnCancelarUsuario.Click += (s, e) => Limpiar(); btnEliminar.Click += (s, e) => CambiarEstado();
             dgvGruposProveedores.CellClick += (s, e) => Seleccionar(e.RowIndex);
             txtBusqueda.TextChanged += (s, e) => Filtrar();

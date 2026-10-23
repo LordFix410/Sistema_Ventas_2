@@ -60,10 +60,12 @@
             this.label5 = new System.Windows.Forms.Label();
             this.txtMontoCambio = new System.Windows.Forms.TextBox();
             this.label7 = new System.Windows.Forms.Label();
+            this.groupBox3 = new System.Windows.Forms.GroupBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.groupBox2.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.groupBox4.SuspendLayout();
+            this.groupBox3.SuspendLayout();
             this.SuspendLayout();
             // 
             // btnPdf
@@ -78,10 +80,10 @@
             this.btnPdf.IconColor = System.Drawing.Color.Red;
             this.btnPdf.IconFont = FontAwesome.Sharp.IconFont.Auto;
             this.btnPdf.IconSize = 35;
-            this.btnPdf.Location = new System.Drawing.Point(867, 644);
+            this.btnPdf.Location = new System.Drawing.Point(1334, 219);
             this.btnPdf.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnPdf.Name = "btnPdf";
-            this.btnPdf.Size = new System.Drawing.Size(155, 68);
+            this.btnPdf.Size = new System.Drawing.Size(133, 57);
             this.btnPdf.TabIndex = 71;
             this.btnPdf.Text = "Descargar PDF";
             this.btnPdf.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -91,7 +93,7 @@
             // 
             // txtMontoTotal
             // 
-            this.txtMontoTotal.Location = new System.Drawing.Point(241, 659);
+            this.txtMontoTotal.Location = new System.Drawing.Point(115, 21);
             this.txtMontoTotal.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtMontoTotal.Name = "txtMontoTotal";
             this.txtMontoTotal.Size = new System.Drawing.Size(124, 22);
@@ -102,7 +104,7 @@
             // 
             this.label12.AutoSize = true;
             this.label12.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label12.Location = new System.Drawing.Point(147, 662);
+            this.label12.Location = new System.Drawing.Point(12, 24);
             this.label12.Name = "label12";
             this.label12.Size = new System.Drawing.Size(81, 16);
             this.label12.TabIndex = 69;
@@ -119,12 +121,12 @@
             this.PrecioCompra,
             this.Cantidad,
             this.SubTotal});
-            this.dataGridView1.Location = new System.Drawing.Point(119, 300);
+            this.dataGridView1.Location = new System.Drawing.Point(418, 317);
             this.dataGridView1.Margin = new System.Windows.Forms.Padding(4);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.ReadOnly = true;
             this.dataGridView1.RowHeadersWidth = 51;
-            this.dataGridView1.Size = new System.Drawing.Size(868, 330);
+            this.dataGridView1.Size = new System.Drawing.Size(1108, 330);
             this.dataGridView1.TabIndex = 68;
             // 
             // Producto
@@ -167,7 +169,7 @@
             this.groupBox2.Controls.Add(this.txtDocCliente);
             this.groupBox2.Controls.Add(this.label6);
             this.groupBox2.Controls.Add(this.txtNombreCliente);
-            this.groupBox2.Location = new System.Drawing.Point(160, 202);
+            this.groupBox2.Location = new System.Drawing.Point(418, 197);
             this.groupBox2.Margin = new System.Windows.Forms.Padding(4);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Padding = new System.Windows.Forms.Padding(4);
@@ -225,9 +227,9 @@
             // 
             this.label3.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.label3.Font = new System.Drawing.Font("Arial", 18F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label3.Location = new System.Drawing.Point(125, 44);
+            this.label3.Location = new System.Drawing.Point(412, 39);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(295, 39);
+            this.label3.Size = new System.Drawing.Size(266, 39);
             this.label3.TabIndex = 64;
             this.label3.Text = "Detalle Venta:";
             // 
@@ -240,7 +242,7 @@
             this.groupBox1.Controls.Add(this.txtFecha);
             this.groupBox1.Controls.Add(this.label13);
             this.groupBox1.Controls.Add(this.txtTipoDocumento);
-            this.groupBox1.Location = new System.Drawing.Point(160, 118);
+            this.groupBox1.Location = new System.Drawing.Point(418, 113);
             this.groupBox1.Margin = new System.Windows.Forms.Padding(4);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Padding = new System.Windows.Forms.Padding(4);
@@ -310,7 +312,7 @@
             this.groupBox4.Controls.Add(this.btnBuscar);
             this.groupBox4.Controls.Add(this.txtBusqueda);
             this.groupBox4.Controls.Add(this.label14);
-            this.groupBox4.Location = new System.Drawing.Point(427, 44);
+            this.groupBox4.Location = new System.Drawing.Point(685, 39);
             this.groupBox4.Margin = new System.Windows.Forms.Padding(4);
             this.groupBox4.Name = "groupBox4";
             this.groupBox4.Padding = new System.Windows.Forms.Padding(4);
@@ -385,13 +387,13 @@
             this.label10.Font = new System.Drawing.Font("Arial", 18F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label10.Location = new System.Drawing.Point(112, 11);
             this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(940, 757);
+            this.label10.Size = new System.Drawing.Size(1778, 285);
             this.label10.TabIndex = 63;
             this.label10.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // txtMontoPago
             // 
-            this.txtMontoPago.Location = new System.Drawing.Point(477, 659);
+            this.txtMontoPago.Location = new System.Drawing.Point(115, 78);
             this.txtMontoPago.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtMontoPago.Name = "txtMontoPago";
             this.txtMontoPago.Size = new System.Drawing.Size(124, 22);
@@ -402,7 +404,7 @@
             // 
             this.label5.AutoSize = true;
             this.label5.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label5.Location = new System.Drawing.Point(383, 662);
+            this.label5.Location = new System.Drawing.Point(12, 81);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(83, 16);
             this.label5.TabIndex = 72;
@@ -410,7 +412,7 @@
             // 
             // txtMontoCambio
             // 
-            this.txtMontoCambio.Location = new System.Drawing.Point(737, 659);
+            this.txtMontoCambio.Location = new System.Drawing.Point(115, 139);
             this.txtMontoCambio.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtMontoCambio.Name = "txtMontoCambio";
             this.txtMontoCambio.Size = new System.Drawing.Size(124, 22);
@@ -421,24 +423,34 @@
             // 
             this.label7.AutoSize = true;
             this.label7.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label7.Location = new System.Drawing.Point(623, 662);
+            this.label7.Location = new System.Drawing.Point(12, 142);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(97, 16);
             this.label7.TabIndex = 74;
             this.label7.Text = "Monto Cambio:";
             // 
+            // groupBox3
+            // 
+            this.groupBox3.Controls.Add(this.txtMontoCambio);
+            this.groupBox3.Controls.Add(this.label12);
+            this.groupBox3.Controls.Add(this.label7);
+            this.groupBox3.Controls.Add(this.txtMontoTotal);
+            this.groupBox3.Controls.Add(this.txtMontoPago);
+            this.groupBox3.Controls.Add(this.label5);
+            this.groupBox3.Location = new System.Drawing.Point(1281, 39);
+            this.groupBox3.Name = "groupBox3";
+            this.groupBox3.Size = new System.Drawing.Size(245, 171);
+            this.groupBox3.TabIndex = 76;
+            this.groupBox3.TabStop = false;
+            this.groupBox3.Text = "Resumen:";
+            // 
             // frmDetalleVenta
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1067, 741);
-            this.Controls.Add(this.txtMontoCambio);
-            this.Controls.Add(this.label7);
-            this.Controls.Add(this.txtMontoPago);
-            this.Controls.Add(this.label5);
+            this.ClientSize = new System.Drawing.Size(1924, 741);
+            this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.btnPdf);
-            this.Controls.Add(this.txtMontoTotal);
-            this.Controls.Add(this.label12);
             this.Controls.Add(this.dataGridView1);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.label3);
@@ -455,8 +467,9 @@
             this.groupBox1.PerformLayout();
             this.groupBox4.ResumeLayout(false);
             this.groupBox4.PerformLayout();
+            this.groupBox3.ResumeLayout(false);
+            this.groupBox3.PerformLayout();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
@@ -494,5 +507,6 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn PrecioCompra;
         private System.Windows.Forms.DataGridViewTextBoxColumn Cantidad;
         private System.Windows.Forms.DataGridViewTextBoxColumn SubTotal;
+        private System.Windows.Forms.GroupBox groupBox3;
     }
 }

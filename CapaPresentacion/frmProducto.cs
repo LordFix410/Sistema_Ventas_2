@@ -24,6 +24,7 @@ namespace CapaPresentacion
             txtPrecioVentaProducto.KeyDown += PrecioVentaProducto_KeyDown;
             txtCostoProducto.Leave += delegate { ActualizarPorcentajeProducto(); };
             txtPorcentaje.KeyDown += PorcentajeProducto_KeyDown;
+            cboGrupoProveedor.DropDown += (s, e) => CargarPerfilesProveedor(IdCombo(cboGrupoProveedor));
             txtCostoProducto.Enter += delegate { txtCostoProducto.SelectAll(); };
             txtPrecioVentaProducto.Enter += delegate { txtPrecioVentaProducto.SelectAll(); };
             txtPorcentaje.Enter += delegate { txtPorcentaje.SelectAll(); };
@@ -62,6 +63,11 @@ namespace CapaPresentacion
                 return;
             }
             ActualizarPorcentajeProducto();
+            if (decimal.TryParse(txtCostoProducto.Text, out decimal costo) && costo == 0 &&
+                decimal.TryParse(txtPorcentaje.Text, out decimal margen) && margen > 0)
+            {
+                if (!CalcularCostoDesdeVentaYMargen()) return;
+            }
             cboGrupoProveedor.Focus();
         }
 
@@ -89,6 +95,29 @@ namespace CapaPresentacion
             sincronizandoPreciosProducto = false;
         }
 
+        private bool CalcularCostoDesdeVentaYMargen()
+        {
+            if (!decimal.TryParse(txtPrecioVentaProducto.Text, out decimal venta) || venta <= 0 ||
+                !decimal.TryParse(txtPorcentaje.Text, out decimal margen) || margen <= 0)
+                return true;
+
+            decimal costo = Math.Round(venta / (1m + margen / 100m), 2, MidpointRounding.AwayFromZero);
+            if (costo <= 0)
+            {
+                CapaPresentacion.DialogoSistema.Show("Con esos valores el costo calculado queda en cero. Revisa el precio y el margen.",
+                    "Costo calculado inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPrecioVentaProducto.Focus();
+                txtPrecioVentaProducto.SelectAll();
+                return false;
+            }
+
+            sincronizandoPreciosProducto = true;
+            txtCostoProducto.Text = costo.ToString("0.00");
+            sincronizandoPreciosProducto = false;
+            ActualizarPorcentajeProducto();
+            return true;
+        }
+
         private void PorcentajeProducto_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode != Keys.Enter) return;
@@ -106,38 +135,22 @@ namespace CapaPresentacion
 
             if (costo == 0)
             {
-                if (margen <= 0 || !decimal.TryParse(txtPrecioVentaProducto.Text, out decimal ventaExistente) || ventaExistente <= 0)
+                if (margen <= 0)
                 {
                     CapaPresentacion.DialogoSistema.Show(
-                        "Para calcular el costo, ingresa un margen mayor que cero y un precio de venta mayor que cero.",
+                        "Para calcular el costo, ingresa un margen mayor que cero.",
                         "Datos incompletos", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    if (margen <= 0)
-                    {
-                        txtPorcentaje.Focus();
-                        txtPorcentaje.SelectAll();
-                    }
-                    else
-                    {
-                        txtPrecioVentaProducto.Focus();
-                        txtPrecioVentaProducto.SelectAll();
-                    }
+                    txtPorcentaje.Focus();
+                    txtPorcentaje.SelectAll();
                     return;
                 }
-
-                costo = Math.Round(ventaExistente / (1m + margen / 100m), 2, MidpointRounding.AwayFromZero);
-                if (costo <= 0)
+                if (!decimal.TryParse(txtPrecioVentaProducto.Text, out decimal ventaExistente) || ventaExistente <= 0)
                 {
-                    CapaPresentacion.DialogoSistema.Show("Con esos valores el costo calculado queda en cero. Revisa el precio y el margen.",
-                        "Costo calculado inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     txtPrecioVentaProducto.Focus();
                     txtPrecioVentaProducto.SelectAll();
                     return;
                 }
-
-                sincronizandoPreciosProducto = true;
-                txtCostoProducto.Text = costo.ToString("0.00");
-                sincronizandoPreciosProducto = false;
-                ActualizarPorcentajeProducto();
+                if (!CalcularCostoDesdeVentaYMargen()) return;
                 txtPrecioVentaProducto.Focus();
                 txtPrecioVentaProducto.SelectAll();
                 return;
@@ -267,6 +280,12 @@ namespace CapaPresentacion
                 txtCostoProducto.Focus();
                 txtCostoProducto.SelectAll();
                 return;
+            }
+            if (costo == 0 && porcentaje > 0 && precioVenta > 0)
+            {
+                if (!CalcularCostoDesdeVentaYMargen()) return;
+                decimal.TryParse(txtCostoProducto.Text, out costo);
+                decimal.TryParse(txtPorcentaje.Text, out porcentaje);
             }
             if (costo > 0 && precioVenta < costo)
             {
@@ -398,12 +417,28 @@ namespace CapaPresentacion
             cboGrupoReposicion.SelectedIndex = 0;
         }
 
-        private void CargarPerfilesProveedor()
+        private void CargarPerfilesProveedor(int? idSeleccionado = null)
         {
-            cboGrupoProveedor.Items.Clear(); cboGrupoProveedor.Items.Add(new OpcionReposicion(null, "Sin perfil de proveedores"));
-            foreach (DataRow fila in new CN_Reposicion().ListarPerfiles().Rows)
-                if (Convert.ToBoolean(fila["Activo"])) cboGrupoProveedor.Items.Add(new OpcionReposicion(Convert.ToInt32(fila["IdGrupoProveedor"]), Convert.ToString(fila["Nombre"])));
-            cboGrupoProveedor.SelectedIndex = 0;
+            try
+            {
+                cboGrupoProveedor.BeginUpdate();
+                cboGrupoProveedor.Items.Clear();
+                cboGrupoProveedor.Items.Add(new OpcionReposicion(null, "Sin perfil de proveedores"));
+                foreach (DataRow fila in new CN_Reposicion().ListarPerfiles().Rows)
+                    if (Convert.ToBoolean(fila["Activo"]))
+                        cboGrupoProveedor.Items.Add(new OpcionReposicion(Convert.ToInt32(fila["IdGrupoProveedor"]), Convert.ToString(fila["Nombre"])));
+                SeleccionarCombo(cboGrupoProveedor, idSeleccionado);
+            }
+            catch (Exception ex)
+            {
+                cboGrupoProveedor.Items.Clear();
+                cboGrupoProveedor.Items.Add(new OpcionReposicion(null, "No se pudieron cargar perfiles"));
+                cboGrupoProveedor.SelectedIndex = 0;
+                CapaPresentacion.DialogoSistema.Show(
+                    "No se pudieron cargar los perfiles de proveedores. Verifica que ejecutaste migracion_reposicion_cotizaciones.sql y que la conexión tenga acceso a GRUPO_PROVEEDOR.\n\n" + ex.Message,
+                    "Perfiles de proveedores", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally { cboGrupoProveedor.EndUpdate(); }
         }
 
         private void ActualizarLimitesReposicion()

@@ -67,9 +67,9 @@
             // 
             this.label10.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.label10.Font = new System.Drawing.Font("Arial", 18F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label10.Location = new System.Drawing.Point(117, 11);
+            this.label10.Location = new System.Drawing.Point(12, 11);
             this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(892, 757);
+            this.label10.Size = new System.Drawing.Size(1900, 757);
             this.label10.TabIndex = 24;
             this.label10.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.label10.Click += new System.EventHandler(this.label10_Click);
@@ -85,7 +85,7 @@
             this.groupBox4.Margin = new System.Windows.Forms.Padding(4);
             this.groupBox4.Name = "groupBox4";
             this.groupBox4.Padding = new System.Windows.Forms.Padding(4);
-            this.groupBox4.Size = new System.Drawing.Size(531, 66);
+            this.groupBox4.Size = new System.Drawing.Size(707, 66);
             this.groupBox4.TabIndex = 35;
             this.groupBox4.TabStop = false;
             this.groupBox4.Text = "Buscar:";
@@ -153,6 +153,7 @@
             // groupBox1
             // 
             this.groupBox1.BackColor = System.Drawing.SystemColors.Control;
+            this.groupBox1.Controls.Add(this.btnPdf);
             this.groupBox1.Controls.Add(this.txtUsuario);
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Controls.Add(this.label2);
@@ -163,7 +164,7 @@
             this.groupBox1.Margin = new System.Windows.Forms.Padding(4);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Padding = new System.Windows.Forms.Padding(4);
-            this.groupBox1.Size = new System.Drawing.Size(798, 76);
+            this.groupBox1.Size = new System.Drawing.Size(974, 76);
             this.groupBox1.TabIndex = 36;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Información Compra:";
@@ -236,6 +237,7 @@
             // 
             this.groupBox2.BackColor = System.Drawing.SystemColors.Control;
             this.groupBox2.Controls.Add(this.txtId);
+            this.groupBox2.Controls.Add(this.txtTotalPagar);
             this.groupBox2.Controls.Add(this.label4);
             this.groupBox2.Controls.Add(this.txtDocProveedor);
             this.groupBox2.Controls.Add(this.label6);
@@ -244,7 +246,7 @@
             this.groupBox2.Margin = new System.Windows.Forms.Padding(4);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Padding = new System.Windows.Forms.Padding(4);
-            this.groupBox2.Size = new System.Drawing.Size(798, 79);
+            this.groupBox2.Size = new System.Drawing.Size(974, 79);
             this.groupBox2.TabIndex = 37;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Información Proveedor:";
@@ -329,12 +331,13 @@
             this.PrecioCompra.Name = "PrecioCompra";
             this.PrecioCompra.ReadOnly = true;
             this.PrecioCompra.Width = 125;
+            // 
             // Porcentaje
+            // 
             this.Porcentaje.HeaderText = "MARGEN %";
             this.Porcentaje.MinimumWidth = 6;
             this.Porcentaje.Name = "Porcentaje";
             this.Porcentaje.ReadOnly = true;
-            this.Porcentaje.Width = 100;
             // 
             // Cantidad
             // 
@@ -355,7 +358,7 @@
             // txtTotalPagar
             // 
             this.txtTotalPagar.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.txtTotalPagar.Location = new System.Drawing.Point(293, 641);
+            this.txtTotalPagar.Location = new System.Drawing.Point(816, 46);
             this.txtTotalPagar.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtTotalPagar.Name = "txtTotalPagar";
             this.txtTotalPagar.Size = new System.Drawing.Size(124, 27);
@@ -367,7 +370,7 @@
             this.label12.AutoSize = true;
             this.label12.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.label12.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label12.Location = new System.Drawing.Point(149, 641);
+            this.label12.Location = new System.Drawing.Point(977, 219);
             this.label12.Name = "label12";
             this.label12.Size = new System.Drawing.Size(128, 20);
             this.label12.TabIndex = 39;
@@ -385,7 +388,7 @@
             this.btnPdf.IconColor = System.Drawing.Color.Red;
             this.btnPdf.IconFont = FontAwesome.Sharp.IconFont.Auto;
             this.btnPdf.IconSize = 35;
-            this.btnPdf.Location = new System.Drawing.Point(808, 641);
+            this.btnPdf.Location = new System.Drawing.Point(812, 8);
             this.btnPdf.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnPdf.Name = "btnPdf";
             this.btnPdf.Size = new System.Drawing.Size(155, 68);
@@ -400,9 +403,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1067, 722);
-            this.Controls.Add(this.btnPdf);
-            this.Controls.Add(this.txtTotalPagar);
+            this.ClientSize = new System.Drawing.Size(1924, 722);
             this.Controls.Add(this.label12);
             this.Controls.Add(this.dataGridView1);
             this.Controls.Add(this.groupBox2);
