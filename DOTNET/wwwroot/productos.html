@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administrar productos · Librería Digital</title>
+  <link rel="stylesheet" href="css/app.css?v=17">
+  <link rel="stylesheet" href="css/productos.css?v=6">
+  <script src="js/productos.js?v=6" defer></script>
+</head>
+<body class="products-page">
+  <nav class="site-nav">
+    <a class="brand" href="index.html">Librería Digital</a>
+    <div class="nav-links"><a href="index.html">Inicio</a><a class="active" href="productos.html">Productos</a><a href="venta.html">Ventas</a></div>
+  </nav>
+  <main class="products-wrap">
+    <header class="products-heading"><div><h1>Productos</h1></div><div id="signedIn" class="signed-in" hidden><span id="userName"></span><button id="logoutButton" class="button button-quiet">Salir</button></div></header>
+    <section id="loginPanel" class="product-panel login-panel">
+      <div><h2>Contraseña</h2></div>
+      <form id="loginForm" class="login-form"><label>Contraseña<input name="clave" type="password" autocomplete="current-password" required autofocus></label><button class="button button-primary">Entrar</button></form>
+      <p id="loginMessage" class="form-message" role="status"></p>
+    </section>
+    <section id="productApp" hidden>
+      <nav class="product-tabs" aria-label="Administración del catálogo">
+        <button type="button" class="product-tab active" data-view="viewProduct">Crear producto</button>
+        <button type="button" class="product-tab" data-view="viewCategories">Categorías</button>
+        <button type="button" class="product-tab" data-view="viewProductGroups">Grupos de productos</button>
+        <button type="button" class="product-tab" data-view="viewSupplierGroups">Grupos de proveedores</button>
+      </nav>
+      <p id="catalogMessage" class="catalog-status" role="status" aria-live="polite"></p>
+      <section id="viewProduct" class="workspace-view">
+      <section id="scannerPanel" class="product-panel scanner-panel" hidden><div class="scanner-title"><h2>Escanear código</h2><button id="closeScanner" class="button button-quiet" type="button">Cerrar cámara</button></div><video id="scannerVideo" playsinline muted></video><div id="scanCandidates" class="scan-candidates"></div><p id="scannerMessage" class="form-message" role="status"></p></section>
+      <form id="productForm" class="product-grid">
+        <section class="product-panel product-main">
+          <div class="panel-title"><div><div><h2>Producto</h2></div></div></div>
+          <div class="field-grid">
+            <label class="span-2">Código de barras *<div class="input-action"><input id="codigo" name="codigo" maxlength="20" required autocomplete="off"><button id="scanButton" class="button button-quiet" type="button">Usar cámara</button></div></label>
+            <label>Nombre *<input id="nombre" name="nombre" maxlength="30" required></label>
+            <label>Descripción<input name="descripcion" maxlength="30"></label>
+            <label>Categoría *<select id="categoria" name="idCategoria" required></select></label>
+            <label>Grupo de proveedores<select id="supplierGroup" name="idGrupoProveedor"><option value="">Sin grupo</option></select></label>
+          </div>
+          <div class="price-grid"><label>Precio de compra (Q)<input id="precioCompra" name="precioCompra" type="number" min="0" step="0.01" value="0"><small>Dejalo en 0 si aún no conocés el costo.</small></label><label>Precio de venta (Q)<input id="precioVenta" name="precioVenta" type="number" min="0" step="0.25" value="0"></label><label>Porcentaje de ganancia (%)<input id="porcentaje" name="porcentaje" type="number" min="0" step="0.01" value="61"></label></div>
+          <p id="priceHint" class="price-hint"></p>
+          <label class="status-check"><input type="checkbox" name="estado" checked> Producto activo</label>
+        </section>
+        <section class="product-panel">
+          <div class="panel-title"><div><div><h2>Existencia</h2></div></div></div>
+          <label>Grupo de productos<select id="replenishmentGroup"><option value="">Límites por producto</option></select></label>
+          <div id="individualLimits" class="limits-grid"><label>Cantidad mínima<input name="cantidadMinima" type="number" min="0" max="2147483647" step="1" required></label><label>Cantidad máxima<input name="cantidadMaxima" type="number" min="0" max="2147483647" step="1" required></label></div>
+          <div class="save-row"><button class="button button-primary" type="submit">Crear producto</button><button class="button button-quiet" type="reset">Limpiar formulario</button></div>
+          <p id="productMessage" class="form-message" role="status"></p>
+        </section>
+      </form>
+      </section>
+      <section id="viewCategories" class="workspace-view" hidden>
+        <section class="product-panel manager-panel"><h2>Categorías</h2><form id="categoryManageForm" class="manager-form"><label>Nombre<input name="nombre" maxlength="100" required></label><div class="manager-form-actions"><button class="button button-primary">Agregar</button><button type="button" class="button button-quiet cancel-edit" hidden>Cancelar</button></div></form><p class="form-message" role="status"></p><div class="table-scroll"><table><thead><tr><th>Nombre</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="categoryRows"></tbody></table></div></section>
+      </section>
+      <section id="viewProductGroups" class="workspace-view" hidden>
+        <section class="product-panel manager-panel"><h2>Grupos de productos</h2><form id="productGroupManageForm" class="manager-form manager-product-group-form"><label>Nombre<input name="nombre" maxlength="100" required></label><label>Mínimo<input name="cantidadMinima" type="number" min="0" step="1" required></label><label>Máximo<input name="cantidadMaxima" type="number" min="0" step="1" required></label><div class="manager-form-actions"><button class="button button-primary">Agregar</button><button type="button" class="button button-quiet cancel-edit" hidden>Cancelar</button></div></form><p class="form-message" role="status"></p><div class="table-scroll"><table><thead><tr><th>Nombre</th><th>Mínimo</th><th>Máximo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="productGroupRows"></tbody></table></div></section>
+      </section>
+      <section id="viewSupplierGroups" class="workspace-view" hidden>
+        <section class="product-panel manager-panel"><h2>Grupos de proveedores</h2><form id="supplierGroupManageForm" class="manager-form"><label>Nombre<input name="nombre" maxlength="100" required></label><fieldset><legend>Proveedores</legend><div id="supplierChoices" class="supplier-choices" aria-live="polite"></div></fieldset><div class="manager-form-actions"><button class="button button-primary">Agregar</button><button type="button" class="button button-quiet cancel-edit" hidden>Cancelar</button></div></form><p class="form-message" role="status"></p><div class="table-scroll"><table><thead><tr><th>Grupo</th><th>Proveedores</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="supplierGroupRows"></tbody></table></div></section>
+      </section>
+    </section>
+  </main>
+</body>
+</html>
+

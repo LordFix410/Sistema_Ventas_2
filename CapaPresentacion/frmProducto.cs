@@ -62,6 +62,15 @@ namespace CapaPresentacion
                 txtPrecioVentaProducto.SelectAll();
                 return;
             }
+            if (decimal.TryParse(txtCostoProducto.Text, out decimal costoActual) && costoActual == 0 &&
+                (!decimal.TryParse(txtPorcentaje.Text, out decimal margenActual) || margenActual <= 0))
+            {
+                CapaPresentacion.DialogoSistema.Show("Con costo desconocido, ingresa un margen mayor que cero para calcular el costo.",
+                    "Margen requerido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPorcentaje.Focus();
+                txtPorcentaje.SelectAll();
+                return;
+            }
             ActualizarPorcentajeProducto();
             if (decimal.TryParse(txtCostoProducto.Text, out decimal costo) && costo == 0 &&
                 decimal.TryParse(txtPorcentaje.Text, out decimal margen) && margen > 0)
@@ -214,7 +223,7 @@ namespace CapaPresentacion
             cboEstado.DisplayMember = "Texto";
             cboEstado.ValueMember = "Valor";
             cboEstado.SelectedIndex = 0;
-            txtPorcentaje.Text = "0";
+            txtPorcentaje.Text = "61";
             txtCostoProducto.Text = "0.00";
             txtPrecioVentaProducto.Text = "0.00";
             txtCostoProducto.Text = "0.00";
@@ -234,6 +243,8 @@ namespace CapaPresentacion
             cboCategoria.ValueMember = "Valor";
             cboCategoria.SelectedIndex = 0;
 
+            if (dgvData.Columns.Contains("CantidadMinima")) dgvData.Columns["CantidadMinima"].HeaderText = "CANTIDAD\nMÍNIMA";
+            if (dgvData.Columns.Contains("CantidadMaxima")) dgvData.Columns["CantidadMaxima"].HeaderText = "CANTIDAD\nMÁXIMA";
             foreach (DataGridViewColumn columna in dgvData.Columns)
             {
                 if (columna.Visible == true && columna.Name != "btnSeleccionar")
@@ -247,10 +258,14 @@ namespace CapaPresentacion
 
             // La lista se consulta solo cuando el usuario busca; abrir el mantenedor no lee todo PRODUCTO.
             dgvData.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+            dgvData.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            dgvData.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            dgvData.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvData.RowTemplate.Height = 38;
             var anchos = new Dictionary<string, int>
             {
                 ["Codigo"] = 85, ["Nombre"] = 145, ["Descripcion"] = 160, ["Categoria"] = 105,
-                ["Stock"] = 60, ["CantidadMinima"] = 65, ["CantidadMaxima"] = 65,
+                ["Stock"] = 60, ["CantidadMinima"] = 72, ["CantidadMaxima"] = 72,
                 ["PRECIOCOMPRA"] = 85, ["PRECIOVENTA"] = 85, ["PORCENTAJE"] = 80,
                 ["GrupoReposicion"] = 125, ["GrupoProveedores"] = 125, ["Estado"] = 70
             };
@@ -281,8 +296,16 @@ namespace CapaPresentacion
                 txtCostoProducto.SelectAll();
                 return;
             }
-            if (costo == 0 && porcentaje > 0 && precioVenta > 0)
+            if (costo == 0)
             {
+                if (porcentaje <= 0 || precioVenta <= 0)
+                {
+                    CapaPresentacion.DialogoSistema.Show("Con costo desconocido, ingresa un porcentaje mayor que cero y un precio de venta para calcular el costo.",
+                        "Faltan datos para calcular el costo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtPorcentaje.Focus();
+                    txtPorcentaje.SelectAll();
+                    return;
+                }
                 if (!CalcularCostoDesdeVentaYMargen()) return;
                 decimal.TryParse(txtCostoProducto.Text, out costo);
                 decimal.TryParse(txtPorcentaje.Text, out porcentaje);
@@ -306,13 +329,15 @@ namespace CapaPresentacion
 
             int? idGrupo = IdCombo(cboGrupoReposicion);
             int? minimo = null, maximo = null;
-            if (!idGrupo.HasValue && (txtCantidadMinima.Text.Trim().Length > 0 || txtCantidadMaxima.Text.Trim().Length > 0))
+            if (!idGrupo.HasValue)
             {
                 int minVal, maxVal;
                 if (!int.TryParse(txtCantidadMinima.Text, out minVal) || !int.TryParse(txtCantidadMaxima.Text, out maxVal) || minVal < 0 || maxVal < minVal)
                 {
-                    CapaPresentacion.DialogoSistema.Show("Indica mínimo y máximo válidos (enteros) o deja ambos vacíos.", "Límites inválidos", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    txtCantidadMinima.Focus(); return;
+                    CapaPresentacion.DialogoSistema.Show("Sin grupo de productos debes ingresar mínimo y máximo como números enteros no negativos. El máximo debe ser igual o mayor que el mínimo.", "Límites inválidos", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    if (!int.TryParse(txtCantidadMinima.Text, out minVal) || minVal < 0) txtCantidadMinima.Focus();
+                    else txtCantidadMaxima.Focus();
+                    return;
                 }
                 minimo = minVal; maximo = maxVal;
             }
@@ -397,7 +422,7 @@ namespace CapaPresentacion
             txtCodigo.Text = "";
             txtNombre.Text = "";
             txtDescripcion.Text = "";
-            txtPorcentaje.Text = "0";
+            txtPorcentaje.Text = "61";
             txtCostoProducto.Text = "0.00";
             txtPrecioVentaProducto.Text = "0.00";
             cboCategoria.SelectedIndex = 0;

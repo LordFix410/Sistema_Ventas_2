@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#123b59">
+  <title>Venta móvil · Librería Digital</title>
+  <link rel="stylesheet" href="css/app.css?v=17">
+  <link rel="stylesheet" href="css/venta.css?v=5">
+  <script src="js/venta.js?v=5" defer></script>
+</head>
+<body class="mobile-sale-page">
+  <nav class="site-nav">
+    <a class="brand" href="index.html">Librería Digital</a>
+    <div class="nav-links"><a href="index.html">Inicio</a><a href="productos.html">Productos</a><a class="active" href="venta.html">Ventas</a></div>
+  </nav>
+  <main class="mobile-wrap">
+    <header class="mobile-heading"><div><p class="eyebrow">PUNTO DE VENTA</p><h1>Venta móvil</h1></div><div id="signedIn" class="signed-in" hidden><span id="userName"></span><button id="logoutButton" class="button button-quiet" type="button">Salir</button></div></header>
+
+    <section id="loginPanel" class="product-panel login-panel">
+      <h2>Identificación del vendedor</h2>
+      <p class="muted">Ingresa tu contraseña una vez. Este teléfono conservará la sesión durante el turno.</p>
+      <form id="loginForm" class="login-form"><label>Contraseña<input name="clave" type="password" autocomplete="current-password" required autofocus></label><button class="button button-primary">Entrar</button></form>
+      <p id="loginMessage" class="form-message" role="status"></p>
+    </section>
+
+    <section id="saleApp" hidden>
+      <nav class="sale-tabs" aria-label="Opciones de venta">
+        <button type="button" class="sale-tab active" data-view="saleView">Cobrar venta</button>
+        <button type="button" class="sale-tab" data-view="priceView">Consultar precio</button>
+      </nav>
+
+      <section id="saleView" class="sale-view">
+        <section class="product-panel search-panel">
+          <div class="section-title"><span class="step-number">1</span><div><h2>Agregar productos</h2><p>Escanea el código o busca en el catálogo.</p></div></div>
+          <form id="saleSearchForm" class="search-form"><label class="visually-hidden" for="saleSearch">Código o nombre del producto</label><input id="saleSearch" type="search" placeholder="Escanea o escribe código / producto" autocomplete="off"><button class="button button-primary" type="submit">Buscar</button></form>
+          <button id="scanSaleButton" class="button button-scan" type="button">▣ Escanear con cámara</button>
+          <p id="saleSearchMessage" class="inline-message" role="status"></p>
+          <div id="saleResults" class="product-results" aria-live="polite"></div>
+          <details class="temporary-entry">
+            <summary>Agregar artículo fuera del catálogo</summary>
+            <p class="muted">Para impresiones u otros trabajos variables. Cada línea queda registrada por separado en la venta.</p>
+            <form id="temporaryItemForm" class="temporary-form">
+              <label>Descripción<input id="temporaryDescription" maxlength="30" required placeholder="Ej. IMPRESIÓN A COLOR"></label>
+              <div class="temporary-fields"><label>Precio unitario<input id="temporaryPrice" type="text" lang="en" inputmode="decimal" autocomplete="off" pattern="[0-9]+(\.[0-9]{1,2})?" required placeholder="0.00" aria-describedby="decimalHelp"></label>
+              <label>Cantidad<input id="temporaryQuantity" type="number" min="1" max="1000000" step="1" inputmode="numeric" value="1" required></label></div>
+              <small id="decimalHelp" class="field-help">Usa punto para los centavos, por ejemplo 10.50.</small>
+              <button class="button button-secondary" type="submit">Agregar artículo especial</button>
+            </form>
+          </details>
+        </section>
+
+        <section class="product-panel cart-panel">
+          <div class="panel-heading"><div class="section-title"><span class="step-number">2</span><div><h2>Detalle de la venta</h2><p>Revisa cantidades y artículos antes de cobrar.</p></div></div><button id="clearCartButton" class="button button-quiet button-small" type="button">Vaciar</button></div>
+          <div id="emptyCart" class="empty-cart">Escanea un producto o búscalo por nombre.</div>
+          <div id="cartRows" class="cart-rows"></div>
+          <div class="sale-total"><span>Total</span><strong id="saleTotal">Q 0.00</strong></div>
+        </section>
+
+        <section class="product-panel client-panel">
+          <div class="section-title"><span class="step-number">3</span><div><h2>Cliente de la venta</h2><p>Por defecto se registra como consumidor final.</p></div></div>
+          <div class="selected-client"><div><small>SE REGISTRARÁ A NOMBRE DE</small><strong id="selectedClientName">CONSUMIDOR FINAL</strong><span id="selectedClientDocument">CF</span></div><button id="changeClientButton" class="button button-secondary" type="button">Buscar / crear cliente</button></div>
+        </section>
+
+        <section class="product-panel payment-panel">
+          <div class="section-title payment-title"><span class="step-number">4</span><div><h2>Cobro</h2><p>Se guarda como boleta con los datos del cliente seleccionado.</p></div></div>
+          <label class="cash-label">¿Con cuánto paga?<input id="cashReceived" type="text" lang="en" inputmode="decimal" autocomplete="off" pattern="[0-9]+(\.[0-9]{1,2})?" placeholder="0.00" aria-describedby="cashDecimalHelp"><small id="cashDecimalHelp" class="field-help">Usa punto para los centavos, por ejemplo 30.00.</small></label>
+          <div class="change-box"><span>Vuelto</span><strong id="changeAmount">Q 0.00</strong></div>
+          <button id="registerSaleButton" class="button button-primary button-charge" type="button" disabled>Registrar venta</button>
+          <p id="saleMessage" class="form-message" role="status" aria-live="polite"></p>
+        </section>
+        <section id="saleReceipt" class="product-panel receipt-panel" hidden aria-live="polite">
+          <div><p class="eyebrow">VENTA REGISTRADA</p><h2>Boleta <strong id="receiptNumber"></strong></h2><p id="receiptSummary" class="muted"></p></div>
+          <button id="copyReceiptButton" class="button button-primary" type="button">Copiar número</button>
+          <p id="copyReceiptMessage" class="inline-message" role="status"></p>
+        </section>
+
+        <dialog id="clientDialog" class="client-dialog">
+          <div class="dialog-heading"><div><p class="eyebrow">DATOS DE LA VENTA</p><h2>Seleccionar cliente</h2></div><button id="closeClientDialog" class="dialog-close" type="button" aria-label="Cerrar">×</button></div>
+          <button id="useCfButton" class="cf-option" type="button"><strong>Consumidor final (CF)</strong><span>Usar los datos predeterminados</span></button>
+          <form id="clientSearchForm" class="client-search-form"><label for="clientDocumentSearch">Buscar por NIT / documento</label><div class="search-form"><input id="clientDocumentSearch" maxlength="50" autocomplete="off" placeholder="Ej. 1234567-8" required><button class="button button-primary" type="submit">Buscar</button></div></form>
+          <p id="clientSearchMessage" class="inline-message" role="status"></p>
+          <div id="clientResults" class="client-results"></div>
+          <form id="clientCreateForm" class="client-create-form" hidden>
+            <h3>Registrar cliente nuevo</h3><p class="muted">El carrito de la venta se conservará mientras completas estos datos.</p>
+            <label>NIT / documento<input id="clientNewDocument" maxlength="50" required></label>
+            <label>Nombre o razón social<input id="clientNewName" maxlength="50" autocomplete="name" required></label>
+            <div class="client-optional-fields"><label>Correo (opcional)<input id="clientNewEmail" type="email" maxlength="50" autocomplete="email"></label><label>Teléfono (opcional)<input id="clientNewPhone" type="tel" maxlength="50" autocomplete="tel"></label></div>
+            <div class="dialog-actions"><button id="cancelClientCreate" class="button button-quiet" type="button">Cancelar</button><button class="button button-primary" type="submit">Guardar y usar cliente</button></div>
+          </form>
+          <p id="clientCreateMessage" class="form-message" role="status"></p>
+        </dialog>
+      </section>
+
+      <section id="priceView" class="sale-view" hidden>
+        <section class="product-panel search-panel price-search-panel">
+          <h2>Consulta rápida de precios</h2>
+          <p class="muted">Busca o escanea para mostrar el precio. Si la persona decide llevárselo, agrégalo a la venta sin volver a buscarlo.</p>
+          <form id="priceSearchForm" class="search-form"><label class="visually-hidden" for="priceSearch">Código o nombre del producto</label><input id="priceSearch" type="search" placeholder="Código de barras o nombre" autocomplete="off"><button class="button button-primary" type="submit">Consultar</button></form>
+          <button id="scanPriceButton" class="button button-scan" type="button">▣ Consultar con cámara</button>
+          <p id="priceSearchMessage" class="inline-message" role="status"></p>
+          <div id="priceResults" class="product-results" aria-live="polite"></div>
+        </section>
+      </section>
+    </section>
+
+    <section id="scannerPanel" class="product-panel scanner-panel" hidden>
+      <div class="panel-heading"><h2>Escanear código</h2><button id="closeScanner" class="button button-quiet button-small" type="button">Cerrar cámara</button></div>
+      <video id="scannerVideo" playsinline muted></video>
+      <p id="scannerMessage" class="inline-message" role="status"></p>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ordenar escaneos doble cara</title>
+<link rel="stylesheet" href="css/app.css?v=17">
+</head>
+<body class="double-face-tool">
+<nav class="site-nav"><a class="brand" href="index.html">Librería Digital</a><div class="nav-links"><a href="index.html">Inicio</a><a class="active" href="doble-cara.html">Doble cara</a><a href="fotos-escala.html">Tamaños de foto</a><a href="cedula-fotografia.html">Cédula y fotografía</a></div></nav>
+<header class="page-heading"><h1>Ordenar escaneos doble cara</h1><p>Revisá, ordená y exportá tus imágenes escaneadas.</p></header>
+<main class="wrap">
+  <section class="card">
+    <h2>Imágenes escaneadas</h2>
+    <label class="drop" for="files"><strong>Agregar imágenes</strong><br><span class="muted">Hacé clic o arrastrá aquí imágenes, ZIP o RAR</span></label>
+    <input id="files" type="file" accept="image/*,.zip,.rar" multiple>
+    <div id="status" class="empty">Todavía no has agregado imágenes.</div>
+    <div id="tip" class="tip" hidden></div>
+    <div id="list" class="list"></div>
+  </section>
+  <section class="card">
+    <div class="toolbar"><span id="paperInfo" class="paper-info">El tamaño de papel se detectará al cargar las imágenes.</span><div class="controls"><button id="doubleColorMode" type="button" aria-pressed="false">Color</button><button id="word" disabled>Exportar a Word</button><button id="pdf" disabled>Exportar a PDF</button></div></div>
+    <p class="muted">El documento se ajusta automáticamente a la página detectada, con márgenes en cero.</p>
+  </section>
+</main><footer>Todo el procesamiento ocurre en tu equipo; las imágenes no se suben a ningún servidor.</footer>
+<dialog id="viewer" class="viewer"><div class="viewer-bar"><strong id="viewerName"></strong><button id="closeViewer" type="button" aria-label="Cerrar">Cerrar</button></div><img id="viewerImage" alt="Vista ampliada"><div class="viewer-controls"><button id="prevViewer" type="button">← Anterior</button><button id="rotateViewerLeft" type="button">↶ Girar</button><button id="rotateViewerRight" type="button">↷ Girar</button><button id="nextViewer" type="button">Siguiente →</button></div></dialog>
+<script src="js/file-transfer.js?v=1" defer></script><script src="js/doble-cara.js?v=9" defer></script>
+</body></html>
+
+

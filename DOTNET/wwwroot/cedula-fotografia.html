@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cédula y fotografía · Librería Digital</title>
+  <link rel="stylesheet" href="css/app.css?v=19">
+  <script src="js/file-transfer.js?v=1" defer></script>
+  <script src="js/cedula-fotografia.js?v=11" defer></script>
+</head>
+<body class="id-photo-tool">
+  <nav class="site-nav">
+    <a class="brand" href="index.html">Librería Digital</a>
+    <div class="nav-links">
+      <a href="index.html">Inicio</a>
+      <a href="doble-cara.html">Doble cara</a>
+      <a href="fotos-escala.html">Tamaños de foto</a>
+      <a class="active" href="cedula-fotografia.html">Cédula y fotografía</a>
+    </div>
+  </nav>
+  <main class="wrap id-layout">
+    <section class="card id-editor">
+      <section class="id-workflow-step id-source-step">
+        <h2>Foto original</h2>
+        <label class="drop" for="sourceImage"><strong>Seleccionar foto o ZIP/RAR</strong></label>
+        <input id="sourceImage" type="file" accept="image/*,.zip,.rar" multiple>
+        <div id="sourceStatus" class="empty">Elegí una foto para empezar.</div>
+      </section>
+      <details class="id-workflow-step id-format-step id-collapsible-step">
+        <summary id="photoSizeSummary">Tamaño de foto · Cédula · 2.5 × 3 cm</summary>
+        <label class="preset-label">Formato
+          <select id="photoPreset"><option value="custom">Personalizado</option><option value="cedula">Cédula · 2.5 × 3 cm</option><option value="photo">Fotografía · 10 × 15 cm</option></select>
+        </label>
+        <div class="id-size-row">
+          <label>Ancho (cm)<input id="photoWidth" type="number" min="1" max="12" step="0.1" value="2.5"></label>
+          <label>Alto (cm)<input id="photoHeight" type="number" min="1" max="16" step="0.1" value="3"></label>
+          <label>Borde blanco (mm)<input id="whiteBorder" type="number" min="0" max="5" step="0.1" value="2"></label>
+        </div>
+      </details>
+      <section class="id-workflow-step id-crop-step">
+        <h2>Ajustar foto</h2>
+        <p class="muted crop-help">Arrastrá la foto para ubicarla dentro del marco.</p>
+        <div class="crop-frame"><div class="crop-stage"><canvas id="cropCanvas" aria-label="Encuadre de la foto"></canvas><div id="cropGuides" class="crop-guides" aria-hidden="true"><span></span></div></div></div>
+        <div class="crop-controls">
+          <label>Zoom <input id="zoom" type="range" min="0.35" max="3" step="0.01" value="1"></label>
+          <label>Filtro<select id="filterPreset"><option value="none">Original</option><option value="natural">Natural</option><option value="enhance">Luz y contraste</option><option value="bw">Blanco y negro</option><option value="warm">Cálido</option></select></label>
+          <label>Color de fondo <span class="color-picker"><input id="backgroundColor" type="color" value="#827d7d"><button id="pickBackground" type="button" class="secondary">Gotero</button></span></label>
+        </div>
+        <div class="id-editor-actions">
+          <button id="removeBackground" type="button" disabled>Quitar fondo</button>
+          <button id="addPhoto" type="button" disabled>Agregar a la hoja</button>
+        </div>
+        <div class="background-progress" id="backgroundProgress" hidden><progress></progress><span id="backgroundProgressText">Procesando recorte…</span></div>
+      </section>
+      <section class="id-workflow-step id-queue-step">
+        <div class="queue-heading"><h2>Fotos para imprimir</h2><span id="queueCount" class="muted">0 copias</span></div>
+        <div id="photoQueue" class="photo-queue"></div>
+      </section>
+    </section>
+    <section class="id-output">
+      <div class="card">
+        <h2>Hoja y salida</h2>
+        <label class="id-paper-size">Tamaño de hoja
+          <select id="idPaperSize"><option value="letter">Carta · 21.59 × 27.94 cm</option><option value="oficio">Oficio · 21.59 × 33.02 cm</option></select>
+        </label>
+        <p class="muted">Vista previa e impresión a escala 100 % · separación de 3 mm.</p>
+        <label class="page-margin-toggle"><input id="idIncludeMargin" type="checkbox" checked> Margen de hoja de 1 cm</label>
+        <div class="id-output-controls"><label class="id-color-setting">Impresión <button id="idColorMode" type="button" aria-pressed="false">Color</button></label><button id="printIdPhotos" class="id-print-action" disabled>Imprimir</button><button id="wordIdPhotos" class="id-word-action" disabled>Descargar Word</button></div>
+        <p id="sheetSummary" class="muted id-sheet-summary">Agregá fotos para ver la hoja.</p>
+      </div>
+      <h2 id="previewTitle" class="preview-title">Vista previa de la hoja carta</h2>
+      <div id="idSheets" class="id-sheets"></div>
+    </section>
+  </main>
+  <footer>La imagen se edita en este equipo y no se sube a ningún servidor.</footer>
+  <style id="idPrintStyle"></style>
+</body>
+</html>
