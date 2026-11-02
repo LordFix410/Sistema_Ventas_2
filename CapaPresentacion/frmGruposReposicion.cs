@@ -46,7 +46,7 @@ namespace CapaPresentacion
                 if (nombre.Length == 0) throw new InvalidOperationException("Escribe el nombre del grupo.");
                 if (numMaximoGrupo.Value < numMinimoGrupo.Value) throw new InvalidOperationException("El máximo no puede ser menor que el mínimo.");
                 negocio.GuardarGrupo(idEdicion, nombre, (int)numMinimoGrupo.Value, (int)numMaximoGrupo.Value);
-                Cargar(); Limpiar(); Aviso("Grupo guardado correctamente.", MessageBoxIcon.Information);
+                Cargar(); Limpiar(); Aviso("Grupo guardado correctamente.", MessageBoxIcon.None);
             }
             catch (Exception ex) { Aviso(ex.Message, MessageBoxIcon.Error); }
         }

@@ -53,6 +53,39 @@ namespace CapaDatos
             return lista;
         }
 
+        public List<Cliente> BuscarPorDocumento(string documento)
+        {
+            var resultado = new List<Cliente>();
+            string normalizado = (documento ?? string.Empty).Trim().ToUpperInvariant().Replace("-", string.Empty).Replace(" ", string.Empty);
+            using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+            using (SqlCommand comando = new SqlCommand(@"
+SELECT TOP (2) IdCliente, Documento, NombreCompleto, Correo, Telefono, Estado
+FROM CLIENTE
+WHERE Estado = 1
+  AND REPLACE(REPLACE(UPPER(LTRIM(RTRIM(Documento))), '-', ''), ' ', '') = @Documento
+ORDER BY IdCliente", conexion))
+            {
+                comando.Parameters.Add("@Documento", SqlDbType.VarChar, 50).Value = normalizado;
+                conexion.Open();
+                using (SqlDataReader lector = comando.ExecuteReader())
+                {
+                    while (lector.Read())
+                    {
+                        resultado.Add(new Cliente
+                        {
+                            IdCliente = Convert.ToInt32(lector["IdCliente"]),
+                            Documento = Convert.ToString(lector["Documento"]),
+                            NombreCompleto = Convert.ToString(lector["NombreCompleto"]),
+                            Correo = Convert.ToString(lector["Correo"]),
+                            Telefono = Convert.ToString(lector["Telefono"]),
+                            Estado = Convert.ToBoolean(lector["Estado"])
+                        });
+                    }
+                }
+            }
+            return resultado;
+        }
+
         //-----------Registrar---------
 
         public int Registrar(Cliente obj, out string Mensaje)

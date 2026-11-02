@@ -20,6 +20,18 @@ namespace CapaPresentacion
                 MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
         }
 
+        public static DialogResult ShowSuccess(string mensaje)
+        {
+            return Show(null, mensaje, "Sistema de ventas", MessageBoxButtons.OK,
+                MessageBoxIcon.None, MessageBoxDefaultButton.Button1);
+        }
+
+        public static DialogResult ShowSuccess(string mensaje, string titulo)
+        {
+            return Show(null, mensaje, titulo, MessageBoxButtons.OK,
+                MessageBoxIcon.None, MessageBoxDefaultButton.Button1);
+        }
+
         public static DialogResult Show(string mensaje, string titulo,
             MessageBoxButtons botones, MessageBoxIcon icono)
         {
@@ -89,11 +101,17 @@ namespace CapaPresentacion
                     simbolo = "?";
                     colorSimbolo = Color.FromArgb(43, 105, 157);
                 }
-                else if (icono == MessageBoxIcon.Information || icono == MessageBoxIcon.Asterisk)
+                else if (icono == MessageBoxIcon.None)
                 {
                     simbolo = "✓";
                     colorSimbolo = Color.FromArgb(34, 137, 100);
                     suave = Color.FromArgb(230, 246, 239);
+                }
+                else if (icono == MessageBoxIcon.Information || icono == MessageBoxIcon.Asterisk)
+                {
+                    simbolo = "i";
+                    colorSimbolo = acento;
+                    suave = Color.FromArgb(232, 241, 249);
                 }
 
                 var encabezado = new Panel

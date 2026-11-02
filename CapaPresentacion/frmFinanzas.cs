@@ -756,7 +756,7 @@ namespace CapaPresentacion
             {
                 MessageBox.Show(mensaje, "No se registró el cierre", MessageBoxButtons.OK, MessageBoxIcon.Error); return;
             }
-            MessageBox.Show("Cierre registrado correctamente. Número: " + id, "Cierre guardado", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            DialogoSistema.ShowSuccess("Cierre registrado correctamente. Número: " + id, "Cierre guardado");
             CargarPanel();
         }
 
@@ -793,7 +793,7 @@ namespace CapaPresentacion
             string mensaje;
             if (!finanzas.RegistrarDeposito(idCierreDeposito, responsable.IdUsuario, capital, ganancia, txtReferenciaDeposito.Text.Trim(), out mensaje))
             { MessageBox.Show(mensaje, "Depósito", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
-            MessageBox.Show("Depósito registrado para auditoría.\nResponsable: " + responsable.NombreCompleto, "Depósito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            DialogoSistema.ShowSuccess("Depósito registrado para auditoría.\nResponsable: " + responsable.NombreCompleto, "Depósito");
             CargarPanel();
         }
 
@@ -857,7 +857,7 @@ namespace CapaPresentacion
             string mensaje;
             if (!finanzas.RegistrarMovimiento(tipo, relacionado, usuarioActual.IdUsuario, dtpFechaMovimiento.Value, concepto, monto, cboMedioPago.SelectedItem.ToString(), null, out mensaje))
             { MessageBox.Show(mensaje, "No se registró el movimiento", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
-            MessageBox.Show("Movimiento registrado correctamente.", "Finanzas", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            DialogoSistema.ShowSuccess("Movimiento registrado correctamente.", "Finanzas");
             txtMontoMovimiento.Clear(); txtMotivoMovimiento.Clear();
             cboFacturaProveedor.SelectedIndex = -1; cboObligacionPersonal.SelectedIndex = -1;
             CargarPanel();

@@ -76,13 +76,21 @@ namespace CapaPresentacion.Modales
         private void btnBuscar_Click(object sender, EventArgs e)
         {
             string columnaFiltro = ((OpcionCombo)cboBuscar.SelectedItem).Valor.ToString();
+            string criterio = txtBusqueda.Text.Trim();
+            if (columnaFiltro == "Correo" && criterio.Length == 0)
+            {
+                CapaPresentacion.DialogoSistema.Show(this, "Escribe un correo para buscar. Los clientes sin correo no se pueden localizar por ese dato.",
+                    "Búsqueda por correo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtBusqueda.Focus();
+                return;
+            }
             dgvData.CurrentCell = null;
             dgvData.ClearSelection();
             if (dgvData.Rows.Count > 0)
             {
                 foreach (DataGridViewRow row in dgvData.Rows)
                 {
-                    if (Convert.ToString(row.Cells[columnaFiltro].Value).Trim().IndexOf(txtBusqueda.Text.Trim(), StringComparison.CurrentCultureIgnoreCase) >= 0)
+                    if (Convert.ToString(row.Cells[columnaFiltro].Value).Trim().IndexOf(criterio, StringComparison.CurrentCultureIgnoreCase) >= 0)
                         row.Visible = true;
                     else
                         row.Visible = false;

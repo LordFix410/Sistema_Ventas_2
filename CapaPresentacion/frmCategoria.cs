@@ -78,7 +78,7 @@ namespace CapaPresentacion
 
                 if (mensaje == string.Empty && idGenerado != 0)
                 {
-                    CapaPresentacion.DialogoSistema.Show("se ha registrado correctamente");
+                    CapaPresentacion.DialogoSistema.ShowSuccess("Categoría registrada correctamente.");
                     dgvData.Rows.Add("", idGenerado.ToString(), txtDescripcion.Text,
                     ((OpcionCombo)cboEstado.SelectedItem).Valor.ToString(),
                     ((OpcionCombo)cboEstado.SelectedItem).Texto.ToString()
@@ -105,7 +105,7 @@ namespace CapaPresentacion
                 }
                 else
                 {
-                    CapaPresentacion.DialogoSistema.Show(mensaje);
+                    CapaPresentacion.DialogoSistema.Show(mensaje, "No se pudo actualizar la categoría", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
             List<Categoria> listaCategoria = new CN_Categoria().Listar();

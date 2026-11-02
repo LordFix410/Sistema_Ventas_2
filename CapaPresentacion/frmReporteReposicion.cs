@@ -126,7 +126,7 @@ namespace CapaPresentacion
                         hoja.PageSetup.Margins.Top = 0.4; hoja.PageSetup.Margins.Bottom = 0.4;
                         libro.SaveAs(dialogo.FileName);
                     }
-                    Mensaje("Se exportó la lista agrupada por proveedor. La columna ‘Productos a pedir’ quedó libre para completar las cantidades.", MessageBoxIcon.Information);
+                    Mensaje("Se exportó la lista agrupada por proveedor. La columna ‘Productos a pedir’ quedó libre para completar las cantidades.", MessageBoxIcon.None);
                 }
                 catch (Exception ex) { Error(ex); }
             }

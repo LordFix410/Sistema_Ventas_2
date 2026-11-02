@@ -71,7 +71,7 @@ namespace CapaPresentacion
 
                 if (mensaje == string.Empty && idusuariogenerado != 0)
                 {
-                    CapaPresentacion.DialogoSistema.Show("se ha registrado correctamente");
+                    CapaPresentacion.DialogoSistema.ShowSuccess("Proveedor registrado correctamente.");
                     dgvData.Rows.Add("", idusuariogenerado.ToString(), txtDocumento.Text, txtRazonSocial.Text, txtCorreo.Text,
                         txtTelefono.Text,
                         ((OpcionCombo)cboEstado.SelectedItem).Valor.ToString(),
@@ -102,7 +102,7 @@ namespace CapaPresentacion
                 }
                 else
                 {
-                    CapaPresentacion.DialogoSistema.Show(mensaje);
+                    CapaPresentacion.DialogoSistema.Show(mensaje, "No se pudo actualizar el proveedor", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
         }

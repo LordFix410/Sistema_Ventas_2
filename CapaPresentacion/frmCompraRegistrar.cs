@@ -147,8 +147,7 @@ namespace CapaPresentacion
                         new XElement("RazonSocial", txtRazonSocial.Text),
                         new XElement("TipoDocumento", (cboTipoDocumento.SelectedItem as OpcionCombo)?.Texto ?? "Boleta"),
                         lineas)).Save(dialogo.FileName);
-                    CapaPresentacion.DialogoSistema.Show("Borrador guardado correctamente.", "Borrador de compra",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    CapaPresentacion.DialogoSistema.ShowSuccess("Borrador guardado correctamente.", "Borrador de compra");
                 }
                 catch (Exception ex)
                 {
@@ -702,25 +701,25 @@ namespace CapaPresentacion
 
             if(!int.TryParse(txtIdProducto.Text, out int idProductoSeleccionado) || idProductoSeleccionado <= 0)
             {
-                CapaPresentacion.DialogoSistema.Show("Debe de seleccionar un producto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("Debe de seleccionar un producto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             
             if(!decimal.TryParse(txtPrecioCompra.Text, out precioCompra))
             {
-                CapaPresentacion.DialogoSistema.Show("Precio Compra - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("Precio Compra - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if(!decimal.TryParse(txtPrecioVenta.Text, out precioVenta))
             {
-                CapaPresentacion.DialogoSistema.Show("Precio Venta - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("Precio Venta - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if (!decimal.TryParse(txtPorcentaje.Text, out porcentajeSolicitado) || porcentajeSolicitado < 0)
             {
-                CapaPresentacion.DialogoSistema.Show("Margen - Ingrese un porcentaje válido igual o mayor a cero", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("Margen - Ingrese un porcentaje válido igual o mayor a cero", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtPorcentaje.Focus();
                 txtPorcentaje.SelectAll();
                 return;
@@ -728,7 +727,7 @@ namespace CapaPresentacion
 
             if (precioCompra <= 0 || precioVenta <= 0)
             {
-                CapaPresentacion.DialogoSistema.Show("El precio de compra y el precio de venta deben ser mayores que cero.", "Precios inválidos", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("El precio de compra y el precio de venta deben ser mayores que cero.", "Precios inválidos", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 if (precioCompra <= 0)
                 {
                     txtPrecioCompra.Focus();
@@ -792,7 +791,7 @@ namespace CapaPresentacion
             else
             {
                 CapaPresentacion.DialogoSistema.Show("El producto ya está agregado en la fila " + (indiceDuplicado + 1) +
-                    ". Para modificarlo, haga doble clic en esa fila.", "Producto repetido", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ". Para modificarlo, haga doble clic en esa fila.", "Producto repetido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -802,7 +801,7 @@ namespace CapaPresentacion
             if (indiceProductoEditando >= 0 && indiceProductoEditando != e.RowIndex)
             {
                 CapaPresentacion.DialogoSistema.Show("Termine de editar el producto seleccionado antes de abrir otro.",
-                    "Edición en curso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "Edición en curso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -893,7 +892,7 @@ namespace CapaPresentacion
             if (indiceProductoEditando >= 0)
             {
                 CapaPresentacion.DialogoSistema.Show("Confirme la edición del producto con Enter en Precio Venta antes de registrar la compra.",
-                    "Edición pendiente", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "Edición pendiente", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtPrecioVenta.Focus();
                 txtPrecioVenta.SelectAll();
                 return;
@@ -956,7 +955,7 @@ namespace CapaPresentacion
             if (respuesta)
             {
                 var result = CapaPresentacion.DialogoSistema.Show("Numero de Compra generada: \n"+oCompra.NumeroDocumento+"\n\n¿Desea Copiar al porta papeles?", "Mensaje",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                    MessageBoxButtons.YesNo, MessageBoxIcon.None);
                 if(result == DialogResult.Yes)
                 {
                     Clipboard.SetText(oCompra.NumeroDocumento);

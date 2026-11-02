@@ -17,15 +17,21 @@ namespace CapaNegocio
             return objcd_Cliente.Listar();
         }
 
+        public List<Cliente> BuscarPorDocumento(string documento)
+        {
+            return objcd_Cliente.BuscarPorDocumento(documento);
+        }
+
         public int Registrar(Cliente obj, out string Mensaje)
         {
             Mensaje = string.Empty;
-            if (obj.NombreCompleto == "") Mensaje += "Es necesario el nombre del Cliente\n";
-
-            if (obj.Documento == "") Mensaje += "Es necesario el documento\n";
-            if (obj.Correo == "") Mensaje += "Es necesario un correo\n";
-
-            if (obj.Telefono == "") Mensaje += "Es necesario un Telefono\n";
+            obj.NombreCompleto = (obj.NombreCompleto ?? string.Empty).Trim();
+            obj.Documento = (obj.Documento ?? string.Empty).Trim();
+            obj.Correo = (obj.Correo ?? string.Empty).Trim();
+            obj.Telefono = (obj.Telefono ?? string.Empty).Trim();
+            if (obj.NombreCompleto.Length == 0) Mensaje += "Es necesario el nombre del Cliente\n";
+            if (obj.Documento.Length == 0) Mensaje += "Es necesario el documento\n";
+            if (obj.Telefono.Length == 0) Mensaje += "Es necesario un Telefono\n";
 
             if (Mensaje != string.Empty) return 0;
             else return objcd_Cliente.Registrar(obj, out Mensaje);
@@ -33,12 +39,13 @@ namespace CapaNegocio
         public bool Editar(Cliente obj, out string Mensaje)
         {
             Mensaje = string.Empty;
-            if (obj.NombreCompleto == "") Mensaje += "Es necesario el nombre del Cliente\n";
-
-            if (obj.Documento == "") Mensaje += "Es necesario el documento\n";
-            if (obj.Correo == "") Mensaje += "Es necesario un correo\n";
-
-            if (obj.Telefono == "") Mensaje += "Es necesario un Telefono\n";
+            obj.NombreCompleto = (obj.NombreCompleto ?? string.Empty).Trim();
+            obj.Documento = (obj.Documento ?? string.Empty).Trim();
+            obj.Correo = (obj.Correo ?? string.Empty).Trim();
+            obj.Telefono = (obj.Telefono ?? string.Empty).Trim();
+            if (obj.NombreCompleto.Length == 0) Mensaje += "Es necesario el nombre del Cliente\n";
+            if (obj.Documento.Length == 0) Mensaje += "Es necesario el documento\n";
+            if (obj.Telefono.Length == 0) Mensaje += "Es necesario un Telefono\n";
 
             if (Mensaje != string.Empty) return false;
             return objcd_Cliente.Editar(obj, out Mensaje);

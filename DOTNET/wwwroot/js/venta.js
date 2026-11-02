@@ -5,6 +5,8 @@
   const currency = new Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' });
   const cart = new Map();
   let selectedClient = null;
+  const saleDraftKey = 'ld-mobile-sale-draft-v1';
+  let navigationApproved = false;
   let cameraStream = null, barcodeDetector = null, scanMode = '', scanFrameId = 0;
   const visibleCodes = new Set(), missingFrames = new Map();
   const parseDotAmount = value => {
@@ -33,13 +35,54 @@
   }
   function money(value) { return currency.format(Number(value) || 0); }
   function switchView(id) {
+    if (cameraStream) stopScanner();
     document.querySelectorAll('.sale-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.view === id));
     $('#saleView').hidden = id !== 'saleView';
     $('#priceView').hidden = id !== 'priceView';
   }
   function renderSelectedClient() {
-    $('#selectedClientName').textContent = selectedClient?.nombreCompleto || 'CONSUMIDOR FINAL';
     $('#selectedClientDocument').textContent = selectedClient?.documento || 'CF';
+    $('#checkoutClientSummary').textContent = selectedClient
+      ? `${selectedClient.nombreCompleto} · ${selectedClient.documento}`
+      : 'CONSUMIDOR FINAL · CF';
+    $('#changeClientButton').setAttribute('aria-label', selectedClient
+      ? `Cliente ${selectedClient.nombreCompleto}. Cambiar cliente`
+      : 'Buscar cliente por NIT');
+    persistSaleDraft();
+  }
+  function saleDraftHasData() {
+    return cart.size > 0 || !!selectedClient || !!$('#cashReceived').value.trim() || !!$('#saleSearch').value.trim() ||
+      !!$('#temporaryDescription').value.trim() || !!$('#temporaryPrice').value.trim();
+  }
+  function hasSaleDraft() { return !!sessionStorage.getItem(saleDraftKey); }
+  function persistSaleDraft() {
+    if (saleApp.hidden) return;
+    if (!saleDraftHasData()) { sessionStorage.removeItem(saleDraftKey); return; }
+    sessionStorage.setItem(saleDraftKey, JSON.stringify({
+      productos: [...cart.values()], cliente: selectedClient,
+      efectivo: $('#cashReceived').value, busqueda: $('#saleSearch').value,
+      articulo: { descripcion: $('#temporaryDescription').value, precio: $('#temporaryPrice').value, cantidad: $('#temporaryQuantity').value }
+    }));
+  }
+  function restoreSaleDraft() {
+    const saved = sessionStorage.getItem(saleDraftKey);
+    if (!saved) return false;
+    try {
+      const draft = JSON.parse(saved);
+      cart.clear();
+      for (const item of draft.productos || []) {
+        if (!item || typeof item.key !== 'string' || !Number.isInteger(item.cantidad) || item.cantidad < 1 || !Number.isFinite(Number(item.precioVenta))) continue;
+        cart.set(item.key, { ...item, precioVenta: Number(item.precioVenta) });
+      }
+      selectedClient = draft.cliente && Number.isInteger(draft.cliente.id) ? draft.cliente : null;
+      $('#cashReceived').value = typeof draft.efectivo === 'string' ? draft.efectivo : '';
+      $('#saleSearch').value = typeof draft.busqueda === 'string' ? draft.busqueda : '';
+      $('#temporaryDescription').value = draft.articulo?.descripcion || '';
+      $('#temporaryPrice').value = draft.articulo?.precio || '';
+      $('#temporaryQuantity').value = draft.articulo?.cantidad || '1';
+      setMessage($('#saleSearchMessage'), 'Borrador de venta recuperado en este teléfono.', true);
+      return true;
+    } catch { sessionStorage.removeItem(saleDraftKey); return false; }
   }
   function closeClientDialog() {
     if ($('#clientDialog').open) $('#clientDialog').close();
@@ -55,6 +98,9 @@
     $('#clientDocumentSearch').focus();
   });
   $('#closeClientDialog').addEventListener('click', closeClientDialog);
+  $('#paymentChangeClientButton').addEventListener('click', () => {
+    $('#changeClientButton').click();
+  });
   $('#cancelClientCreate').addEventListener('click', () => {
     $('#clientCreateForm').hidden = true;
     setMessage($('#clientCreateMessage'), '');
@@ -115,13 +161,27 @@
       selectedClient = await request('/ventas-moviles/clientes', { method: 'POST', body: JSON.stringify(payload) });
       renderSelectedClient();
       closeClientDialog();
-      setMessage($('#saleMessage'), `Cliente ${selectedClient.nombreCompleto} agregado a esta venta.`, true);
+      setMessage($('#saleSearchMessage'), `Cliente ${selectedClient.nombreCompleto} agregado a esta venta.`, true);
     } catch (error) {
       if (error.status === 401) { location.reload(); return; }
       setMessage($('#clientCreateMessage'), error.message);
     } finally { button.disabled = false; }
   });
   document.querySelectorAll('.sale-tab').forEach(tab => tab.addEventListener('click', () => switchView(tab.dataset.view)));
+  $('#saleSearch').addEventListener('input', persistSaleDraft);
+  for (const field of [$('#temporaryDescription'), $('#temporaryQuantity')]) field.addEventListener('input', persistSaleDraft);
+  window.addEventListener('beforeunload', event => {
+    if (navigationApproved || !hasSaleDraft()) return;
+    event.preventDefault(); event.returnValue = '';
+  });
+  document.addEventListener('click', event => {
+    const link = event.target.closest('a[href]');
+    if (!link || !hasSaleDraft()) return;
+    const destination = new URL(link.href, location.href);
+    if (destination.href === location.href) return;
+    if (confirm('Hay una venta en curso. El borrador quedó guardado en esta pestaña. ¿Quieres salir de la pantalla?')) { navigationApproved = true; return; }
+    event.preventDefault();
+  });
 
   $('#loginForm').addEventListener('submit', async event => {
     event.preventDefault();
@@ -131,13 +191,17 @@
     try {
       const session = await request('/productos/sesion', { method: 'POST', body: JSON.stringify({ clave: new FormData(form).get('clave') }) });
       signedIn(session.nombre);
+      restoreSaleDraft();
+      renderCart(); renderSelectedClient(); updatePayment();
     } catch (error) { setMessage($('#loginMessage'), error.message); }
     finally { button.disabled = false; }
   });
 
   $('#logoutButton').addEventListener('click', async () => {
+    if (hasSaleDraft() && !confirm('Hay una venta en curso. El borrador quedó guardado en esta pestaña. ¿Quieres cerrar sesión?')) return;
     await stopScanner();
     await request('/productos/sesion', { method: 'DELETE' });
+    navigationApproved = true;
     location.reload();
   });
 
@@ -152,14 +216,36 @@
     const value = parsed ?? 0;
     const currentTotal = total();
     $('#saleTotal').textContent = money(currentTotal);
+    $('#checkoutTotal').textContent = money(currentTotal);
     $('#changeAmount').textContent = money(Math.max(0, value - currentTotal));
+    $('#openPaymentButton').disabled = cart.size === 0;
     $('#registerSaleButton').disabled = cart.size === 0 || parsed === null || value < currentTotal;
     if (raw.trim() && parsed === null) setMessage($('#saleMessage'), 'Escribe el importe con punto decimal, por ejemplo 30.50.');
     else if ($('#saleMessage').textContent.startsWith('Escribe el importe con punto decimal')) setMessage($('#saleMessage'), '');
   }
+  $('#openPaymentButton').addEventListener('click', () => {
+    if (!cart.size) return;
+    updatePayment();
+    $('#paymentDialog').showModal();
+    $('#cashReceived').focus();
+    $('#cashReceived').select();
+  });
+  $('#closePaymentDialog').addEventListener('click', () => $('#paymentDialog').close());
+  $('#closeTemporaryDialog').addEventListener('click', () => $('#temporaryDialog').close());
+  $('#cancelTemporaryDialog').addEventListener('click', () => $('#temporaryDialog').close());
+  $('#addSpecialButton').addEventListener('click', () => {
+    $('#temporaryDialog').showModal();
+    $('#temporaryDescription').focus();
+  });
+  $('#closeReceiptDialog').addEventListener('click', () => {
+    $('#saleReceiptDialog').close();
+    $('#saleSearch').focus();
+  });
   function renderCart() {
     const rows = $('#cartRows');
     rows.replaceChildren();
+    $('#cartCount').textContent = String(cart.size);
+    $('#clearCartButton').disabled = cart.size === 0;
     $('#emptyCart').hidden = cart.size > 0;
     for (const item of cart.values()) {
       const row = document.createElement('article');
@@ -188,6 +274,7 @@
       rows.append(row);
     }
     updatePayment();
+    persistSaleDraft();
   }
   function addProduct(product) {
     const key = `p:${product.id}`;
@@ -213,6 +300,8 @@
     event.currentTarget.reset();
     $('#temporaryQuantity').value = '1';
     setMessage($('#saleSearchMessage'), `${description} agregado como artículo temporal.`, true);
+    $('#temporaryDialog').close();
+    persistSaleDraft();
     $('#saleSearch').focus();
   });
   for (const input of [$('#temporaryPrice'), $('#cashReceived')]) {
@@ -224,6 +313,7 @@
         if (cursor !== null) input.setSelectionRange(cursor, cursor);
       }
       if (input.id === 'cashReceived') updatePayment();
+      persistSaleDraft();
     });
   }
 
@@ -270,7 +360,7 @@
   }
   $('#saleSearchForm').addEventListener('submit', event => { event.preventDefault(); findProducts($('#saleSearch').value, 'sale'); });
   $('#priceSearchForm').addEventListener('submit', event => { event.preventDefault(); findProducts($('#priceSearch').value, 'price'); });
-  $('#clearCartButton').addEventListener('click', () => { cart.clear(); renderCart(); $('#cashReceived').value = ''; setMessage($('#saleMessage'), ''); });
+  $('#clearCartButton').addEventListener('click', () => { cart.clear(); $('#cashReceived').value = ''; setMessage($('#saleMessage'), ''); renderCart(); persistSaleDraft(); });
 
   $('#registerSaleButton').addEventListener('click', async () => {
     const button = $('#registerSaleButton');
@@ -290,20 +380,20 @@
           : ({ idProducto: item.idProducto, cantidad: item.cantidad })) })
       });
       cart.clear(); $('#cashReceived').value = ''; $('#saleResults').replaceChildren(); $('#saleSearch').value = '';
+      sessionStorage.removeItem(saleDraftKey);
       selectedClient = null; renderSelectedClient();
       renderCart();
       setMessage($('#saleMessage'), response.mensaje, true);
       $('#receiptNumber').textContent = response.numeroDocumento;
       $('#receiptSummary').textContent = `Total ${money(response.total)} · Vuelto ${money(response.cambio)} · Cliente ${clientAtSale?.documento || 'CF'}${clientAtSale ? ` · ${clientAtSale.nombreCompleto}` : ''}`;
-      $('#saleReceipt').hidden = false;
-      $('#saleReceipt').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      $('#paymentDialog').close();
+      $('#saleReceiptDialog').showModal();
       try {
         await navigator.clipboard.writeText(response.numeroDocumento);
         setMessage($('#copyReceiptMessage'), 'Número copiado al portapapeles.', true);
       } catch {
         setMessage($('#copyReceiptMessage'), 'Toca “Copiar número” para copiarlo.');
       }
-      $('#saleSearch').focus();
     } catch (error) {
       if (error.status === 401) { location.reload(); return; }
       setMessage($('#saleMessage'), error.message);
@@ -389,7 +479,7 @@
   async function start() {
     try {
       const session = await request('/productos/sesion');
-      if (session.autenticado) signedIn(session.nombre);
+      if (session.autenticado) { signedIn(session.nombre); restoreSaleDraft(); }
     } catch (error) { setMessage($('#loginMessage'), error.message); }
     renderCart();
     renderSelectedClient();

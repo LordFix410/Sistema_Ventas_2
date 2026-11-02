@@ -207,7 +207,7 @@ namespace CapaPresentacion
                         var hoja = wb.Worksheets.Add(dt, "Informe");
                         hoja.ColumnsUsed().AdjustToContents();
                         wb.SaveAs(savefile.FileName);
-                        CapaPresentacion.DialogoSistema.Show("Reporte Generado", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        CapaPresentacion.DialogoSistema.ShowSuccess("Reporte generado.", "Compras");
 
                     }
                     catch

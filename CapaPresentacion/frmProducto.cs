@@ -364,7 +364,7 @@ namespace CapaPresentacion
 
                 if (mensaje == string.Empty && idnuevo != 0)
                 {
-                    CapaPresentacion.DialogoSistema.Show("se ha registrado correctamente");
+                    CapaPresentacion.DialogoSistema.ShowSuccess("Producto registrado correctamente.");
                     objProducto.IdProducto = idnuevo;
                     AgregarFilaProducto(objProducto, idnuevo, txtCodigo.Text, txtNombre.Text, txtDescripcion.Text,
                         Convert.ToInt32(((OpcionCombo)cboCategoria.SelectedItem).Valor),
@@ -411,7 +411,7 @@ namespace CapaPresentacion
                 }
                 else
                 {
-                    CapaPresentacion.DialogoSistema.Show(mensaje);
+                    CapaPresentacion.DialogoSistema.Show(mensaje, "No se pudo actualizar el producto", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
 
@@ -680,7 +680,7 @@ namespace CapaPresentacion
                         var hoja = wb.Worksheets.Add(dt, "Informe");
                         hoja.ColumnsUsed().AdjustToContents();
                         wb.SaveAs(savefile.FileName);
-                        CapaPresentacion.DialogoSistema.Show("Reporte Generado", "mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        CapaPresentacion.DialogoSistema.ShowSuccess("Reporte generado.", "Productos");
                     }
                     catch
                     {

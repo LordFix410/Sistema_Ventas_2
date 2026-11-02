@@ -78,7 +78,7 @@ namespace CapaPresentacion
                 string nombre = txtNombreGrupoProveedor.Text.Trim();
                 if (nombre.Length == 0) throw new InvalidOperationException("Escribe el nombre del perfil.");
                 int[] ids = clbProveedores.CheckedItems.Cast<DataRowView>().Select(x => Convert.ToInt32(x["IdProveedor"])).ToArray();
-                negocio.GuardarPerfil(idEdicion, nombre, ids); Cargar(); Limpiar(); Aviso("Perfil y proveedores guardados correctamente.", MessageBoxIcon.Information);
+                negocio.GuardarPerfil(idEdicion, nombre, ids); Cargar(); Limpiar(); Aviso("Perfil y proveedores guardados correctamente.", MessageBoxIcon.None);
             }
             catch (Exception ex) { Aviso(ex.Message, MessageBoxIcon.Error); }
         }

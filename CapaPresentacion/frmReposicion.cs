@@ -358,7 +358,7 @@ namespace CapaPresentacion
                 if (nudMaximoGrupo.Value < nudMinimoGrupo.Value) throw new InvalidOperationException("El máximo debe ser igual o mayor que el mínimo.");
                 idGrupoEditado = negocio.GuardarGrupo(idGrupoEditado, nombre, (int)nudMinimoGrupo.Value, (int)nudMaximoGrupo.Value);
                 CargarGrupos(); CargarOpcionesProductos(); CargarProductos(); CargarReporte();
-                Mensaje("El grupo de reposición quedó guardado.", "Configuración guardada", MessageBoxIcon.Information);
+                Mensaje("El grupo de reposición quedó guardado.", "Configuración guardada", MessageBoxIcon.None);
             }
             catch (Exception ex) { MostrarError(ex); }
         }
@@ -388,7 +388,7 @@ namespace CapaPresentacion
                 int[] proveedores = clbProveedores.CheckedItems.Cast<DataRowView>().Select(r => Convert.ToInt32(r["IdProveedor"])).ToArray();
                 idPerfilEditado = negocio.GuardarPerfil(idPerfilEditado, nombre, proveedores);
                 CargarPerfiles(); CargarOpcionesProductos(); CargarProductos(); CargarReporte();
-                Mensaje("El perfil y sus proveedores quedaron guardados.", "Configuración guardada", MessageBoxIcon.Information);
+                Mensaje("El perfil y sus proveedores quedaron guardados.", "Configuración guardada", MessageBoxIcon.None);
             }
             catch (Exception ex) { MostrarError(ex); }
         }
@@ -464,7 +464,7 @@ namespace CapaPresentacion
                 }
                 negocio.GuardarConfiguracionProducto(idProductoSeleccionado, grupo, minimo, maximo, IdSeleccionado(cboPerfilProducto));
                 CargarProductos(); CargarReporte();
-                Mensaje("La configuración del producto quedó guardada.", "Configuración guardada", MessageBoxIcon.Information);
+                Mensaje("La configuración del producto quedó guardada.", "Configuración guardada", MessageBoxIcon.None);
             }
             catch (Exception ex) { MostrarError(ex); }
         }
@@ -514,7 +514,7 @@ namespace CapaPresentacion
                         hoja.ColumnsUsed().AdjustToContents(10, 42);
                         libro.SaveAs(guardar.FileName);
                     }
-                    Mensaje("Se guardó la cotización en Excel.", "Archivo generado", MessageBoxIcon.Information);
+                    Mensaje("Se guardó la cotización en Excel.", "Archivo generado", MessageBoxIcon.None);
                 }
                 catch (Exception ex) { MostrarError(ex); }
             }

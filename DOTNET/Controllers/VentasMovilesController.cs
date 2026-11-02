@@ -128,7 +128,7 @@ WHERE Estado = 1
        OR Nombre LIKE @contiene ESCAPE '!' OR ISNULL(Descripcion, '') LIKE @contiene ESCAPE '!')
 ORDER BY CASE WHEN Codigo = @exacto THEN 0 WHEN Codigo LIKE @prefijo ESCAPE '!'
               THEN 1 WHEN Nombre LIKE @prefijo ESCAPE '!' THEN 2 ELSE 3 END, Nombre;", connection);
-                command.Parameters.Add("@exacto", SqlDbType.VarChar, 20).Value = term;
+                command.Parameters.Add("@exacto", SqlDbType.VarChar, 100).Value = term;
                 command.Parameters.Add("@prefijo", SqlDbType.VarChar, 210).Value = escaped + "%";
                 command.Parameters.Add("@contiene", SqlDbType.VarChar, 210).Value = "%" + escaped + "%";
                 await using var reader = await command.ExecuteReaderAsync();

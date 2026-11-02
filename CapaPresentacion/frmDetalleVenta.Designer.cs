@@ -93,7 +93,7 @@
             // 
             // txtMontoTotal
             // 
-            this.txtMontoTotal.Location = new System.Drawing.Point(115, 21);
+            this.txtMontoTotal.Location = new System.Drawing.Point(138, 20);
             this.txtMontoTotal.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtMontoTotal.Name = "txtMontoTotal";
             this.txtMontoTotal.Size = new System.Drawing.Size(124, 22);
@@ -365,7 +365,7 @@
             // 
             // txtBusqueda
             // 
-            this.txtBusqueda.Location = new System.Drawing.Point(150, 24);
+            this.txtBusqueda.Location = new System.Drawing.Point(176, 24);
             this.txtBusqueda.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtBusqueda.Name = "txtBusqueda";
             this.txtBusqueda.Size = new System.Drawing.Size(177, 22);
@@ -385,7 +385,7 @@
             // 
             this.label10.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.label10.Font = new System.Drawing.Font("Arial", 18F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label10.Location = new System.Drawing.Point(112, 11);
+            this.label10.Location = new System.Drawing.Point(125, 9);
             this.label10.Name = "label10";
             this.label10.Size = new System.Drawing.Size(1778, 285);
             this.label10.TabIndex = 63;
@@ -393,7 +393,7 @@
             // 
             // txtMontoPago
             // 
-            this.txtMontoPago.Location = new System.Drawing.Point(115, 78);
+            this.txtMontoPago.Location = new System.Drawing.Point(138, 75);
             this.txtMontoPago.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtMontoPago.Name = "txtMontoPago";
             this.txtMontoPago.Size = new System.Drawing.Size(124, 22);
@@ -412,7 +412,7 @@
             // 
             // txtMontoCambio
             // 
-            this.txtMontoCambio.Location = new System.Drawing.Point(115, 139);
+            this.txtMontoCambio.Location = new System.Drawing.Point(138, 137);
             this.txtMontoCambio.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtMontoCambio.Name = "txtMontoCambio";
             this.txtMontoCambio.Size = new System.Drawing.Size(124, 22);
@@ -439,7 +439,7 @@
             this.groupBox3.Controls.Add(this.label5);
             this.groupBox3.Location = new System.Drawing.Point(1281, 39);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(245, 171);
+            this.groupBox3.Size = new System.Drawing.Size(296, 171);
             this.groupBox3.TabIndex = 76;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Resumen:";

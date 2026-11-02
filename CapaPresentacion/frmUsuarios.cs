@@ -91,7 +91,7 @@ namespace CapaPresentacion
                 if (mensaje == string.Empty && idusuariogenerado != 0)
                 {
                     
-                    CapaPresentacion.DialogoSistema.Show("se ha registrado correctamente");
+                    CapaPresentacion.DialogoSistema.ShowSuccess("Usuario registrado correctamente.");
                     dgvData.Rows.Add("", txtId.Text, txtDocumento.Text, txtNombreCompleto.Text, txtCorreo.Text,
                         txtClave.Text,
                         ((OpcionCombo)cboRol.SelectedItem).Valor.ToString(),
@@ -140,7 +140,7 @@ namespace CapaPresentacion
                     }
                     else
                     {
-                        CapaPresentacion.DialogoSistema.Show(mensaje);
+                        CapaPresentacion.DialogoSistema.Show(mensaje, "No se pudo actualizar el usuario", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                 }
                 else
@@ -268,12 +268,12 @@ namespace CapaPresentacion
                 {
                     DataGridViewRow row = dgvData.Rows[Convert.ToInt32(txtIndice.Text)];
                     dgvData.Rows.Remove(row);
-                    CapaPresentacion.DialogoSistema.Show("Se ha eliminado correctamente", "Eliminar", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                    CapaPresentacion.DialogoSistema.ShowSuccess("Usuario eliminado correctamente.", "Eliminar");
                 }
             }
             else
             {
-                CapaPresentacion.DialogoSistema.Show(mensaje);
+                CapaPresentacion.DialogoSistema.Show(mensaje, "No se pudo eliminar el usuario", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }*/
         }
 

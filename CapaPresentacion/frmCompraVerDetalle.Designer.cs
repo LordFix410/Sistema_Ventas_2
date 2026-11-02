@@ -35,6 +35,7 @@
             this.txtBusqueda = new System.Windows.Forms.TextBox();
             this.label14 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.btnPdf = new FontAwesome.Sharp.IconButton();
             this.txtUsuario = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
@@ -44,6 +45,7 @@
             this.label3 = new System.Windows.Forms.Label();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.txtId = new System.Windows.Forms.TextBox();
+            this.txtTotalPagar = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
             this.txtDocProveedor = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
@@ -54,9 +56,7 @@
             this.Porcentaje = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Cantidad = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.SubTotal = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.txtTotalPagar = new System.Windows.Forms.TextBox();
             this.label12 = new System.Windows.Forms.Label();
-            this.btnPdf = new FontAwesome.Sharp.IconButton();
             this.groupBox4.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
@@ -69,7 +69,7 @@
             this.label10.Font = new System.Drawing.Font("Arial", 18F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label10.Location = new System.Drawing.Point(12, 11);
             this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(1900, 757);
+            this.label10.Size = new System.Drawing.Size(1900, 284);
             this.label10.TabIndex = 24;
             this.label10.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.label10.Click += new System.EventHandler(this.label10_Click);
@@ -134,7 +134,7 @@
             // 
             // txtBusqueda
             // 
-            this.txtBusqueda.Location = new System.Drawing.Point(169, 24);
+            this.txtBusqueda.Location = new System.Drawing.Point(176, 24);
             this.txtBusqueda.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtBusqueda.Name = "txtBusqueda";
             this.txtBusqueda.Size = new System.Drawing.Size(177, 22);
@@ -168,6 +168,29 @@
             this.groupBox1.TabIndex = 36;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Información Compra:";
+            // 
+            // btnPdf
+            // 
+            this.btnPdf.BackColor = System.Drawing.Color.White;
+            this.btnPdf.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnPdf.FlatAppearance.BorderColor = System.Drawing.Color.Black;
+            this.btnPdf.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnPdf.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnPdf.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.btnPdf.IconChar = FontAwesome.Sharp.IconChar.FilePdf;
+            this.btnPdf.IconColor = System.Drawing.Color.Red;
+            this.btnPdf.IconFont = FontAwesome.Sharp.IconFont.Auto;
+            this.btnPdf.IconSize = 35;
+            this.btnPdf.Location = new System.Drawing.Point(812, 8);
+            this.btnPdf.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.btnPdf.Name = "btnPdf";
+            this.btnPdf.Size = new System.Drawing.Size(155, 68);
+            this.btnPdf.TabIndex = 62;
+            this.btnPdf.Text = "Descargar PDF";
+            this.btnPdf.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.btnPdf.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
+            this.btnPdf.UseVisualStyleBackColor = false;
+            this.btnPdf.Click += new System.EventHandler(this.btnPdf_Click);
             // 
             // txtUsuario
             // 
@@ -260,6 +283,16 @@
             this.txtId.TabIndex = 31;
             this.txtId.Visible = false;
             // 
+            // txtTotalPagar
+            // 
+            this.txtTotalPagar.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtTotalPagar.Location = new System.Drawing.Point(816, 46);
+            this.txtTotalPagar.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.txtTotalPagar.Name = "txtTotalPagar";
+            this.txtTotalPagar.Size = new System.Drawing.Size(124, 27);
+            this.txtTotalPagar.TabIndex = 40;
+            this.txtTotalPagar.Text = "0";
+            // 
             // label4
             // 
             this.label4.AutoSize = true;
@@ -338,6 +371,7 @@
             this.Porcentaje.MinimumWidth = 6;
             this.Porcentaje.Name = "Porcentaje";
             this.Porcentaje.ReadOnly = true;
+            this.Porcentaje.Width = 125;
             // 
             // Cantidad
             // 
@@ -355,16 +389,6 @@
             this.SubTotal.ReadOnly = true;
             this.SubTotal.Width = 125;
             // 
-            // txtTotalPagar
-            // 
-            this.txtTotalPagar.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.txtTotalPagar.Location = new System.Drawing.Point(816, 46);
-            this.txtTotalPagar.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
-            this.txtTotalPagar.Name = "txtTotalPagar";
-            this.txtTotalPagar.Size = new System.Drawing.Size(124, 27);
-            this.txtTotalPagar.TabIndex = 40;
-            this.txtTotalPagar.Text = "0";
-            // 
             // label12
             // 
             this.label12.AutoSize = true;
@@ -375,29 +399,6 @@
             this.label12.Size = new System.Drawing.Size(128, 20);
             this.label12.TabIndex = 39;
             this.label12.Text = "Total a Pagar:";
-            // 
-            // btnPdf
-            // 
-            this.btnPdf.BackColor = System.Drawing.Color.White;
-            this.btnPdf.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnPdf.FlatAppearance.BorderColor = System.Drawing.Color.Black;
-            this.btnPdf.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnPdf.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnPdf.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
-            this.btnPdf.IconChar = FontAwesome.Sharp.IconChar.FilePdf;
-            this.btnPdf.IconColor = System.Drawing.Color.Red;
-            this.btnPdf.IconFont = FontAwesome.Sharp.IconFont.Auto;
-            this.btnPdf.IconSize = 35;
-            this.btnPdf.Location = new System.Drawing.Point(812, 8);
-            this.btnPdf.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
-            this.btnPdf.Name = "btnPdf";
-            this.btnPdf.Size = new System.Drawing.Size(155, 68);
-            this.btnPdf.TabIndex = 62;
-            this.btnPdf.Text = "Descargar PDF";
-            this.btnPdf.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.btnPdf.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
-            this.btnPdf.UseVisualStyleBackColor = false;
-            this.btnPdf.Click += new System.EventHandler(this.btnPdf_Click);
             // 
             // frmCompraVerDetalle
             // 

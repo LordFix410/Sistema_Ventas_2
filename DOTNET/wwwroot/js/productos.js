@@ -4,6 +4,8 @@
   const loginPanel = $('#loginPanel'), productApp = $('#productApp');
   let stream = null, detector = null, detected = new Set(), adminData = null;
   let catalogWarnings = [];
+  const productDraftKey = 'ld-product-draft-v1';
+  let navigationApproved = false;
   const managerConfig = {
     categoryManageForm: { endpoint: 'categorias', list: 'categorias', rows: 'categoryRows', select: 'categoria', fields: ['nombre'] },
     productGroupManageForm: { endpoint: 'grupos-reposicion', list: 'gruposProducto', rows: 'productGroupRows', select: 'replenishmentGroup', fields: ['nombre', 'cantidadMinima', 'cantidadMaxima'] },
@@ -28,9 +30,48 @@
     if (!data.proveedores.length) warnings.push('No hay proveedores activos en dbo.PROVEEDOR.');
     catalogWarnings = warnings;
     try { await refreshAdministration(); } catch (error) { warnings.push(`No se pudieron cargar los catálogos de edición: ${error.message}`); }
+    restoreProductDraft();
     const summary = `Categorías: ${data.categorias.length} · Grupos: ${data.gruposReposicion.length} · Grupos de proveedores: ${data.gruposProveedor.length} · Proveedores: ${data.proveedores.length}`;
     message($('#catalogMessage'), warnings.length ? `${summary}. ${warnings.join(' ')}` : summary, warnings.length === 0);
   }
+  $('#addCategoryButton').addEventListener('click', () => {
+    $('#quickCategoryForm').reset();
+    message($('#quickCategoryMessage'), '');
+    $('#categoryDialog').showModal();
+    $('#quickCategoryName').focus();
+  });
+  function closeCategoryDialog() { if ($('#categoryDialog').open) $('#categoryDialog').close(); }
+  $('#closeCategoryDialog').addEventListener('click', closeCategoryDialog);
+  $('#cancelCategoryDialog').addEventListener('click', closeCategoryDialog);
+  $('#quickCategoryForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const name = $('#quickCategoryName').value.trim().toLocaleUpperCase('es-GT');
+    const active = $('#quickCategoryState').value === 'true';
+    const button = form.querySelector('[type="submit"]');
+    if (!name) { message($('#quickCategoryMessage'), 'Escribe la descripción de la categoría.'); $('#quickCategoryName').focus(); return; }
+    button.disabled = true;
+    message($('#quickCategoryMessage'), 'Guardando categoría…');
+    try {
+      const category = await request('/categorias', { method: 'POST', body: JSON.stringify({ nombre: name, estado: active }) });
+      if (category.activo) {
+        const option = new Option(category.nombre, category.id, true, true);
+        $('#categoria').add(option);
+        $('#categoria').value = String(category.id);
+        persistProductDraft();
+      }
+      closeCategoryDialog();
+      form.reset();
+      message($('#productMessage'), category.activo
+        ? `Categoría ${category.nombre} creada y seleccionada.`
+        : `Categoría ${category.nombre} creada como inactiva. Actívala desde Categorías para poder usarla.`, true);
+      $('#addCategoryButton').focus();
+    } catch (error) {
+      if (error.status === 401) { location.reload(); return; }
+      message($('#quickCategoryMessage'), error.message);
+      $('#quickCategoryName').focus();
+    } finally { button.disabled = false; }
+  });
   async function refreshAdministration() {
     adminData = await request('/administracion');
     const supplierMap = new Map(adminData.proveedores.map(item => [item.id, item.nombre]));
@@ -84,7 +125,7 @@
     catch (error) { if (productApp.hidden) message($('#loginMessage'), error.message); else message($('#catalogMessage'), error.message); }
     finally { button.disabled = false; }
   });
-  $('#logoutButton').addEventListener('click', async () => { await stopScanner(); await request('/sesion', { method: 'DELETE' }); location.reload(); });
+  $('#logoutButton').addEventListener('click', async () => { if (hasProductDraft() && !confirm('Hay un producto sin guardar. El borrador quedó guardado en esta pestaña. ¿Quieres cerrar sesión?')) return; await stopScanner(); await request('/sesion', { method: 'DELETE' }); navigationApproved = true; location.reload(); });
   document.querySelectorAll('.product-tab').forEach(button => button.addEventListener('click', () => {
     document.querySelectorAll('.product-tab').forEach(tab => tab.classList.toggle('active', tab === button));
     document.querySelectorAll('.workspace-view').forEach(view => { view.hidden = view.id !== button.dataset.view; });
@@ -97,6 +138,54 @@
   const maximumInput = $('input[name="cantidadMaxima"]', productForm);
   const submitProduct = productForm.querySelector('[type="submit"]');
   let autoPurchaseCost = true;
+
+  function productFormHasData() {
+    return !!($('#codigo').value.trim() || $('#nombre').value.trim() || $('input[name="descripcion"]', productForm).value.trim() ||
+      $('#categoria').value || $('#supplierGroup').value || $('#replenishmentGroup').value ||
+      (Number(purchaseInput.value) || 0) > 0 || (Number(saleInput.value) || 0) > 0 ||
+      (Number(percentInput.value) || 0) !== 61 || minimumInput.value !== '' || maximumInput.value !== '');
+  }
+  function hasProductDraft() { return !!sessionStorage.getItem(productDraftKey); }
+  function persistProductDraft() {
+    if (!productFormHasData()) { sessionStorage.removeItem(productDraftKey); return; }
+    const values = [...productForm.elements].filter(element => element.name && element.type !== 'submit' && element.type !== 'reset')
+      .map(element => ({ name: element.name, type: element.type, value: element.value, checked: element.type === 'checkbox' ? element.checked : undefined }));
+    sessionStorage.setItem(productDraftKey, JSON.stringify({ campos: values, costoAutomatico: autoPurchaseCost }));
+  }
+  function restoreProductDraft() {
+    const saved = sessionStorage.getItem(productDraftKey);
+    if (!saved) return;
+    try {
+      const draft = JSON.parse(saved);
+      const values = Array.isArray(draft) ? draft : draft.campos;
+      if (!Array.isArray(values)) throw new Error('Borrador inválido');
+      for (const item of values) {
+        const element = [...productForm.elements].find(candidate => candidate.name === item.name && candidate.type === item.type);
+        if (!element) continue;
+        if (item.type === 'checkbox') element.checked = !!item.checked;
+        else if (element.tagName !== 'SELECT' || [...element.options].some(option => option.value === item.value)) element.value = item.value;
+      }
+      autoPurchaseCost = typeof draft.costoAutomatico === 'boolean' ? draft.costoAutomatico : (Number(purchaseInput.value) || 0) <= 0;
+      $('#replenishmentGroup').dispatchEvent(new Event('change'));
+      updatePricePreview();
+      message($('#productMessage'), 'Borrador del producto recuperado. Puedes continuar donde lo dejaste.', true);
+    } catch { sessionStorage.removeItem(productDraftKey); }
+  }
+  productForm.addEventListener('input', persistProductDraft);
+  productForm.addEventListener('change', persistProductDraft);
+  productForm.addEventListener('reset', () => setTimeout(() => sessionStorage.removeItem(productDraftKey), 0));
+  window.addEventListener('beforeunload', event => {
+    if (navigationApproved || !hasProductDraft()) return;
+    event.preventDefault(); event.returnValue = '';
+  });
+  document.addEventListener('click', event => {
+    const link = event.target.closest('a[href]');
+    if (!link || !hasProductDraft()) return;
+    const destination = new URL(link.href, location.href);
+    if (destination.href === location.href) return;
+    if (confirm('Hay un producto sin guardar. El borrador quedó guardado en esta pestaña. ¿Quieres salir de la pantalla?')) { navigationApproved = true; return; }
+    event.preventDefault();
+  });
 
   // Enter funciona como "Siguiente" en teclado físico y en teclados móviles.
   const enterNext = new Map([
@@ -173,7 +262,7 @@
     }
     const payload = { codigo: data.get('codigo'), nombre: data.get('nombre'), descripcion: data.get('descripcion') || null, idCategoria: Number(data.get('idCategoria')), precioCompra: numeric('precioCompra') || 0, precioVenta: numeric('precioVenta') || 0, porcentaje: numeric('porcentaje') || 0, calcularCosto: autoPurchaseCost, estado: data.has('estado'), idGrupoReposicion: $('#replenishmentGroup').value ? Number($('#replenishmentGroup').value) : null, cantidadMinima: numeric('cantidadMinima'), cantidadMaxima: numeric('cantidadMaxima'), idGrupoProveedor: $('#supplierGroup').value ? Number($('#supplierGroup').value) : null };
     button.disabled = true; button.textContent = 'Guardando…';
-    try { const result = await request('', { method: 'POST', body: JSON.stringify(payload) }); message($('#productMessage'), result.mensaje, true); form.reset(); $('#replenishmentGroup').dispatchEvent(new Event('change')); $('#codigo').focus(); }
+    try { const result = await request('', { method: 'POST', body: JSON.stringify(payload) }); sessionStorage.removeItem(productDraftKey); message($('#productMessage'), result.mensaje, true); form.reset(); $('#replenishmentGroup').dispatchEvent(new Event('change')); $('#codigo').focus(); }
     catch (error) { if (error.status === 401) { location.reload(); return; } message($('#productMessage'), error.message); }
     finally { button.disabled = false; button.textContent = 'Crear producto'; }
   });

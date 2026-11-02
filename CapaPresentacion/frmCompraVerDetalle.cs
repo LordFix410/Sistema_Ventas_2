@@ -153,7 +153,7 @@ namespace CapaPresentacion
 
                     pdfDoc.Close();
                     stream.Close();
-                    CapaPresentacion.DialogoSistema.Show("Documento Generado", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    CapaPresentacion.DialogoSistema.ShowSuccess("Documento generado.", "Compra");
                 }
             }
 

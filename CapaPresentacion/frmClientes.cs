@@ -76,7 +76,7 @@ namespace CapaPresentacion
 
                 if (mensaje == string.Empty && idusuariogenerado != 0)
                 {
-                    CapaPresentacion.DialogoSistema.Show("se ha registrado correctamente");
+                    CapaPresentacion.DialogoSistema.ShowSuccess("Cliente registrado correctamente.");
                     dgvData.Rows.Add("", idusuariogenerado.ToString(), txtDocumento.Text, txtNombreCompleto.Text, txtCorreo.Text, txtTelefono.Text,
                        
                         ((OpcionCombo)cboEstado.SelectedItem).Valor.ToString(),
@@ -107,7 +107,7 @@ namespace CapaPresentacion
                 }
                 else
                 {
-                    CapaPresentacion.DialogoSistema.Show(mensaje);
+                    CapaPresentacion.DialogoSistema.Show(mensaje, "No se pudo actualizar el cliente", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
             dgvData.Rows.Clear();
@@ -214,11 +214,19 @@ namespace CapaPresentacion
         private void btnBuscar_Click(object sender, EventArgs e)
         {
             string columnaFiltro = ((OpcionCombo)cboBuscar.SelectedItem).Valor.ToString();
+            string criterio = txtBusqueda.Text.Trim();
+            if (columnaFiltro == "Correo" && criterio.Length == 0)
+            {
+                CapaPresentacion.DialogoSistema.Show(this, "Escribe un correo para buscar. Los clientes sin correo no se pueden localizar por ese dato.",
+                    "Búsqueda por correo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtBusqueda.Focus();
+                return;
+            }
             if (dgvData.Rows.Count > 0 && ((OpcionCombo)cboBuscar.SelectedItem).Valor.ToString() != "Estado")
             {
                 foreach (DataGridViewRow row in dgvData.Rows)
                 {
-                    if (row.Cells[columnaFiltro].Value.ToString().Trim().ToUpper().Contains(txtBusqueda.Text.Trim().ToUpper()))
+                    if (Convert.ToString(row.Cells[columnaFiltro].Value).Trim().IndexOf(criterio, StringComparison.CurrentCultureIgnoreCase) >= 0)
                         row.Visible = true;
                     else
                         row.Visible = false;

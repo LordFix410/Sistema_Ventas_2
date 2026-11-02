@@ -453,7 +453,7 @@
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(51, 16);
             this.label4.TabIndex = 34;
-            this.label4.Text = "Correo:";
+            this.label4.Text = "Correo (opcional):";
             // 
             // label3
             // 

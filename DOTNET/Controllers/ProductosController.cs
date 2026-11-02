@@ -188,7 +188,7 @@ namespace ImagenPDF.Controllers
         }
 
         [HttpPost("categorias")]
-        public async Task<IActionResult> CreateCategory([FromBody] NameRequest request)
+        public async Task<IActionResult> CreateCategory([FromBody] CategoryCreateRequest request)
         {
             if (!IsSignedIn) return Unauthorized();
             var name = request.Nombre?.Trim();
@@ -196,10 +196,13 @@ namespace ImagenPDF.Controllers
             if (string.IsNullOrWhiteSpace(ConnectionString)) return DatabaseNotConfigured();
             await using var connection = new SqlConnection(ConnectionString);
             await connection.OpenAsync();
-            await using var command = new SqlCommand("INSERT dbo.CATEGORIA(Descripcion, Estado) OUTPUT INSERTED.IdCategoria VALUES(@nombre, 1)", connection);
+            await using var command = new SqlCommand("INSERT dbo.CATEGORIA(Descripcion, Estado) OUTPUT INSERTED.IdCategoria VALUES(@nombre, @estado)", connection);
             command.Parameters.Add("@nombre", SqlDbType.VarChar, 100).Value = name;
-            try { return Ok(new OptionItem(Convert.ToInt32(await command.ExecuteScalarAsync()), name)); }
+            command.Parameters.Add("@estado", SqlDbType.Bit).Value = request.Estado;
+            try { return Ok(new { id = Convert.ToInt32(await command.ExecuteScalarAsync()), nombre = name, activo = request.Estado }); }
             catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601) { return Conflict(new { mensaje = "Ya existe una categoría con ese nombre." }); }
+            catch (SqlException ex) when (ex.Number == 229) { return StatusCode(403, new { mensaje = "La conexión SQL no tiene permiso para crear categorías." }); }
+            catch (SqlException ex) when (ex.Number == 207 || ex.Number == 208) { return StatusCode(503, new { mensaje = "No se encontró la tabla o columna de categorías esperada en la base de datos." }); }
         }
 
         [HttpPost("grupos-reposicion")]
@@ -335,6 +338,7 @@ namespace ImagenPDF.Controllers
 
     public sealed class LoginRequest { public string Clave { get; set; } = ""; }
     public class NameRequest { public string? Nombre { get; set; } }
+    public sealed class CategoryCreateRequest : NameRequest { public bool Estado { get; set; } = true; }
     public sealed class ReplenishmentRequest : NameRequest { public int CantidadMinima { get; set; } public int CantidadMaxima { get; set; } }
     public sealed class SupplierGroupRequest : NameRequest { public List<int>? Proveedores { get; set; } }
     public sealed class ProductRequest

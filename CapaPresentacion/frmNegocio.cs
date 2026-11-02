@@ -76,7 +76,7 @@ namespace CapaPresentacion
 
             if (respuesta)
             {
-                CapaPresentacion.DialogoSistema.Show("Los cambios fueron guardados", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.ShowSuccess("Los cambios fueron guardados.", "Negocio");
             }
             else
             {

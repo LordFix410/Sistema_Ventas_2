@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Administrar productos · Librería Digital</title>
   <link rel="stylesheet" href="css/app.css?v=17">
-  <link rel="stylesheet" href="css/productos.css?v=6">
-  <script src="js/productos.js?v=6" defer></script>
+  <link rel="stylesheet" href="css/productos.css?v=7">
+  <script src="js/productos.js?v=7" defer></script>
 </head>
 <body class="products-page">
   <nav class="site-nav">
@@ -37,7 +37,7 @@
             <label class="span-2">Código de barras *<div class="input-action"><input id="codigo" name="codigo" maxlength="20" required autocomplete="off"><button id="scanButton" class="button button-quiet" type="button">Usar cámara</button></div></label>
             <label>Nombre *<input id="nombre" name="nombre" maxlength="30" required></label>
             <label>Descripción<input name="descripcion" maxlength="30"></label>
-            <label>Categoría *<select id="categoria" name="idCategoria" required></select></label>
+            <label>Categoría *<div class="input-action"><select id="categoria" name="idCategoria" required></select><button id="addCategoryButton" class="button button-add" type="button" aria-label="Crear categoría" title="Crear categoría">＋</button></div></label>
             <label>Grupo de proveedores<select id="supplierGroup" name="idGrupoProveedor"><option value="">Sin grupo</option></select></label>
           </div>
           <div class="price-grid"><label>Precio de compra (Q)<input id="precioCompra" name="precioCompra" type="number" min="0" step="0.01" value="0"><small>Dejalo en 0 si aún no conocés el costo.</small></label><label>Precio de venta (Q)<input id="precioVenta" name="precioVenta" type="number" min="0" step="0.25" value="0"></label><label>Porcentaje de ganancia (%)<input id="porcentaje" name="porcentaje" type="number" min="0" step="0.01" value="61"></label></div>
@@ -46,13 +46,22 @@
         </section>
         <section class="product-panel">
           <div class="panel-title"><div><div><h2>Existencia</h2></div></div></div>
-          <label>Grupo de productos<select id="replenishmentGroup"><option value="">Límites por producto</option></select></label>
+          <label>Grupo de productos<select id="replenishmentGroup" name="idGrupoReposicion"><option value="">Límites por producto</option></select></label>
           <div id="individualLimits" class="limits-grid"><label>Cantidad mínima<input name="cantidadMinima" type="number" min="0" max="2147483647" step="1" required></label><label>Cantidad máxima<input name="cantidadMaxima" type="number" min="0" max="2147483647" step="1" required></label></div>
           <div class="save-row"><button class="button button-primary" type="submit">Crear producto</button><button class="button button-quiet" type="reset">Limpiar formulario</button></div>
           <p id="productMessage" class="form-message" role="status"></p>
         </section>
       </form>
       </section>
+      <dialog id="categoryDialog" class="product-dialog category-dialog">
+        <form id="quickCategoryForm">
+          <div class="dialog-heading"><div><p class="eyebrow">NUEVA CATEGORÍA</p><h2>Crear categoría</h2></div><button id="closeCategoryDialog" class="dialog-close" type="button" aria-label="Cerrar">×</button></div>
+          <label>Descripción *<input id="quickCategoryName" name="nombre" maxlength="100" required autocomplete="off" placeholder="Ej. LÁPICES ECONÓMICOS"></label>
+          <label>Estado<select id="quickCategoryState" name="estado"><option value="true" selected>Activo</option><option value="false">Inactivo</option></select></label>
+          <p id="quickCategoryMessage" class="form-message" role="status" aria-live="polite"></p>
+          <div class="dialog-actions"><button id="cancelCategoryDialog" class="button button-quiet" type="button">Cancelar</button><button class="button button-primary" type="submit">Guardar categoría</button></div>
+        </form>
+      </dialog>
       <section id="viewCategories" class="workspace-view" hidden>
         <section class="product-panel manager-panel"><h2>Categorías</h2><form id="categoryManageForm" class="manager-form"><label>Nombre<input name="nombre" maxlength="100" required></label><div class="manager-form-actions"><button class="button button-primary">Agregar</button><button type="button" class="button button-quiet cancel-edit" hidden>Cancelar</button></div></form><p class="form-message" role="status"></p><div class="table-scroll"><table><thead><tr><th>Nombre</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="categoryRows"></tbody></table></div></section>
       </section>

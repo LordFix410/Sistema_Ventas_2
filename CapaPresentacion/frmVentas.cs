@@ -101,25 +101,74 @@ namespace CapaPresentacion
 
         private void BuscarClientePorDocumento()
         {
+            string documentoAnterior = txtDocumentoCliente.Text;
+            string nombreAnterior = txtNombreCliente.Text;
             string documento = txtDocumentoCliente.Text.Trim();
             if (documento.Length == 0)
             {
                 btnBuscarProveedor.PerformClick();
                 return;
             }
-
-            Cliente cliente = new CN_Cliente().Listar()
-                .FirstOrDefault(item => item.Estado &&
-                    string.Equals(Convert.ToString(item.Documento).Trim(), documento, StringComparison.OrdinalIgnoreCase));
-            if (cliente == null)
+            if (documento.Length > 50)
             {
-                CapaPresentacion.DialogoSistema.Show("No se encontró un cliente con el documento '" + documento + "'.",
-                    "Cliente no encontrado", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show(this, "El NIT o documento no puede exceder 50 caracteres.",
+                    "Documento inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtDocumentoCliente.Focus();
                 txtDocumentoCliente.SelectAll();
                 return;
             }
 
+            List<Cliente> coincidencias;
+            try
+            {
+                coincidencias = new CN_Cliente().BuscarPorDocumento(documento);
+            }
+            catch (Exception ex)
+            {
+                CapaPresentacion.DialogoSistema.Show(this, "No se pudo consultar el cliente: " + ex.Message,
+                    "Error al buscar cliente", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                txtDocumentoCliente.Focus();
+                txtDocumentoCliente.SelectAll();
+                return;
+            }
+
+            if (coincidencias.Count > 1)
+            {
+                CapaPresentacion.DialogoSistema.Show(this,
+                    "Hay más de un cliente activo con ese NIT (con o sin guion). Corrige los registros antes de continuar.",
+                    "NIT duplicado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtDocumentoCliente.Focus();
+                txtDocumentoCliente.SelectAll();
+                return;
+            }
+
+            if (coincidencias.Count == 0)
+            {
+                DialogResult agregar = CapaPresentacion.DialogoSistema.Show(this,
+                    "No se encontró un cliente con el documento '" + documento + "'.\n\n¿Desea agregarlo ahora?",
+                    "Cliente no encontrado", MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                    MessageBoxDefaultButton.Button2);
+                if (agregar == DialogResult.Yes)
+                {
+                    using (var dialogo = new DialogoRegistrarCliente(documento))
+                    {
+                        if (dialogo.ShowDialog(this) == DialogResult.OK)
+                        {
+                            txtDocumentoCliente.Text = dialogo.ClienteRegistrado.Documento;
+                            txtNombreCliente.Text = dialogo.ClienteRegistrado.NombreCompleto;
+                            txtCodigoProducto.Focus();
+                            return;
+                        }
+                    }
+                }
+                txtDocumentoCliente.Text = documentoAnterior;
+                txtNombreCliente.Text = nombreAnterior;
+                txtDocumentoCliente.Focus();
+                txtDocumentoCliente.SelectAll();
+                return;
+            }
+
+            Cliente cliente = coincidencias[0];
             txtDocumentoCliente.Text = cliente.Documento;
             txtNombreCliente.Text = cliente.NombreCompleto;
             txtCodigoProducto.Focus();
@@ -316,13 +365,13 @@ namespace CapaPresentacion
 
             if (!int.TryParse(txtIdProducto.Text, out idProductoActual) || idProductoActual == 0)
             {
-                CapaPresentacion.DialogoSistema.Show("Debe de seleccionar un producto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("Debe de seleccionar un producto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if (!decimal.TryParse(txtPrecioCompra.Text, out precioCompra))
             {
-                CapaPresentacion.DialogoSistema.Show("Precio Compra - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("Precio Compra - Formato incorrecto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -365,7 +414,7 @@ namespace CapaPresentacion
             }
             else
             {
-                CapaPresentacion.DialogoSistema.Show("El producto ya está agregado a la venta", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("El producto ya está agregado a la venta", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
         private void limpiarProducto()
@@ -516,7 +565,7 @@ namespace CapaPresentacion
         {
             if (txtTotalPagar.Text.Trim() == "")
             {
-                CapaPresentacion.DialogoSistema.Show("No existe producto en la venta", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("No existe producto en la venta", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
@@ -530,7 +579,7 @@ namespace CapaPresentacion
 
             if (!decimal.TryParse(txtPagaCon.Text.Trim(), out pagacon))
             {
-                CapaPresentacion.DialogoSistema.Show("El monto recibido tiene un formato incorrecto", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CapaPresentacion.DialogoSistema.Show("El monto recibido tiene un formato incorrecto", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
@@ -671,7 +720,7 @@ namespace CapaPresentacion
                 if (respuesta)
                 {
                     var result = CapaPresentacion.DialogoSistema.Show("Numero de venta generado: \n" + oVenta.NumeroDocumento + "\n\n¿Desea copiar al portapapeles?", "Mensaje",
-                        MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                        MessageBoxButtons.YesNo, MessageBoxIcon.None);
 
                     if (result == DialogResult.Yes)
                     {
@@ -770,6 +819,93 @@ namespace CapaPresentacion
             if (txtCantidad.Value < 1)
             {
                 txtCantidad.Value = 1;
+            }
+        }
+
+        private sealed class DialogoRegistrarCliente : Form
+        {
+            private readonly TextBox txtDocumento = new TextBox();
+            private readonly TextBox txtNombre = new TextBox();
+            private readonly TextBox txtCorreo = new TextBox();
+            private readonly TextBox txtTelefono = new TextBox();
+
+            public Cliente ClienteRegistrado { get; private set; }
+
+            public DialogoRegistrarCliente(string documento)
+            {
+                Text = "Registrar cliente";
+                Font = new System.Drawing.Font("Segoe UI", 9F);
+                BackColor = System.Drawing.Color.White;
+                FormBorderStyle = FormBorderStyle.FixedDialog;
+                StartPosition = FormStartPosition.CenterParent;
+                MinimizeBox = false;
+                MaximizeBox = false;
+                ShowInTaskbar = false;
+                ClientSize = new Size(430, 355);
+
+                Controls.Add(new Label { Text = "Nuevo cliente", Font = new System.Drawing.Font("Segoe UI", 15F, FontStyle.Bold), Left = 20, Top = 14, Width = 380, Height = 30 });
+                Controls.Add(new Label { Text = "NIT / documento:", Left = 20, Top = 56, Width = 380 });
+                ConfigurarCampo(txtDocumento, 20, 78, 390, 50, documento);
+                Controls.Add(txtDocumento);
+                Controls.Add(new Label { Text = "Nombre o razón social:", Left = 20, Top = 112, Width = 380 });
+                ConfigurarCampo(txtNombre, 20, 134, 390, 50);
+                Controls.Add(txtNombre);
+                Controls.Add(new Label { Text = "Correo (opcional):", Left = 20, Top = 168, Width = 380 });
+                ConfigurarCampo(txtCorreo, 20, 190, 390, 50);
+                Controls.Add(txtCorreo);
+                Controls.Add(new Label { Text = "Teléfono:", Left = 20, Top = 224, Width = 380 });
+                ConfigurarCampo(txtTelefono, 20, 246, 390, 50);
+                Controls.Add(txtTelefono);
+
+                var cancelar = new System.Windows.Forms.Button { Text = "Cancelar", DialogResult = DialogResult.Cancel };
+                cancelar.SetBounds(218, 304, 90, 32);
+                Controls.Add(cancelar);
+                var guardar = new System.Windows.Forms.Button { Text = "Guardar cliente", BackColor = System.Drawing.Color.FromArgb(43, 105, 157), ForeColor = System.Drawing.Color.White, FlatStyle = FlatStyle.Flat };
+                guardar.SetBounds(314, 304, 96, 32);
+                guardar.Click += GuardarCliente_Click;
+                Controls.Add(guardar);
+
+                AcceptButton = guardar;
+                CancelButton = cancelar;
+                Shown += (s, e) =>
+                {
+                    if (string.IsNullOrWhiteSpace(txtDocumento.Text)) txtDocumento.Focus();
+                    else txtNombre.Focus();
+                };
+            }
+
+            private static void ConfigurarCampo(TextBox campo, int left, int top, int width, int maxLength, string valorInicial = "")
+            {
+                campo.SetBounds(left, top, width, 25);
+                campo.MaxLength = maxLength;
+                campo.CharacterCasing = CharacterCasing.Upper;
+                campo.Text = valorInicial;
+            }
+
+            private void GuardarCliente_Click(object sender, EventArgs e)
+            {
+                Cliente nuevo = new Cliente
+                {
+                    Documento = txtDocumento.Text.Trim(),
+                    NombreCompleto = txtNombre.Text.Trim(),
+                    Correo = txtCorreo.Text.Trim(),
+                    Telefono = txtTelefono.Text.Trim(),
+                    Estado = true
+                };
+                string mensaje;
+                int id = new CN_Cliente().Registrar(nuevo, out mensaje);
+                if (id <= 0)
+                {
+                    CapaPresentacion.DialogoSistema.Show(this,
+                        string.IsNullOrWhiteSpace(mensaje) ? "No se pudo registrar el cliente." : mensaje,
+                        "No se pudo guardar", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                nuevo.IdCliente = id;
+                ClienteRegistrado = nuevo;
+                DialogResult = DialogResult.OK;
+                Close();
             }
         }
 
@@ -873,7 +1009,7 @@ namespace CapaPresentacion
                 if (string.IsNullOrWhiteSpace(txtNombre.Text))
                 {
                     CapaPresentacion.DialogoSistema.Show(this, "Escribe el nombre o descripción del artículo.", "Dato requerido",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     txtNombre.Focus();
                     return;
                 }
@@ -882,7 +1018,7 @@ namespace CapaPresentacion
                     CultureInfo.CurrentCulture, out precio) || precio < 0)
                 {
                     CapaPresentacion.DialogoSistema.Show(this, "Escribe un precio válido igual o mayor que cero.", "Precio inválido",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     txtPrecio.Focus();
                     txtPrecio.SelectAll();
                     return;
