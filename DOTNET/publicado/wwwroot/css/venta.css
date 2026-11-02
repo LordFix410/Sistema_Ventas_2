@@ -15,3 +15,13 @@
 .price-search-panel h2{margin:0}.price-search-panel>p{margin:4px 0 10px}.price-search-panel .button-scan{width:100%;margin-top:8px}.button-scan{min-height:42px;background:#e8f3f9;color:var(--sale-blue);font-weight:700}
 .scanner-panel{position:relative;z-index:11;scroll-margin-top:60px}.scanner-panel video{display:block;width:100%;max-height:45vh;object-fit:cover;background:#10202c;border-radius:10px;margin-top:10px}.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:540px){.mobile-wrap{padding:10px 9px calc(104px + env(safe-area-inset-bottom))}.mobile-heading{margin-bottom:8px}.mobile-heading h1{font-size:1.32rem}.mobile-sale-page .product-panel{padding:11px;margin-bottom:8px}.mobile-heading .signed-in{font-size:.76rem}.quick-actions{align-items:flex-start}.quick-actions .inline-message{flex:1}.button-link{font-size:.83rem}.sticky-sale-bar{gap:8px;padding-left:9px;padding-right:9px}.client-chip{padding:6px 7px}.sticky-total strong{font-size:1.14rem}.button-charge{padding:9px 13px}.sale-dialog{padding:15px 13px}.temporary-fields,.client-optional-fields{grid-template-columns:1fr}.dialog-actions .button{flex:1}}
+
+/* El acceso de ventas usa el mismo formulario compacto que productos. */
+.mobile-sale-page .login-panel{max-width:540px;margin:8vh auto 0;padding:30px}
+.mobile-sale-page .login-panel h2{margin:0 0 6px}
+.mobile-sale-page .login-form{display:grid;gap:16px;margin-top:24px}
+.mobile-sale-page .login-form label{display:grid;gap:7px;font-size:.9rem;font-weight:700}
+.mobile-sale-page .login-form input{box-sizing:border-box;width:100%;min-width:0;min-height:43px;padding:9px 11px;border:1px solid #becddb;border-radius:9px;background:#fff;color:#1c3040;font:inherit}
+.mobile-sale-page .login-form input:focus{outline:3px solid #88c8f44c;border-color:#3284bd}
+.mobile-sale-page .login-form button{width:100%;min-height:46px}
+@media(max-width:540px){.mobile-sale-page .login-panel{margin:8vh auto 0;padding:22px}.mobile-sale-page .login-form{gap:13px;margin-top:18px}}

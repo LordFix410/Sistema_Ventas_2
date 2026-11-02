@@ -1,0 +1,31 @@
+{
+  "id": "/",
+  "name": "Librería Digital",
+  "short_name": "Librería",
+  "description": "Herramientas y punto de venta de Librería Digital.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
+  "orientation": "portrait",
+  "background_color": "#edf3f7",
+  "theme_color": "#0d2f47",
+  "lang": "es-GT",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "purpose": "any",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon-512.png",
+      "purpose": "any",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

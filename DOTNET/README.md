@@ -4,13 +4,29 @@ Aplicación web local hecha con ASP.NET Core 5.0.
 
 ## Ejecutar
 
-Desde esta carpeta, ejecutá `dotnet run`. La aplicación escucha en `http://0.0.0.0:5170` para aceptar conexiones de la red local.
+Desde esta carpeta, ejecutá `dotnet run`. La aplicación escucha en `http://0.0.0.0:5170` para aceptar conexiones de la red local. `global.json` fija el SDK 5.0.408 para este proyecto.
 
 ## Publicar y arrancar en Windows
 
-Publicá una vez desde esta carpeta con `dotnet publish -c Release -o publicado`. El archivo `IniciarLibreriaDigital.bat` ejecuta esa publicación en el puerto 5170. Para iniciarla al encender el equipo, crea una tarea en el Programador de tareas con desencadenador **Al iniciar el sistema** y acción **Iniciar un programa**, seleccionando el `.bat`.
+El archivo `IniciarLibreriaDigital.bat` ejecuta `dotnet run` desde la carpeta del proyecto, por lo que inicia la versión actual. Para exponerla mediante el túnel, usa `IniciarVentasCloudflare.ps1` o `IniciarVentasAutomatico.bat`; el lanzador compila y publica el proyecto actual en `publicado` antes de levantarlo.
 
 En la otra computadora, usa `http://IP-DEL-SERVIDOR:5170`.
+
+## Iniciar con el túnel temporal de Cloudflare
+
+El script `IniciarVentasCloudflare.ps1` compila el proyecto desde esta carpeta usando el SDK de `global.json`, inicia esa publicación, crea un Quick Tunnel y actualiza la clave `url` del KV de ventas. Si el puerto 5170 ya está ocupado por un proceso desconocido, se detiene para evitar usar una versión anterior.
+
+1. Coloca una copia del API Token de Cloudflare en `cloudflare-token.txt`, junto a este README. También se acepta el nombre `cloudflare-token` sin extensión. El token debe tener únicamente permiso de escritura en Workers KV para la cuenta correspondiente.
+2. Ejecuta `IniciarVentasAutomatico.bat` para iniciar en segundo plano, sin dejar abierta una ventana de consola. También puedes abrir directamente `IniciarVentasOculto.vbs`.
+3. Para apagarlo, ejecuta `DetenerVentas.bat`. El lanzador evita iniciar una segunda copia y guarda errores en `logs\lanzador.log`; los registros propios de la app y de Cloudflare quedan también en `logs`.
+
+### Iniciar automáticamente al entrar a Windows
+
+1. Pulsa `Windows + R`, escribe `shell:startup` y presiona Enter.
+2. En la carpeta que se abre, crea un acceso directo a `IniciarVentasOculto.vbs`.
+3. La próxima vez que inicies sesión en Windows, el lanzador iniciará la aplicación, creará un túnel y publicará su nueva URL en el KV.
+
+El token local y los registros se excluyen de Git. No subas ni compartas el token. El Quick Tunnel genera una dirección temporal; para uso continuo o productivo, configura un túnel con nombre y hostname estable.
 
 ## Registro de productos
 

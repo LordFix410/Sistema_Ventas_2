@@ -236,3 +236,17 @@ body.id-photo-tool .id-sheet{transform:scale(1)!important;transform-origin:top c
 @media(max-width:760px){body.id-photo-tool .id-layout{display:block}body.id-photo-tool .id-editor,body.id-photo-tool .id-output{position:static;max-height:none;overflow:visible}body.id-photo-tool .id-output{margin-top:14px}body.id-photo-tool .photo-queue{max-height:40vh}}
 @media(max-width:420px){body.id-photo-tool .id-size-row{grid-template-columns:repeat(2,minmax(0,1fr))}body.id-photo-tool .id-size-row label:last-child{grid-column:1/-1}.queue-item{flex-wrap:wrap}.queue-item span{flex:1 1 120px}}
 
+/* Inicio compacto: cada tarjeta completa funciona como un botón grande. */
+.home-wrap{max-width:900px;margin:clamp(12px,3vh,28px) auto;padding:0 12px}
+.home-intro{margin:0 0 14px}
+.home-intro h1{margin:0;color:#123b59;font-size:clamp(1.35rem,4vw,1.8rem)}
+.tool-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0}
+.tool-card{box-sizing:border-box;display:flex;min-width:0;min-height:116px;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:14px 10px;border:1px solid #d5e0e9;border-radius:14px;background:#fff;color:#123b59;text-align:center;text-decoration:none;box-shadow:0 3px 12px #19364b0b;transition:transform .12s,border-color .12s,background .12s,box-shadow .12s;-webkit-tap-highlight-color:transparent}
+.tool-card:hover{border-color:#8bb8d1;background:#f8fcff;box-shadow:0 6px 18px #19364b16}
+.tool-card:active{transform:scale(.98);background:#edf6fb}
+.tool-card:focus-visible{outline:3px solid #63a7d4;outline-offset:2px}
+.tool-card h2{margin:0;font-size:clamp(.92rem,2.6vw,1.05rem);line-height:1.2;overflow-wrap:anywhere}
+.tool-mark{display:grid;place-items:center;width:38px;height:38px;margin:0;border-radius:11px;background:#e7f2f9;color:#1769aa;font-size:23px;line-height:1}
+@media(min-width:700px){.tool-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.tool-card{min-height:136px}.home-wrap{padding:0 18px}}
+@media(max-width:340px){.tool-grid{grid-template-columns:1fr}.tool-card{min-height:86px;flex-direction:row;justify-content:flex-start;padding:12px 16px;text-align:left}}
+

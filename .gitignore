@@ -24,6 +24,23 @@ TestResults/
 
 # Cadena de conexión local (contiene credenciales)
 CapaPresentacion/conexion.txt
+**/conexion.txt
+**/cloudflare-token*
+**/cloudflare-url.txt
+**/cloudflare-output.txt
+**/cloudflare-error.txt
+**/.env
+**/.env.*
+!**/.env.example
+**/appsettings.*.local.json
+DOTNET/publicado/
+DOTNET/logs/
+
+# Llaves y configuracion local de herramientas
+*.pfx
+*.p12
+*.key
+*.pem
 
 # Archivos locales de SQL Server y respaldos
 *.mdf

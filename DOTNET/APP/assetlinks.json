@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "dev.workers.abdielcarcuz.libreria_virtual.twa",
+        "sha256_cert_fingerprints": ["9E:C1:23:1B:35:C2:AD:90:E0:F4:AD:AD:99:E6:DC:06:65:26:2A:C6:DC:FB:CE:F6:A9:46:38:03:3F:D9:95:F6"]
+      }
+    }]
