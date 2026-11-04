@@ -26,16 +26,14 @@
     element.textContent = text || '';
     element.classList.toggle('success', success);
   }
-  function signedIn(name) {
+  function signedIn() {
     loginPanel.hidden = true;
     saleApp.hidden = false;
-    $('#signedIn').hidden = false;
-    $('#userName').textContent = name || 'Vendedor';
-    $('#saleSearch').focus();
+    $('#logoutButton').hidden = false;
   }
   function money(value) { return currency.format(Number(value) || 0); }
   function switchView(id) {
-    if (cameraStream) stopScanner();
+    if (cameraStream || !$('#scannerPanel').hidden) stopScanner();
     document.querySelectorAll('.sale-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.view === id));
     $('#saleView').hidden = id !== 'saleView';
     $('#priceView').hidden = id !== 'priceView';
@@ -190,7 +188,7 @@
     setMessage($('#loginMessage'), 'Validando vendedor…');
     try {
       const session = await request('/productos/sesion', { method: 'POST', body: JSON.stringify({ clave: new FormData(form).get('clave') }) });
-      signedIn(session.nombre);
+      signedIn();
       restoreSaleDraft();
       renderCart(); renderSelectedClient(); updatePayment();
     } catch (error) { setMessage($('#loginMessage'), error.message); }
@@ -239,12 +237,12 @@
   });
   $('#closeReceiptDialog').addEventListener('click', () => {
     $('#saleReceiptDialog').close();
-    $('#saleSearch').focus();
   });
   function renderCart() {
     const rows = $('#cartRows');
     rows.replaceChildren();
     $('#cartCount').textContent = String(cart.size);
+    $('#stickyCartSummary').textContent = `${cart.size} artículo${cart.size === 1 ? '' : 's'} en la venta`;
     $('#clearCartButton').disabled = cart.size === 0;
     $('#emptyCart').hidden = cart.size > 0;
     for (const item of cart.values()) {
@@ -276,13 +274,13 @@
     updatePayment();
     persistSaleDraft();
   }
-  function addProduct(product) {
+  function addProduct(product, amount = 1) {
     const key = `p:${product.id}`;
     const old = cart.get(key);
-    if (old) old.cantidad += 1;
-    else cart.set(key, { key, idProducto: product.id, codigo: product.codigo, nombre: product.nombre, descripcion: product.descripcion || '', precioVenta: Number(product.precioVenta), cantidad: 1, temporal: false });
+    if (old) old.cantidad += amount;
+    else cart.set(key, { key, idProducto: product.id, codigo: product.codigo, nombre: product.nombre, descripcion: product.descripcion || '', precioVenta: Number(product.precioVenta), cantidad: amount, temporal: false });
     renderCart();
-    setMessage($('#saleSearchMessage'), old ? `Cantidad de ${product.nombre} aumentada.` : `${product.nombre} agregado a la venta.`, true);
+    setMessage($('#saleSearchMessage'), old ? `Se actualizaron ${product.nombre}: ${old.cantidad} unidades.` : `${product.nombre} agregado: ${amount} unidad(es).`, true);
   }
 
   $('#temporaryItemForm').addEventListener('submit', event => {
@@ -302,7 +300,6 @@
     setMessage($('#saleSearchMessage'), `${description} agregado como artículo temporal.`, true);
     $('#temporaryDialog').close();
     persistSaleDraft();
-    $('#saleSearch').focus();
   });
   for (const input of [$('#temporaryPrice'), $('#cashReceived')]) {
     input.addEventListener('input', () => {
@@ -317,22 +314,41 @@
     });
   }
 
-  function renderResults(target, products, mode) {
-    target.replaceChildren();
+  function renderResults(target, products, mode, append = false) {
+    if (!append) target.replaceChildren();
     for (const product of products) {
-      const card = document.createElement('article'); card.className = 'result-card';
+      if (append && [...target.children].some(card => card.dataset.productId === String(product.id))) continue;
+      const card = document.createElement('article'); card.className = `result-card${mode === 'price' ? ' price-result-card' : ''}`;
+      card.dataset.productId = String(product.id);
       const info = document.createElement('div'); info.className = 'result-info';
       const name = document.createElement('strong'); name.textContent = product.nombre;
-      const detail = document.createElement('small'); detail.textContent = [product.codigo, product.descripcion].filter(Boolean).join(' · ');
-      info.append(name, detail);
-      const price = document.createElement('div'); price.className = 'result-price'; price.textContent = money(product.precioVenta);
-      const add = document.createElement('button'); add.type = 'button'; add.className = 'button button-primary';
-      add.textContent = mode === 'price' ? 'Agregar a la venta' : 'Agregar · 1 unidad';
-      add.addEventListener('click', () => {
-        addProduct(product);
-        if (mode === 'price') switchView('saleView');
-      });
-      card.append(info, price, add); target.append(card);
+      info.append(name);
+      if (product.descripcion) { const description = document.createElement('small'); description.className = 'result-description'; description.textContent = product.descripcion; info.append(description); }
+      if (product.codigo) { const code = document.createElement('small'); code.className = 'result-code'; code.textContent = product.codigo; info.append(code); }
+      const price = document.createElement('strong'); price.className = 'result-price'; price.textContent = money(product.precioVenta);
+      card.append(info, price);
+      if (mode === 'price') {
+        const controls = document.createElement('div'); controls.className = 'price-result-actions';
+        const decrement = document.createElement('button'); decrement.type = 'button'; decrement.className = 'quantity-step'; decrement.textContent = '−'; decrement.setAttribute('aria-label', 'Restar cantidad');
+        const quantity = document.createElement('input'); quantity.type = 'number'; quantity.min = '1'; quantity.max = '1000000'; quantity.step = '1'; quantity.inputMode = 'numeric'; quantity.value = '1'; quantity.setAttribute('aria-label', `Cantidad de ${product.nombre}`);
+        const increment = document.createElement('button'); increment.type = 'button'; increment.className = 'quantity-step'; increment.textContent = '+'; increment.setAttribute('aria-label', 'Sumar cantidad');
+        decrement.addEventListener('click', () => { quantity.value = String(Math.max(1, (Number(quantity.value) || 1) - 1)); });
+        increment.addEventListener('click', () => { quantity.value = String(Math.min(1000000, (Number(quantity.value) || 1) + 1)); });
+        const add = document.createElement('button'); add.type = 'button'; add.className = 'button button-primary result-add'; add.textContent = 'Agregar';
+        add.addEventListener('click', () => {
+          const amount = Number(quantity.value);
+          if (!Number.isInteger(amount) || amount < 1 || amount > 1000000) { quantity.value = '1'; quantity.focus(); return; }
+          addProduct(product, amount);
+          switchView('saleView');
+        });
+        controls.append(decrement, quantity, increment, add);
+        card.append(controls);
+      } else {
+        const add = document.createElement('button'); add.type = 'button'; add.className = 'button button-primary'; add.textContent = 'Agregar · 1 unidad';
+        add.addEventListener('click', () => addProduct(product));
+        card.append(add);
+      }
+      target.append(card);
     }
   }
   async function findProducts(term, mode, fromCamera = false) {
@@ -347,7 +363,7 @@
         addProduct(exact);
         return;
       }
-      renderResults(resultsElement, products, mode);
+      renderResults(resultsElement, products, mode, mode === 'price');
       if (!products.length) setMessage(messageElement, 'No se encontró un producto activo con ese código o nombre.');
       else if (exact && mode === 'sale') {
         addProduct(exact);
@@ -479,7 +495,7 @@
   async function start() {
     try {
       const session = await request('/productos/sesion');
-      if (session.autenticado) { signedIn(session.nombre); restoreSaleDraft(); }
+      if (session.autenticado) { signedIn(); restoreSaleDraft(); }
     } catch (error) { setMessage($('#loginMessage'), error.message); }
     renderCart();
     renderSelectedClient();

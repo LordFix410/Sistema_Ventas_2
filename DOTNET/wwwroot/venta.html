@@ -9,27 +9,23 @@
   <link rel="icon" href="/favicon.png?v=1" type="image/png" sizes="500x500">
   <link rel="apple-touch-icon" href="/favicon.png?v=1">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="css/app.css?v=18">
-  <link rel="stylesheet" href="css/venta.css?v=8">
+  <link rel="stylesheet" href="css/app.css?v=19">
+  <link rel="stylesheet" href="css/venta.css?v=10">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <script src="/js/pwa.js?v=1" defer></script>
-  <script src="js/venta.js?v=7" defer></script>
+  <script src="js/venta.js?v=9" defer></script>
 </head>
 <body class="mobile-sale-page">
   <nav class="site-nav">
     <a class="brand" href="index.html">Librería Digital</a>
     <div class="nav-links"><a href="index.html">Inicio</a><a class="active" href="venta.html">Ventas</a></div>
+    <button id="logoutButton" class="nav-logout" type="button" aria-label="Cerrar sesión" title="Cerrar sesión" hidden>Salir</button>
   </nav>
   <main class="mobile-wrap">
-    <header class="mobile-heading">
-      <div><p class="eyebrow">PUNTO DE VENTA</p><h1>Venta móvil</h1></div>
-      <div id="signedIn" class="signed-in" hidden><span id="userName"></span><button id="logoutButton" class="button button-quiet" type="button">Salir</button></div>
-    </header>
-
     <section id="loginPanel" class="product-panel login-panel">
       <h2>Contraseña</h2>
-      <form id="loginForm" class="login-form"><label>Contraseña<input name="clave" type="password" autocomplete="current-password" required autofocus></label><button class="button button-primary" type="submit">Entrar</button></form>
+      <form id="loginForm" class="login-form"><label>Contraseña<input name="clave" type="password" autocomplete="current-password" required></label><button class="button button-primary" type="submit">Entrar</button></form>
       <p id="loginMessage" class="form-message" role="status"></p>
     </section>
 
@@ -39,12 +35,19 @@
         <button type="button" class="sale-tab" data-view="priceView">Consultar precio</button>
       </nav>
 
+      <section id="scannerPanel" class="product-panel scanner-panel" hidden>
+        <div class="panel-heading"><h2>Escanear código</h2><button id="closeScanner" class="scanner-close" type="button" aria-label="Cerrar cámara">×</button></div>
+        <div class="scanner-viewport"><video id="scannerVideo" playsinline muted></video><div class="scanner-frame" aria-hidden="true"></div><span class="scanner-hint">Apunta al código de barras</span></div>
+        <p id="scannerMessage" class="inline-message" role="status"></p>
+      </section>
+
       <section id="saleView" class="sale-view">
         <section class="product-panel sale-search-panel">
+          <button id="scanSaleButton" class="button button-primary scan-launch" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg> Escanear producto</button>
           <form id="saleSearchForm" class="scan-row">
             <label class="visually-hidden" for="saleSearch">Código o nombre del producto</label>
             <input id="saleSearch" type="search" placeholder="Código o nombre del producto" autocomplete="off">
-            <button id="scanSaleButton" class="scan-button" type="button" aria-label="Escanear con cámara" title="Escanear con cámara"><span aria-hidden="true">▣</span></button>
+            <button class="button button-secondary search-submit" type="submit">Buscar</button>
           </form>
           <div class="quick-actions"><p id="saleSearchMessage" class="inline-message" role="status"></p><button id="addSpecialButton" class="button button-link" type="button">＋ Artículo especial</button></div>
           <div id="saleResults" class="product-results" aria-live="polite"></div>
@@ -55,12 +58,6 @@
           <div id="emptyCart" class="empty-cart"><strong>Aún no hay productos</strong><span>Escanea un código o búscalo por nombre.</span></div>
           <div id="cartRows" class="cart-rows"></div>
         </section>
-
-        <div class="sticky-sale-bar">
-          <button id="changeClientButton" class="client-chip" type="button" aria-label="Buscar cliente por NIT"><span aria-hidden="true">♙</span><span id="selectedClientDocument">CF</span><small>Cliente</small></button>
-          <div class="sticky-total"><small>Total</small><strong id="saleTotal">Q 0.00</strong></div>
-          <button id="openPaymentButton" class="button button-primary button-charge" type="button" disabled>Cobrar</button>
-        </div>
 
         <dialog id="temporaryDialog" class="sale-dialog">
           <div class="dialog-heading"><div><p class="eyebrow">ARTÍCULO ESPECIAL</p><h2>Agregar a la venta</h2></div><button id="closeTemporaryDialog" class="dialog-close" type="button" aria-label="Cerrar">×</button></div>
@@ -111,20 +108,22 @@
 
       <section id="priceView" class="sale-view" hidden>
         <section class="product-panel search-panel price-search-panel">
-          <h2>Consulta rápida de precios</h2>
-          <p class="muted">Busca o escanea. Si se lo llevan, agrégalo sin volver a buscarlo.</p>
-          <form id="priceSearchForm" class="search-form"><label class="visually-hidden" for="priceSearch">Código o nombre del producto</label><input id="priceSearch" type="search" placeholder="Código de barras o nombre" autocomplete="off"><button class="button button-primary" type="submit">Consultar</button></form>
-          <button id="scanPriceButton" class="button button-scan" type="button">▣ Consultar con cámara</button>
+          <div class="panel-heading"><h2>Consulta de precio</h2><span class="muted">Escanea o busca</span></div>
+          <details class="price-manual-search">
+            <summary>Buscar por código o nombre</summary>
+            <form id="priceSearchForm" class="search-form"><label class="visually-hidden" for="priceSearch">Código o nombre del producto</label><input id="priceSearch" type="search" placeholder="Código o nombre" autocomplete="off"><button class="button button-secondary search-submit" type="submit">Buscar</button></form>
+          </details>
+          <button id="scanPriceButton" class="button button-primary scan-launch" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg> Escanear para consultar</button>
           <p id="priceSearchMessage" class="inline-message" role="status"></p>
           <div id="priceResults" class="product-results" aria-live="polite"></div>
         </section>
       </section>
-    </section>
 
-    <section id="scannerPanel" class="product-panel scanner-panel" hidden>
-      <div class="panel-heading"><h2>Escanear código</h2><button id="closeScanner" class="button button-quiet button-small" type="button">Cerrar</button></div>
-      <video id="scannerVideo" playsinline muted></video>
-      <p id="scannerMessage" class="inline-message" role="status"></p>
+      <div class="sticky-sale-bar">
+        <button id="changeClientButton" class="client-chip" type="button" aria-label="Buscar cliente por NIT"><span aria-hidden="true">♙</span><span id="selectedClientDocument">CF</span><small>Cliente</small></button>
+        <div class="sticky-total"><small id="stickyCartSummary">0 artículos en la venta</small><strong id="saleTotal">Q 0.00</strong></div>
+        <button id="openPaymentButton" class="button button-primary button-charge" type="button" disabled>Cobrar</button>
+      </div>
     </section>
   </main>
 </body>

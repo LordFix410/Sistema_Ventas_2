@@ -67,16 +67,16 @@ function canvasSize() {
 }
 
 function photoDimensions() {
-  const photoWidthCm = Math.max(1, Math.min(12, Number(widthInput.value) || 2.5));
-  const photoHeightCm = Math.max(1, Math.min(16, Number(heightInput.value) || 3));
+  const photoWidthCm = Math.max(1, Math.min(12, Number(widthInput.value) || 3.4));
+  const photoHeightCm = Math.max(1, Math.min(16, Number(heightInput.value) || 4.1));
   const borderCm = Math.max(0, Math.min(5, Number(borderInput.value) || 0)) / 10;
-  return {photoWidthCm, photoHeightCm, borderCm, widthCm: photoWidthCm + borderCm * 2, heightCm: photoHeightCm + borderCm * 2};
+  return {photoWidthCm, photoHeightCm, borderCm, widthCm: photoWidthCm, heightCm: photoHeightCm};
 }
 
 function updatePhotoSizeSummary() {
   if (!photoSizeSummary) return;
   const presetName = {cedula: 'Cédula', photo: 'Fotografía', custom: 'Personalizado'}[photoPresetInput.value];
-  photoSizeSummary.textContent = `Tamaño de foto · ${presetName} · ${Number(widthInput.value) || 2.5} × ${Number(heightInput.value) || 3} cm · borde ${Number(borderInput.value) || 0} mm`;
+  photoSizeSummary.textContent = `Tamaño final · ${presetName} · ${Number(widthInput.value) || 3.4} × ${Number(heightInput.value) || 4.1} cm · borde interno ${Number(borderInput.value) || 0} mm`;
 }
 
 function renderCrop() {
@@ -174,7 +174,7 @@ fileInput.addEventListener('change', async event => {
 
 photoPresetInput.addEventListener('change', () => {
   workStarted = true;
-  const preset = {cedula: [2.5, 3], photo: [10, 15]}[photoPresetInput.value];
+  const preset = {cedula: [3.4, 4.1], photo: [10, 15]}[photoPresetInput.value];
   if (!preset) return;
   widthInput.value = String(preset[0]);
   heightInput.value = String(preset[1]);

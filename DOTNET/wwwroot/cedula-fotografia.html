@@ -11,10 +11,10 @@
   <meta name="theme-color" content="#0d2f47">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="stylesheet" href="css/app.css?v=19">
+  <link rel="stylesheet" href="css/app.css?v=20">
   <script src="/js/pwa.js?v=1" defer></script>
   <script src="js/file-transfer.js?v=1" defer></script>
-  <script src="js/cedula-fotografia.js?v=11" defer></script>
+  <script src="js/cedula-fotografia.js?v=12" defer></script>
 </head>
 <body class="id-photo-tool">
   <nav class="site-nav">
@@ -35,13 +35,13 @@
         <div id="sourceStatus" class="empty">Elegí una foto para empezar.</div>
       </section>
       <details class="id-workflow-step id-format-step id-collapsible-step">
-        <summary id="photoSizeSummary">Tamaño de foto · Cédula · 2.5 × 3 cm</summary>
+        <summary id="photoSizeSummary">Tamaño final · Cédula · 3.4 × 4.1 cm</summary>
         <label class="preset-label">Formato
-          <select id="photoPreset"><option value="custom">Personalizado</option><option value="cedula">Cédula · 2.5 × 3 cm</option><option value="photo">Fotografía · 10 × 15 cm</option></select>
+          <select id="photoPreset"><option value="custom">Personalizado</option><option value="cedula">Cédula · 3.4 × 4.1 cm</option><option value="photo">Fotografía · 10 × 15 cm</option></select>
         </label>
         <div class="id-size-row">
-          <label>Ancho (cm)<input id="photoWidth" type="number" min="1" max="12" step="0.1" value="2.5"></label>
-          <label>Alto (cm)<input id="photoHeight" type="number" min="1" max="16" step="0.1" value="3"></label>
+          <label>Ancho final (cm)<input id="photoWidth" type="number" min="1" max="12" step="0.1" value="3.4"></label>
+          <label>Alto final (cm)<input id="photoHeight" type="number" min="1" max="16" step="0.1" value="4.1"></label>
           <label>Borde blanco (mm)<input id="whiteBorder" type="number" min="0" max="5" step="0.1" value="2"></label>
         </div>
       </details>
@@ -71,7 +71,7 @@
         <label class="id-paper-size">Tamaño de hoja
           <select id="idPaperSize"><option value="letter">Carta · 21.59 × 27.94 cm</option><option value="oficio">Oficio · 21.59 × 33.02 cm</option></select>
         </label>
-        <p class="muted">Vista previa e impresión a escala 100 % · separación de 3 mm.</p>
+        <p class="muted">Tamaño físico a escala 100 % · margen de hoja de 1 cm · separación de 3 mm.</p>
         <label class="page-margin-toggle"><input id="idIncludeMargin" type="checkbox" checked> Margen de hoja de 1 cm</label>
         <div class="id-output-controls"><label class="id-color-setting">Impresión <button id="idColorMode" type="button" aria-pressed="false">Color</button></label><button id="printIdPhotos" class="id-print-action" disabled>Imprimir</button><button id="wordIdPhotos" class="id-word-action" disabled>Descargar Word</button></div>
         <p id="sheetSummary" class="muted id-sheet-summary">Agregá fotos para ver la hoja.</p>

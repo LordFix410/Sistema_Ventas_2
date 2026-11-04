@@ -18,7 +18,7 @@
     return body;
   }
   function message(element, text, success = false) { if (!element) return; element.textContent = text || ''; element.classList.toggle('success', success); }
-  function showSignedIn(name) { loginPanel.hidden = true; productApp.hidden = false; $('#signedIn').hidden = false; $('#userName').textContent = name || 'Sesión iniciada'; }
+  function showSignedIn() { loginPanel.hidden = true; productApp.hidden = false; $('#logoutButton').hidden = false; }
   function selectOptions(select, items, emptyLabel) { select.replaceChildren(new Option(emptyLabel, '')); for (const item of items) select.add(new Option(item.nombre, item.id)); }
   async function refreshCatalogs() {
     const data = await request('/catalogos');
@@ -115,18 +115,19 @@
     if (!adminData.proveedores.length) choices.textContent = 'No hay proveedores activos registrados.';
   }
   async function start() {
-    try { const status = await request('/sesion'); if (status.autenticado) { showSignedIn(status.nombre); message($('#catalogMessage'), 'Cargando catálogos…'); await refreshCatalogs(); } }
+    try { const status = await request('/sesion'); if (status.autenticado) { showSignedIn(); message($('#catalogMessage'), 'Cargando catálogos…'); await refreshCatalogs(); } }
     catch (error) { if (productApp.hidden) message($('#loginMessage'), error.message); else message($('#catalogMessage'), error.message); }
   }
   $('#loginForm').addEventListener('submit', async event => {
     event.preventDefault(); const form = new FormData(event.currentTarget); const button = event.currentTarget.querySelector('button'); button.disabled = true;
     message($('#loginMessage'), 'Verificando contraseña…');
-    try { const session = await request('/sesion', { method: 'POST', body: JSON.stringify({ clave: form.get('clave') }) }); showSignedIn(session.nombre); message($('#catalogMessage'), 'Cargando catálogos…'); await refreshCatalogs(); }
+    try { await request('/sesion', { method: 'POST', body: JSON.stringify({ clave: form.get('clave') }) }); showSignedIn(); message($('#catalogMessage'), 'Cargando catálogos…'); await refreshCatalogs(); }
     catch (error) { if (productApp.hidden) message($('#loginMessage'), error.message); else message($('#catalogMessage'), error.message); }
     finally { button.disabled = false; }
   });
   $('#logoutButton').addEventListener('click', async () => { if (hasProductDraft() && !confirm('Hay un producto sin guardar. El borrador quedó guardado en esta pestaña. ¿Quieres cerrar sesión?')) return; await stopScanner(); await request('/sesion', { method: 'DELETE' }); navigationApproved = true; location.reload(); });
   document.querySelectorAll('.product-tab').forEach(button => button.addEventListener('click', () => {
+    if (button.dataset.view !== 'viewProduct' && !$('#scannerPanel').hidden) stopScanner();
     document.querySelectorAll('.product-tab').forEach(tab => tab.classList.toggle('active', tab === button));
     document.querySelectorAll('.workspace-view').forEach(view => { view.hidden = view.id !== button.dataset.view; });
     if (button.dataset.view !== 'viewProduct' && adminData) refreshAdministration().catch(error => message($('#catalogMessage'), `No se pudieron actualizar las listas: ${error.message}`));
@@ -262,7 +263,7 @@
     }
     const payload = { codigo: data.get('codigo'), nombre: data.get('nombre'), descripcion: data.get('descripcion') || null, idCategoria: Number(data.get('idCategoria')), precioCompra: numeric('precioCompra') || 0, precioVenta: numeric('precioVenta') || 0, porcentaje: numeric('porcentaje') || 0, calcularCosto: autoPurchaseCost, estado: data.has('estado'), idGrupoReposicion: $('#replenishmentGroup').value ? Number($('#replenishmentGroup').value) : null, cantidadMinima: numeric('cantidadMinima'), cantidadMaxima: numeric('cantidadMaxima'), idGrupoProveedor: $('#supplierGroup').value ? Number($('#supplierGroup').value) : null };
     button.disabled = true; button.textContent = 'Guardando…';
-    try { const result = await request('', { method: 'POST', body: JSON.stringify(payload) }); sessionStorage.removeItem(productDraftKey); message($('#productMessage'), result.mensaje, true); form.reset(); $('#replenishmentGroup').dispatchEvent(new Event('change')); $('#codigo').focus(); }
+    try { const result = await request('', { method: 'POST', body: JSON.stringify(payload) }); sessionStorage.removeItem(productDraftKey); message($('#productMessage'), result.mensaje, true); form.reset(); $('#replenishmentGroup').dispatchEvent(new Event('change')); $('#scanButton').focus(); }
     catch (error) { if (error.status === 401) { location.reload(); return; } message($('#productMessage'), error.message); }
     finally { button.disabled = false; button.textContent = 'Crear producto'; }
   });

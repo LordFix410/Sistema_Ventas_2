@@ -45,6 +45,7 @@ let workStarted = false;
 let zipLoadingCount = 0;
 const objectUrls = new WeakMap();
 const photoRotations = new WeakMap();
+const photoOverrides = new Map();
 const cmToPx = cm => cm * 96 / 2.54;
 const cmToTwips = cm => Math.round(cm * 567);
 const cmToEmu = cm => Math.round(cm * 360000);
@@ -108,6 +109,9 @@ document.addEventListener('drop', async event => {
   const dropped = [...event.dataTransfer.files];
   addPhotos(dropped);
   for (const file of dropped.filter(item => /\.(zip|rar)$/i.test(item.name))) await addArchive(file);
+});
+document.addEventListener('dragstart', event => {
+  if (event.target.closest?.('#photoGrid img, #sheets img')) event.preventDefault();
 });
 
 window.addEventListener('beforeunload', event => {
@@ -176,22 +180,113 @@ function settings() {
   return {paperWidth, paperHeight, photoWidth, photoHeight, margin, gap, columns, rows, perPage: columns * rows};
 }
 
+function optionsFor(file, base = settings()) {
+  const override = photoOverrides.get(file);
+  return override ? {...base, ...override, pageFit: false} : {...base, fit: fitInput.value, position: 'center'};
+}
+
+function inputNumber(labelText, value, min, max, step, handler) {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const input = document.createElement('input');
+  input.type = 'number'; input.min = String(min); input.max = String(max); input.step = String(step); input.value = Number(value).toFixed(1);
+  input.addEventListener('change', () => {
+    const parsed = Math.max(min, Math.min(max, Number(input.value) || min));
+    input.value = parsed.toFixed(1);
+    handler(parsed);
+  });
+  label.append(input);
+  return label;
+}
+
+function updatePhotoOverride(file, changes) {
+  savePhotoOverride(file, changes);
+  workStarted = true;
+  render();
+}
+
+function savePhotoOverride(file, changes) {
+  const current = optionsFor(file);
+  photoOverrides.set(file, {
+    photoWidth: changes.photoWidth ?? current.photoWidth,
+    photoHeight: changes.photoHeight ?? current.photoHeight,
+    fit: changes.fit ?? current.fit ?? fitInput.value,
+    position: changes.position ?? current.position ?? 'center'
+  });
+  if (pageFitInput.checked) {
+    pageFitInput.checked = false;
+    syncDimensionControls();
+  }
+}
+
 function render() {
   imageGrid.replaceChildren();
   for (const file of photos) {
     const figure = document.createElement('figure');
+    figure.className = 'editable-photo';
+    const photoConfig = optionsFor(file);
     const image = document.createElement('img');
     image.src = objectUrl(file);
     image.alt = file.name;
+    image.draggable = false;
     image.style.transform = `rotate(${photoRotations.get(file) || 0}deg)`;
     const caption = document.createElement('figcaption');
     caption.textContent = file.name;
+    const dimensions = document.createElement('div');
+    dimensions.className = 'per-photo-dimensions';
+    const heightLabel = inputNumber('Alto (cm)', photoConfig.photoHeight, 1, 40, 0.1, value => updatePhotoOverride(file, {photoHeight: value}));
+    heightLabel.querySelector('input').dataset.photoDimension = 'height';
+    const widthLabel = inputNumber('Ancho (cm)', photoConfig.photoWidth, 1, 40, 0.1, value => updatePhotoOverride(file, {photoWidth: value}));
+    widthLabel.querySelector('input').dataset.photoDimension = 'width';
+    dimensions.append(heightLabel, widthLabel);
+    const aspect = photoConfig.photoWidth / Math.max(0.1, photoConfig.photoHeight);
+    const paper = settings();
+    const maxSliderHeight = Math.max(1, Math.min(40, paper.paperHeight - paper.margin * 2, (paper.paperWidth - paper.margin * 2) / aspect));
+    const sizeLabel = document.createElement('label');
+    sizeLabel.className = 'per-photo-size';
+    sizeLabel.innerHTML = '<span>Tamaño proporcional</span>';
+    const sizeSlider = document.createElement('input');
+    sizeSlider.type = 'range'; sizeSlider.min = '1'; sizeSlider.max = maxSliderHeight.toFixed(1); sizeSlider.step = '0.1'; sizeSlider.value = Math.min(photoConfig.photoHeight, maxSliderHeight).toFixed(1);
+    sizeSlider.setAttribute('aria-label', `Ajustar tamaño proporcional de ${file.name}`);
+    sizeSlider.addEventListener('input', () => {
+      const newHeight = Number(sizeSlider.value);
+      const newWidth = Math.round(newHeight * aspect * 10) / 10;
+      savePhotoOverride(file, {photoHeight: newHeight, photoWidth: newWidth});
+      dimensions.querySelector('[data-photo-dimension="height"]').value = newHeight.toFixed(1);
+      dimensions.querySelector('[data-photo-dimension="width"]').value = newWidth.toFixed(1);
+      workStarted = true;
+      renderSheets();
+    });
+    sizeSlider.addEventListener('change', () => render());
+    sizeLabel.append(sizeSlider);
+    const advanced = document.createElement('details');
+    advanced.className = 'photo-advanced per-photo-advanced';
+    advanced.innerHTML = '<summary>Más opciones de esta foto</summary>';
+    const options = document.createElement('div');
+    options.className = 'per-photo-options';
+    const fitLabel = document.createElement('label'); fitLabel.textContent = 'Encuadre';
+    const fitSelect = document.createElement('select');
+    fitSelect.innerHTML = '<option value="cover">Llenar cuadro</option><option value="contain">Foto completa</option>';
+    fitSelect.value = photoConfig.fit || fitInput.value;
+    fitSelect.addEventListener('change', () => updatePhotoOverride(file, {fit: fitSelect.value}));
+    fitLabel.append(fitSelect);
+    const positionLabel = document.createElement('label'); positionLabel.textContent = 'Posición';
+    const positionSelect = document.createElement('select');
+    positionSelect.innerHTML = '<option value="center">Centro</option><option value="top">Arriba</option><option value="bottom">Abajo</option><option value="left">Izquierda</option><option value="right">Derecha</option>';
+    positionSelect.value = photoConfig.position || 'center';
+    positionSelect.addEventListener('change', () => updatePhotoOverride(file, {position: positionSelect.value}));
+    positionLabel.append(positionSelect);
+    options.append(fitLabel, positionLabel);
+    const orientation = document.createElement('button');
+    orientation.type = 'button'; orientation.className = 'photo-orientation'; orientation.textContent = '↔ Cambiar horizontal / vertical';
+    orientation.addEventListener('click', () => updatePhotoOverride(file, {photoWidth: photoConfig.photoHeight, photoHeight: photoConfig.photoWidth}));
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'remove-photo';
     remove.textContent = 'Quitar';
     remove.addEventListener('click', () => {
       photos = photos.filter(photo => photo !== file);
+      photoOverrides.delete(file);
       render();
     });
     const actions = document.createElement('div');
@@ -208,10 +303,15 @@ function render() {
         photoRotations.set(file, ((photoRotations.get(file) || 0) + rotation + 360) % 360);
         render();
       });
-      actions.append(rotate);
+      options.append(rotate);
     }
+    const reset = document.createElement('button');
+    reset.type = 'button'; reset.className = 'photo-reset'; reset.textContent = 'Usar ajuste global';
+    reset.disabled = !photoOverrides.has(file);
+    reset.addEventListener('click', () => { photoOverrides.delete(file); workStarted = true; render(); });
     actions.append(remove);
-    figure.append(image, caption, actions);
+    advanced.append(options, orientation, reset);
+    figure.append(image, caption, dimensions, sizeLabel, advanced, actions);
     imageGrid.append(figure);
   }
   photoStatus.textContent = photos.length
@@ -227,27 +327,33 @@ function renderSheets() {
   sheets.replaceChildren();
   if (!photos.length) {
     layoutInfo.textContent = 'La hoja y las fotos aparecerán aquí.';
+    layoutInfo.className = 'photo-layout-info muted';
+    layoutInfo.hidden = false;
     return;
   }
   const config = settings();
-  const photoExceedsPaper = config.photoWidth > config.paperWidth - config.margin * 2 || config.photoHeight > config.paperHeight - config.margin * 2;
-  if (photoExceedsPaper) {
-    layoutInfo.textContent = `La foto de ${config.photoWidth.toFixed(2)} × ${config.photoHeight.toFixed(2)} cm no cabe en la hoja con el margen elegido.`;
+  const layout = makePhotoPlacements(config);
+  if (layout.error) {
+    layoutInfo.textContent = layout.error;
+    layoutInfo.className = 'photo-layout-info tip';
+    layoutInfo.hidden = false;
     printButton.disabled = wordButton.disabled = true;
     enterScalePreviewButton.disabled = true;
     return;
   }
   printButton.disabled = wordButton.disabled = false;
   enterScalePreviewButton.disabled = false;
-  const pageCount = Math.ceil(photos.length / config.perPage);
+  const pageCount = layout.pages.length;
   const colorMode = colorModeButton.getAttribute('aria-pressed') === 'true' ? 'blanco y negro' : 'color';
-  layoutInfo.textContent = `${config.columns} por ${config.rows} · ${config.perPage} fotos por hoja · ${pageCount} hoja${pageCount === 1 ? '' : 's'} · ${config.photoWidth.toFixed(2)} × ${config.photoHeight.toFixed(2)} cm · margen ${config.margin ? '1 cm' : 'sin margen'} · ${colorMode}`;
+  layoutInfo.textContent = `${photos.length} fotos · ${pageCount} hoja${pageCount === 1 ? '' : 's'} · tamaños individuales · margen ${config.margin ? '1 cm' : 'sin margen'} · ${colorMode}`;
+  layoutInfo.className = 'photo-layout-info photo-count';
+  layoutInfo.hidden = false;
   document.documentElement.style.setProperty('--paper-w', `${config.paperWidth}cm`);
   document.documentElement.style.setProperty('--paper-h', `${config.paperHeight}cm`);
-  printPageStyle.textContent = `@media print{@page{size:${config.paperWidth}cm ${config.paperHeight}cm;margin:0}html,body{width:${config.paperWidth}cm!important;margin:0!important;padding:0!important}.print-sheet{width:${config.paperWidth}cm!important;height:${config.paperHeight}cm!important;box-sizing:border-box!important}}`;
+  printPageStyle.textContent = `@page{size:${config.paperWidth}cm ${config.paperHeight}cm;margin:0}@media print{html,body{width:${config.paperWidth}cm!important;margin:0!important;padding:0!important;background:#fff!important}.photo-layout,.preview-section,.sheets{margin:0!important;padding:0!important}.sheet-shell{width:${config.paperWidth}cm!important;height:${config.paperHeight}cm!important;margin:0!important;padding:0!important}.print-sheet{width:${config.paperWidth}cm!important;height:${config.paperHeight}cm!important;box-sizing:border-box!important;margin:0!important}}`;
   const isScalePreview = document.body.classList.contains('photo-preview-100');
   const scale = isScalePreview ? 1 : Math.min(1, (sheets.clientWidth - 12) / cmToPx(config.paperWidth));
-  for (let start = 0, page = 0; start < photos.length; start += config.perPage, page++) {
+  for (let page = 0; page < layout.pages.length; page++) {
     const shell = document.createElement('div');
     shell.className = 'sheet-shell';
     shell.style.width = `${cmToPx(config.paperWidth) * scale}px`;
@@ -256,24 +362,26 @@ function renderSheets() {
     sheet.className = 'print-sheet';
     sheet.style.width = `${config.paperWidth}cm`;
     sheet.style.height = `${config.paperHeight}cm`;
-    sheet.style.padding = `${config.margin}cm`;
-    sheet.style.gap = `${config.gap}cm`;
-    sheet.style.gridTemplateColumns = `repeat(${config.columns}, ${config.photoWidth}cm)`;
+    sheet.style.display = 'block';
+    sheet.style.position = 'relative';
+    sheet.style.padding = '0';
     sheet.style.transform = `scale(${scale})`;
     sheet.style.transformOrigin = 'top center';
-    for (const file of photos.slice(start, start + config.perPage)) {
+    for (const placement of layout.pages[page]) {
+      const {file, photoWidth, photoHeight, fit, position, x, y} = placement;
       const frame = document.createElement('div');
-      frame.className = `photo-tile${fitInput.value === 'contain' ? ' contain' : ''}${photoBorderInput.checked ? '' : ' no-border'}`;
-      frame.style.width = `${config.photoWidth}cm`;
-      frame.style.height = `${config.photoHeight}cm`;
+      frame.className = `photo-tile${fit === 'contain' ? ' contain' : ''}${photoBorderInput.checked ? '' : ' no-border'}`;
+      Object.assign(frame.style, {position: 'absolute', left: `${x}cm`, top: `${y}cm`, width: `${photoWidth}cm`, height: `${photoHeight}cm`});
       const image = document.createElement('img');
       image.src = objectUrl(file);
       image.alt = file.name;
+      image.draggable = false;
+      image.style.objectPosition = position || 'center';
       const rotation = photoRotations.get(file) || 0;
       if (rotation % 180) {
         image.style.position = 'absolute';
-        image.style.width = `${config.photoHeight}cm`;
-        image.style.height = `${config.photoWidth}cm`;
+        image.style.width = `${photoHeight}cm`;
+        image.style.height = `${photoWidth}cm`;
         image.style.left = '50%';
         image.style.top = '50%';
         image.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
@@ -286,6 +394,33 @@ function renderSheets() {
     shell.append(sheet);
     sheets.append(shell);
   }
+}
+
+function makePhotoPlacements(config) {
+  const pages = [];
+  const maxX = config.paperWidth - config.margin;
+  const maxY = config.paperHeight - config.margin;
+  let page = [], x = config.margin, y = config.margin, rowHeight = 0;
+  for (const file of photos) {
+    const current = optionsFor(file, config);
+    const photoWidth = Number(current.photoWidth) || config.photoWidth;
+    const photoHeight = Number(current.photoHeight) || config.photoHeight;
+    if (photoWidth > config.paperWidth - config.margin * 2 || photoHeight > config.paperHeight - config.margin * 2) {
+      return {pages: [], error: `${file.name}: ${photoWidth.toFixed(1)} × ${photoHeight.toFixed(1)} cm no cabe en la hoja con el margen elegido.`};
+    }
+    if (x + photoWidth > maxX + 0.001) {
+      x = config.margin; y += rowHeight + config.gap; rowHeight = 0;
+    }
+    if (y + photoHeight > maxY + 0.001) {
+      if (page.length) pages.push(page);
+      page = []; x = config.margin; y = config.margin; rowHeight = 0;
+    }
+    page.push({file, photoWidth, photoHeight, fit: current.fit || fitInput.value, position: current.position || 'center', x, y});
+    x += photoWidth + config.gap;
+    rowHeight = Math.max(rowHeight, photoHeight);
+  }
+  if (page.length) pages.push(page);
+  return {pages};
 }
 
 function syncDimensionControls() {
@@ -332,7 +467,7 @@ photoPresetInput.addEventListener('change', () => {
     heightInput.value = '5';
   }
   syncDimensionControls();
-  renderSheets();
+  render();
 });
 
 photoOrientationInput.addEventListener('change', () => {
@@ -342,11 +477,12 @@ photoOrientationInput.addEventListener('change', () => {
   widthInput.value = String(width);
   heightInput.value = String(height);
   syncDimensionControls();
-  renderSheets();
+  render();
 });
 
 for (const control of [paperInput, fitInput]) control.addEventListener('input', () => { workStarted = true; renderSheets(); });
 for (const control of [paperInput, paperOrientationInput, includeMarginInput, pageFitInput]) control.addEventListener('change', () => { workStarted = true; syncDimensionControls(); renderSheets(); });
+fitInput.addEventListener('change', () => render());
 for (const control of [ratioInput, ratioAInput, ratioBInput]) control.addEventListener('input', () => {
   workStarted = true;
   photoPresetInput.value = 'custom';
@@ -379,14 +515,18 @@ photoWidthScale.addEventListener('input', () => {
   syncDimensionControls();
   renderSheets();
 });
+photoWidthScale.addEventListener('change', () => render());
 heightInput.addEventListener('input', () => {
   workStarted = true;
   photoPresetInput.value = 'custom';
   squareModeInput.checked = false;
   ratioInput.value = 'none';
   syncDimensionControls();
-  renderSheets();
+  render();
 });
+for (const control of [ratioInput, ratioAInput, ratioBInput, widthInput, heightInput, squareModeInput, paperOrientationInput, includeMarginInput, pageFitInput]) {
+  control.addEventListener('change', () => render());
+}
 squareModeInput.addEventListener('change', () => {
   workStarted = true;
   photoPresetInput.value = 'custom';
@@ -437,7 +577,7 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && document.body.classList.contains('photo-preview-100')) exitScalePreview();
 });
 
-function preparePhoto(file, widthCm, heightCm, fit, blackWhite, border, rotation = 0) {
+function preparePhoto(file, widthCm, heightCm, fit, blackWhite, border, rotation = 0, position = 'center') {
   return new Promise((resolve, reject) => {
     const image = new Image();
     const source = URL.createObjectURL(file);
@@ -459,9 +599,15 @@ function preparePhoto(file, widthCm, heightCm, fit, blackWhite, border, rotation
         : Math.min((widthPixels - 6) / orientedWidth, (heightPixels - 6) / orientedHeight);
       const width = image.naturalWidth * scale;
       const height = image.naturalHeight * scale;
+      const visualWidth = swapsAxes ? height : width;
+      const visualHeight = swapsAxes ? width : height;
+      const horizontal = position === 'left' ? 0 : position === 'right' ? 1 : 0.5;
+      const vertical = position === 'top' ? 0 : position === 'bottom' ? 1 : 0.5;
+      const drawX = (widthPixels - visualWidth) * horizontal;
+      const drawY = (heightPixels - visualHeight) * vertical;
       ctx.filter = blackWhite ? 'grayscale(1)' : 'none';
       ctx.save();
-      ctx.translate(widthPixels / 2, heightPixels / 2);
+      ctx.translate(drawX + visualWidth / 2, drawY + visualHeight / 2);
       ctx.rotate(normalizedRotation * Math.PI / 180);
       ctx.drawImage(image, -width / 2, -height / 2, width, height);
       ctx.restore();
@@ -510,52 +656,34 @@ function makeZip(entries) {
   return joinBytes([...localParts, central, end]);
 }
 
-function imageDrawing(id, widthExtent, heightExtent) {
-  return `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${widthExtent}" cy="${heightExtent}"/><wp:docPr id="${id}" name="Foto ${id}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="Foto ${id}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rId${id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${widthExtent}" cy="${heightExtent}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
-}
-
-function buildTable(start, count, config) {
-  const photoWidthTwips = cmToTwips(config.photoWidth), photoHeightTwips = cmToTwips(config.photoHeight), gapTwips = cmToTwips(config.gap), columns = config.columns;
-  const grid = [];
-  for (let col = 0; col < columns; col++) {
-    grid.push(`<w:gridCol w:w="${photoWidthTwips}"/>`);
-    if (col < columns - 1) grid.push(`<w:gridCol w:w="${gapTwips}"/>`);
-  }
-  let rowsXml = '';
-  const rowCount = Math.ceil(count / columns);
-  for (let row = 0; row < rowCount; row++) {
-    let cells = '';
-    for (let col = 0; col < columns; col++) {
-      if (col) cells += `<w:tc><w:tcPr><w:tcW w:w="${gapTwips}" w:type="dxa"/><w:tcBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/></w:tcBorders></w:tcPr><w:p/></w:tc>`;
-      const photoIndex = row * columns + col;
-      const hasPhoto = photoIndex < count;
-      const cellBorders = '<w:tcBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/></w:tcBorders>';
-      const content = hasPhoto ? imageDrawing(start + photoIndex + 1, cmToEmu(config.photoWidth), cmToEmu(config.photoHeight)) : '<w:p/>';
-      cells += `<w:tc><w:tcPr><w:tcW w:w="${photoWidthTwips}" w:type="dxa"/>${cellBorders}<w:vAlign w:val="center"/></w:tcPr>${content}</w:tc>`;
-    }
-    rowsXml += `<w:tr><w:trPr><w:trHeight w:val="${photoHeightTwips}" w:hRule="exact"/></w:trPr>${cells}</w:tr>`;
-  }
-  const tableTwips = columns * photoWidthTwips + (columns - 1) * gapTwips;
-  return `<w:tbl><w:tblPr><w:tblW w:w="${tableTwips}" w:type="dxa"/><w:jc w:val="center"/><w:tblLayout w:type="fixed"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${grid.join('')}</w:tblGrid>${rowsXml}</w:tbl>`;
+function imageDrawing(id, placement) {
+  const width = cmToEmu(placement.photoWidth), height = cmToEmu(placement.photoHeight);
+  const left = cmToEmu(placement.x), top = cmToEmu(placement.y);
+  return `<w:r><w:drawing><wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="${id}" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1"><wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="page"><wp:posOffset>${left}</wp:posOffset></wp:positionH><wp:positionV relativeFrom="page"><wp:posOffset>${top}</wp:posOffset></wp:positionV><wp:extent cx="${width}" cy="${height}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapNone/><wp:docPr id="${id}" name="Foto ${id}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="Foto ${id}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rId${id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${width}" cy="${height}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r>`;
 }
 
 async function exportWord() {
   const config = settings();
+  const layout = makePhotoPlacements(config);
+  if (layout.error) throw new Error(layout.error);
   const processed = [];
   const blackWhite = colorModeButton.getAttribute('aria-pressed') === 'true';
-  for (let index = 0; index < photos.length; index++) {
-    photoStatus.textContent = `Preparando foto ${index + 1} de ${photos.length} para Word…`;
-    processed.push(await preparePhoto(photos[index], config.photoWidth, config.photoHeight, fitInput.value, blackWhite, photoBorderInput.checked, photoRotations.get(photos[index]) || 0));
+  const placements = layout.pages.flat();
+  for (let index = 0; index < placements.length; index++) {
+    const placement = placements[index];
+    photoStatus.textContent = `Preparando foto ${index + 1} de ${placements.length} para Word…`;
+    processed.push(await preparePhoto(placement.file, placement.photoWidth, placement.photoHeight, placement.fit, blackWhite, photoBorderInput.checked, photoRotations.get(placement.file) || 0, placement.position));
   }
   const relationships = processed.map((_, index) => `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image${index + 1}.jpg"/>`).join('');
   const body = [];
-  for (let start = 0; start < processed.length; start += config.perPage) {
-    if (start) body.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
-    body.push(buildTable(start, Math.min(config.perPage, processed.length - start), config));
+  let placementIndex = 0;
+  for (let page = 0; page < layout.pages.length; page++) {
+    const anchors = layout.pages[page].map(placement => imageDrawing(++placementIndex, placement)).join('');
+    body.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="0"/>${page ? '<w:pageBreakBefore/>' : ''}</w:pPr>${anchors}</w:p>`);
   }
-  const paperW = cmToTwips(config.paperWidth), paperH = cmToTwips(config.paperHeight), margin = cmToTwips(config.margin);
+  const paperW = cmToTwips(config.paperWidth), paperH = cmToTwips(config.paperHeight);
   const pageOrientation = config.paperWidth > config.paperHeight ? ' w:orient="landscape"' : '';
-  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body.join('')}<w:sectPr><w:pgSz w:w="${paperW}" w:h="${paperH}"${pageOrientation}/><w:pgMar w:top="${margin}" w:right="${margin}" w:bottom="${margin}" w:left="${margin}" w:header="0" w:footer="0" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body.join('')}<w:sectPr><w:pgSz w:w="${paperW}" w:h="${paperH}"${pageOrientation}/><w:pgMar w:top="0" w:right="0" w:bottom="0" w:left="0" w:header="0" w:footer="0" w:gutter="0"/></w:sectPr></w:body></w:document>`;
   const contentTypes = `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`;
   const rootRels = `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
   const entries = [

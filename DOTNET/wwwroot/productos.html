@@ -12,20 +12,20 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="stylesheet" href="css/app.css?v=17">
-  <link rel="stylesheet" href="css/productos.css?v=7">
+  <link rel="stylesheet" href="css/productos.css?v=8">
   <script src="/js/pwa.js?v=1" defer></script>
-  <script src="js/productos.js?v=7" defer></script>
+  <script src="js/productos.js?v=8" defer></script>
 </head>
 <body class="products-page">
   <nav class="site-nav">
     <a class="brand" href="index.html">Librería Digital</a>
     <div class="nav-links"><a href="index.html">Inicio</a><a class="active" href="productos.html">Productos</a><a href="venta.html">Ventas</a></div>
+    <button id="logoutButton" class="nav-logout" type="button" aria-label="Cerrar sesión" title="Cerrar sesión" hidden>Salir</button>
   </nav>
   <main class="products-wrap">
-    <header class="products-heading"><div><h1>Productos</h1></div><div id="signedIn" class="signed-in" hidden><span id="userName"></span><button id="logoutButton" class="button button-quiet">Salir</button></div></header>
     <section id="loginPanel" class="product-panel login-panel">
       <div><h2>Contraseña</h2></div>
-      <form id="loginForm" class="login-form"><label>Contraseña<input name="clave" type="password" autocomplete="current-password" required autofocus></label><button class="button button-primary">Entrar</button></form>
+      <form id="loginForm" class="login-form"><label>Contraseña<input name="clave" type="password" autocomplete="current-password" required></label><button class="button button-primary">Entrar</button></form>
       <p id="loginMessage" class="form-message" role="status"></p>
     </section>
     <section id="productApp" hidden>
@@ -37,12 +37,13 @@
       </nav>
       <p id="catalogMessage" class="catalog-status" role="status" aria-live="polite"></p>
       <section id="viewProduct" class="workspace-view">
-      <section id="scannerPanel" class="product-panel scanner-panel" hidden><div class="scanner-title"><h2>Escanear código</h2><button id="closeScanner" class="button button-quiet" type="button">Cerrar cámara</button></div><video id="scannerVideo" playsinline muted></video><div id="scanCandidates" class="scan-candidates"></div><p id="scannerMessage" class="form-message" role="status"></p></section>
+      <section id="scannerPanel" class="product-panel scanner-panel" hidden><div class="scanner-title"><h2>Escanear código</h2><button id="closeScanner" class="scanner-close" type="button" aria-label="Cerrar cámara">×</button></div><div class="scanner-viewport"><video id="scannerVideo" playsinline muted></video><div class="scanner-frame" aria-hidden="true"></div><span class="scanner-hint">Apunta al código de barras</span></div><div id="scanCandidates" class="scan-candidates"></div><p id="scannerMessage" class="form-message" role="status"></p></section>
+      <button id="scanButton" class="button button-primary scan-launch" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg> Escanear código de barras</button>
       <form id="productForm" class="product-grid">
         <section class="product-panel product-main">
           <div class="panel-title"><div><div><h2>Producto</h2></div></div></div>
           <div class="field-grid">
-            <label class="span-2">Código de barras *<div class="input-action"><input id="codigo" name="codigo" maxlength="20" required autocomplete="off"><button id="scanButton" class="button button-quiet" type="button">Usar cámara</button></div></label>
+            <label class="span-2">Código de barras *<input id="codigo" name="codigo" maxlength="20" required autocomplete="off"></label>
             <label>Nombre *<input id="nombre" name="nombre" maxlength="30" required></label>
             <label>Descripción<input name="descripcion" maxlength="30"></label>
             <label>Categoría *<div class="input-action"><select id="categoria" name="idCategoria" required></select><button id="addCategoryButton" class="button button-add" type="button" aria-label="Crear categoría" title="Crear categoría">＋</button></div></label>
