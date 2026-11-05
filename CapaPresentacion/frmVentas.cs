@@ -312,9 +312,10 @@ namespace CapaPresentacion
             btnEliminar.Text = "Quitar";
             btnEliminar.UseColumnTextForButtonValue = true;
             btnEliminar.FlatStyle = FlatStyle.Flat;
-            btnEliminar.DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(255, 235, 235);
-            btnEliminar.DefaultCellStyle.ForeColor = System.Drawing.Color.Firebrick;
-            btnEliminar.DefaultCellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(255, 220, 220);
+            btnEliminar.DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(198, 40, 40);
+            btnEliminar.DefaultCellStyle.ForeColor = System.Drawing.Color.White;
+            btnEliminar.DefaultCellStyle.SelectionBackColor = System.Drawing.Color.FromArgb(150, 25, 25);
+            btnEliminar.DefaultCellStyle.SelectionForeColor = System.Drawing.Color.White;
             btnEliminar.ToolTipText = "Quitar este producto de la venta";
 
             foreach (System.Windows.Forms.Control control in new System.Windows.Forms.Control[] { txtTotalPagar, txtPagaCon, txtCambio, label12, label13, lblCambio, btnRegistrar })

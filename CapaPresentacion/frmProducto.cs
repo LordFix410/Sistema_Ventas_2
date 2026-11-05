@@ -30,6 +30,7 @@ namespace CapaPresentacion
         {
             claveUsuario = clave ?? string.Empty;
             InitializeComponent();
+            ConfigurarSeccionesVisuales();
             ConfigurarFotoProducto();
             dgvData.CellClick += dgvData_CellClick;
             txtPrecioVentaProducto.KeyDown += PrecioVentaProducto_KeyDown;
@@ -44,6 +45,106 @@ namespace CapaPresentacion
             ConfigurarOrdenCaptura();
             ConfigurarOrdenColumnas();
             ExperienciaUsuario.Aplicar(this, txtCodigo, txtBusqueda, txtPorcentaje);
+            dgvData.RowTemplate.Height = 88;
+            dgvData.ColumnHeadersHeight = 52;
+            dgvData.DefaultCellStyle.Font = new Font("Segoe UI", 10F);
+            dgvData.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            MejorarTipografiaDetalle();
+        }
+
+        private void MejorarTipografiaDetalle()
+        {
+            foreach (Control control in new Control[] { label2, label3, label4, label5, label8,
+                label14, label15, label16, label17 })
+                control.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+
+            foreach (Control control in new Control[] { label18, labelPorcentaje, label19 })
+                control.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+
+            foreach (Control control in new Control[] { txtCodigo, txtNombre, txtDescripcion,
+                cboCategoria, cboGrupoProveedor, cboGrupoReposicion, txtCantidadMinima,
+                txtCantidadMaxima, cboEstado })
+                control.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+
+            foreach (TextBox precio in new[] { txtCostoProducto, txtPorcentaje, txtPrecioVentaProducto })
+                precio.Font = new Font("Segoe UI", 10.5F, FontStyle.Bold);
+
+            txtCostoProducto.Width = 60;
+            txtPorcentaje.Width = 60;
+            txtPrecioVentaProducto.Width = 60;
+            txtPorcentaje.Left = 103;
+            txtPrecioVentaProducto.Left = 184;
+
+            foreach (Button boton in new Button[] { btnElegir, btnQuitar, btnGirar, btnGuardar, btnCancelarUsuario, btnEliminar })
+                boton.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+        }
+
+        private void ConfigurarSeccionesVisuales()
+        {
+            MoverVertical(new Control[] { label2, txtCodigo, label3, txtNombre, label4, txtDescripcion, label5, cboCategoria }, 20);
+            MoverVertical(new Control[] { label18, txtCostoProducto, labelPorcentaje, txtPorcentaje, label19, txtPrecioVentaProducto,
+                picFotoProduc, btnElegir, btnQuitar, btnGirar }, 32);
+            MoverVertical(new Control[] { label17, cboGrupoProveedor, label14, cboGrupoReposicion,
+                label16, txtCantidadMinima, label15, txtCantidadMaxima }, 35);
+            MoverVertical(new Control[] { label8, cboEstado }, 59);
+            MoverVertical(new Control[] { btnGuardar, btnCancelarUsuario, btnEliminar }, 52);
+
+            AgregarSeccionVisual("Datos básicos", new Rectangle(12, 40, 250, 234),
+                Color.FromArgb(238, 246, 252), Color.FromArgb(43, 105, 157));
+            AgregarSeccionVisual("Precio e imagen", new Rectangle(12, 277, 250, 247),
+                Color.FromArgb(238, 248, 241), Color.FromArgb(36, 130, 76));
+            AgregarSeccionVisual("Reposición", new Rectangle(12, 527, 250, 179),
+                Color.FromArgb(255, 248, 228), Color.FromArgb(177, 124, 0));
+            AgregarSeccionVisual("Estado y acciones", new Rectangle(12, 709, 250, 216),
+                Color.FromArgb(244, 246, 248), Color.FromArgb(75, 91, 108));
+            label1.SendToBack();
+
+            label9.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            label9.ForeColor = Color.FromArgb(35, 75, 108);
+            label10.BackColor = Color.FromArgb(224, 237, 247);
+            label10.ForeColor = Color.FromArgb(35, 75, 108);
+            label10.BorderStyle = BorderStyle.FixedSingle;
+            label10.Font = new Font("Segoe UI", 17F, FontStyle.Bold);
+            label10.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            label10.Width = Math.Max(979, ClientSize.Width - label10.Left - 18);
+
+            dgvData.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            dgvData.Width = Math.Max(700, ClientSize.Width - dgvData.Left - 18);
+            dgvData.BackgroundColor = Color.White;
+            dgvData.GridColor = Color.FromArgb(211, 222, 232);
+        }
+
+        private static void MoverVertical(IEnumerable<Control> controles, int desplazamiento)
+        {
+            foreach (Control control in controles)
+                control.Top += desplazamiento;
+        }
+
+        private void AgregarSeccionVisual(string titulo, Rectangle limites, Color fondo, Color acento)
+        {
+            var panel = new Panel
+            {
+                Bounds = limites,
+                BackColor = fondo,
+                BorderStyle = BorderStyle.FixedSingle,
+                Name = "panelVisual" + titulo.Replace(" ", string.Empty)
+            };
+            panel.Paint += (s, e) =>
+            {
+                using (var pincel = new SolidBrush(acento))
+                    e.Graphics.FillRectangle(pincel, 0, 0, 5, panel.Height);
+            };
+            panel.Controls.Add(new Label
+            {
+                AutoSize = true,
+                BackColor = Color.Transparent,
+                ForeColor = acento,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                Location = new Point(11, 3),
+                Text = titulo.ToUpperInvariant()
+            });
+            Controls.Add(panel);
+            panel.SendToBack();
         }
 
         private void ConfigurarFotoProducto()
@@ -327,6 +428,16 @@ namespace CapaPresentacion
 
         private void ConfigurarOrdenColumnas()
         {
+            if (dgvData.Columns.Contains("btnSeleccionar"))
+            {
+                var columnaAccion = dgvData.Columns["btnSeleccionar"] as DataGridViewButtonColumn;
+                if (columnaAccion != null)
+                {
+                    columnaAccion.FlatStyle = FlatStyle.Flat;
+                    columnaAccion.DefaultCellStyle.Padding = new Padding(0);
+                }
+            }
+
             string[] orden = { "btnSeleccionar", "Foto", "Codigo", "Nombre", "Descripcion", "Categoria", "Stock",
                 "CantidadMinima", "CantidadMaxima", "PRECIOCOMPRA", "PRECIOVENTA", "PORCENTAJE",
                 "GrupoReposicion", "GrupoProveedores", "Estado" };
@@ -708,14 +819,18 @@ namespace CapaPresentacion
 
             if (dgvData.Columns[e.ColumnIndex].Name == "btnSeleccionar")
             {
-                e.Paint(e.CellBounds, DataGridViewPaintParts.All);
+                e.PaintBackground(e.CellBounds, true);
+                e.Paint(e.CellBounds, DataGridViewPaintParts.Border);
 
                 var w = Properties.Resources.Check.Width;
                 var h = Properties.Resources.Check.Height;
-                var x = e.CellBounds.Left + (e.CellBounds.Width - w) / 2;
-                var y = e.CellBounds.Top + (e.CellBounds.Height - h) / 2;
+                var escala = Math.Min(1f, Math.Min(26f / w, 26f / h));
+                var ancho = Math.Max(1, (int)(w * escala));
+                var alto = Math.Max(1, (int)(h * escala));
+                var x = e.CellBounds.Left + (e.CellBounds.Width - ancho) / 2;
+                var y = e.CellBounds.Top + (e.CellBounds.Height - alto) / 2;
 
-                e.Graphics.DrawImage(Properties.Resources.Check, new Rectangle(x, y, w, h));
+                e.Graphics.DrawImage(Properties.Resources.Check, new Rectangle(x, y, ancho, alto));
                 e.Handled = true;
             }
         }
