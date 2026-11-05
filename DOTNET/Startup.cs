@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.FileProviders;
+using System.IO;
 
 namespace ImagenPDF
 {
@@ -23,7 +26,7 @@ namespace ImagenPDF
             });
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment environment)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment environment, IConfiguration configuration)
         {
             if (environment.IsDevelopment())
             {
@@ -32,6 +35,16 @@ namespace ImagenPDF
 
             app.UseDefaultFiles();
             app.UseStaticFiles();
+            var productImagesPath = configuration["ProductImages:Path"];
+            if (string.IsNullOrWhiteSpace(productImagesPath))
+                productImagesPath = Path.Combine(environment.ContentRootPath, "imagenes");
+            Directory.CreateDirectory(productImagesPath);
+            Directory.CreateDirectory(Path.Combine(productImagesPath, "productos"));
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(productImagesPath),
+                RequestPath = "/imagenes"
+            });
             app.UseSession();
             app.UseRouting();
             app.UseEndpoints(endpoints =>

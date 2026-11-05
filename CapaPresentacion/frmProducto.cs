@@ -17,10 +17,21 @@ namespace CapaPresentacion
     public partial class frmProducto : Form
     {
         private bool sincronizandoPreciosProducto;
+        private readonly string claveUsuario;
+        private string rutaImagenActual;
+        private string archivoImagenPendiente;
+        private bool archivoImagenTemporal;
+        private bool quitarImagen;
+        private int rotacionFotoPendiente;
 
-        public frmProducto()
+        public frmProducto() : this(string.Empty) { }
+
+        public frmProducto(string clave)
         {
+            claveUsuario = clave ?? string.Empty;
             InitializeComponent();
+            ConfigurarFotoProducto();
+            dgvData.CellClick += dgvData_CellClick;
             txtPrecioVentaProducto.KeyDown += PrecioVentaProducto_KeyDown;
             txtCostoProducto.Leave += delegate { ActualizarPorcentajeProducto(); };
             txtPorcentaje.KeyDown += PorcentajeProducto_KeyDown;
@@ -33,6 +44,140 @@ namespace CapaPresentacion
             ConfigurarOrdenCaptura();
             ConfigurarOrdenColumnas();
             ExperienciaUsuario.Aplicar(this, txtCodigo, txtBusqueda, txtPorcentaje);
+        }
+
+        private void ConfigurarFotoProducto()
+        {
+            if (!dgvData.Columns.Contains("Foto"))
+            {
+                var foto = new DataGridViewImageColumn
+                {
+                    Name = "Foto", HeaderText = "FOTO", ImageLayout = DataGridViewImageCellLayout.Zoom,
+                    Width = 68, MinimumWidth = 60, ReadOnly = true, SortMode = DataGridViewColumnSortMode.NotSortable
+                };
+                dgvData.Columns.Insert(1, foto);
+            }
+            picFotoProduc.BorderStyle = BorderStyle.FixedSingle;
+            picFotoProduc.SizeMode = PictureBoxSizeMode.Zoom;
+            picFotoProduc.BackColor = Color.White;
+            picFotoProduc.Cursor = Cursors.Hand;
+            picFotoProduc.Click += (s, e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(rutaImagenActual))
+                    GestorImagenProducto.MostrarVistaPrevia(this, rutaImagenActual, txtNombre.Text);
+                else if (!string.IsNullOrWhiteSpace(archivoImagenPendiente))
+                    MostrarFotoLocal(archivoImagenPendiente);
+                else SeleccionarFotoProducto();
+            };
+            btnElegir.Click += (s, e) => SeleccionarFotoProducto();
+            btnGirar.Click += (s, e) => GirarFotoPendiente();
+            btnGirar.Enabled = false;
+            btnQuitar.Click += (s, e) =>
+            {
+                LimpiarArchivoTemporal();
+                archivoImagenPendiente = null;
+                rotacionFotoPendiente = 0;
+                btnGirar.Enabled = false;
+                quitarImagen = true;
+                rutaImagenActual = null;
+                MostrarImagen(null);
+            };
+        }
+
+        private void SeleccionarFotoProducto()
+        {
+            using (var dialogo = new OpenFileDialog
+            {
+                Title = "Seleccionar foto del producto",
+                Filter = "Imágenes|*.jpg;*.jpeg;*.png;*.bmp",
+                CheckFileExists = true
+            })
+            {
+                if (dialogo.ShowDialog(this) != DialogResult.OK) return;
+                LimpiarArchivoTemporal();
+                Image prueba = GestorImagenProducto.CargarArchivoMiniatura(dialogo.FileName, 160, 176, 0);
+                if (prueba == null)
+                {
+                    CapaPresentacion.DialogoSistema.Show("No se pudo abrir la imagen seleccionada.", "Foto inválida",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                archivoImagenPendiente = dialogo.FileName;
+                archivoImagenTemporal = false;
+                rotacionFotoPendiente = 0;
+                btnGirar.Enabled = true;
+                quitarImagen = false;
+                MostrarImagen(prueba);
+            }
+        }
+
+        private void GirarFotoPendiente()
+        {
+            if (string.IsNullOrWhiteSpace(archivoImagenPendiente))
+            {
+                if (string.IsNullOrWhiteSpace(rutaImagenActual)) return;
+                try
+                {
+                    archivoImagenPendiente = GestorImagenProducto.CrearCopiaTemporal(rutaImagenActual);
+                    archivoImagenTemporal = true;
+                    quitarImagen = false;
+                }
+                catch (Exception ex)
+                {
+                    CapaPresentacion.DialogoSistema.Show(ex.Message, "No se pudo preparar la foto", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+            rotacionFotoPendiente = (rotacionFotoPendiente + 90) % 360;
+            Image girada = GestorImagenProducto.CargarArchivoMiniatura(archivoImagenPendiente, 160, 176, rotacionFotoPendiente);
+            if (girada == null)
+            {
+                CapaPresentacion.DialogoSistema.Show("No se pudo girar la foto seleccionada.", "Foto del producto", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            MostrarImagen(girada);
+        }
+
+        private void MostrarFotoLocal(string archivo)
+        {
+            using (Image imagen = Image.FromFile(archivo))
+            using (var ventana = new Form())
+            using (var cuadro = new PictureBox())
+            {
+                ventana.Text = "Vista previa · " + txtNombre.Text;
+                ventana.StartPosition = FormStartPosition.CenterParent;
+                ventana.Size = new Size(640, 600);
+                cuadro.Dock = DockStyle.Fill; cuadro.SizeMode = PictureBoxSizeMode.Zoom; cuadro.Image = new Bitmap(imagen);
+                ventana.Controls.Add(cuadro); ventana.ShowDialog(this);
+            }
+        }
+
+        private void MostrarImagen(Image imagen)
+        {
+            Image anterior = picFotoProduc.Image;
+            picFotoProduc.Image = imagen;
+            if (anterior != null) anterior.Dispose();
+        }
+
+        private void CargarFoto(string ruta)
+        {
+            LimpiarArchivoTemporal();
+            rutaImagenActual = ruta;
+            archivoImagenPendiente = null;
+            rotacionFotoPendiente = 0;
+            btnGirar.Enabled = !string.IsNullOrWhiteSpace(ruta);
+            quitarImagen = false;
+            MostrarImagen(GestorImagenProducto.CargarMiniatura(ruta, 160, 176));
+        }
+
+        private string PrepararRutaImagen(out bool archivoNuevo)
+        {
+            archivoNuevo = false;
+            if (quitarImagen) return null;
+            if (string.IsNullOrWhiteSpace(archivoImagenPendiente)) return rutaImagenActual;
+            string ruta = GestorImagenProducto.Guardar(archivoImagenPendiente, claveUsuario, rotacionFotoPendiente);
+            archivoNuevo = true;
+            return ruta;
         }
 
         private void ConfigurarOrdenCaptura()
@@ -182,7 +327,7 @@ namespace CapaPresentacion
 
         private void ConfigurarOrdenColumnas()
         {
-            string[] orden = { "btnSeleccionar", "Codigo", "Nombre", "Descripcion", "Categoria", "Stock",
+            string[] orden = { "btnSeleccionar", "Foto", "Codigo", "Nombre", "Descripcion", "Categoria", "Stock",
                 "CantidadMinima", "CantidadMaxima", "PRECIOCOMPRA", "PRECIOVENTA", "PORCENTAJE",
                 "GrupoReposicion", "GrupoProveedores", "Estado" };
             for (int i = 0; i < orden.Length; i++)
@@ -212,6 +357,7 @@ namespace CapaPresentacion
             fila.Cells["GrupoProveedores"].Value = grupoProveedores;
             fila.Cells["EstadoValor"].Value = activo ? 1 : 0;
             fila.Cells["Estado"].Value = activo ? "Activo" : "Inactivo";
+            fila.Cells["Foto"].Value = GestorImagenProducto.CargarMiniatura(producto == null ? null : producto.ImagenRuta, 76, 76);
             fila.Tag = producto;
             return indice;
         }
@@ -247,7 +393,7 @@ namespace CapaPresentacion
             if (dgvData.Columns.Contains("CantidadMaxima")) dgvData.Columns["CantidadMaxima"].HeaderText = "CANTIDAD\nMÁXIMA";
             foreach (DataGridViewColumn columna in dgvData.Columns)
             {
-                if (columna.Visible == true && columna.Name != "btnSeleccionar")
+                if (columna.Visible == true && columna.Name != "btnSeleccionar" && columna.Name != "Foto")
                 {
                     cboBuscar.Items.Add(new OpcionCombo() { Valor = columna.Name, Texto = columna.HeaderText });
                 }
@@ -261,7 +407,7 @@ namespace CapaPresentacion
             dgvData.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
             dgvData.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.True;
             dgvData.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvData.RowTemplate.Height = 38;
+            dgvData.RowTemplate.Height = 88;
             var anchos = new Dictionary<string, int>
             {
                 ["Codigo"] = 85, ["Nombre"] = 145, ["Descripcion"] = 160, ["Categoria"] = 105,
@@ -272,6 +418,13 @@ namespace CapaPresentacion
             foreach (var ancho in anchos)
                 if (dgvData.Columns.Contains(ancho.Key)) dgvData.Columns[ancho.Key].Width = ancho.Value;
             if (dgvData.Columns.Contains("btnSeleccionar")) dgvData.Columns["btnSeleccionar"].Width = 38;
+            if (dgvData.Columns.Contains("Foto")) dgvData.Columns["Foto"].Width = 88;
+            dgvData.RowTemplate.Height = 88;
+            foreach (DataGridViewRow fila in dgvData.Rows)
+            {
+                fila.Height = 88;
+                fila.MinimumHeight = 88;
+            }
             ActualizarLimitesReposicion();
 
         }
@@ -358,6 +511,15 @@ namespace CapaPresentacion
                 CantidadMaxima = maximo,
                 IdGrupoProveedor = IdCombo(cboGrupoProveedor)
             };
+            string imagenAnterior = rutaImagenActual;
+            bool archivoFotoNuevo;
+            try { objProducto.ImagenRuta = PrepararRutaImagen(out archivoFotoNuevo); }
+            catch (Exception ex)
+            {
+                CapaPresentacion.DialogoSistema.Show("No se pudo enviar la foto al servidor web. Verifica que el servicio esté activo y accesible desde esta PC.\n\n" + ex.Message,
+                    "Foto del producto", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             if (objProducto.IdProducto == 0)
             {
                 int idnuevo = new CN_Producto().Registrar(objProducto, out mensaje);
@@ -372,10 +534,12 @@ namespace CapaPresentacion
                         PorcentajeGuardado(costo, precioVenta, porcentaje),
                         minimo, maximo, GrupoNombre(cboGrupoReposicion), GrupoNombre(cboGrupoProveedor), objProducto.Estado);
                     objProducto.Porcentaje = PorcentajeGuardado(costo, precioVenta, porcentaje);
+                    ConfirmarCambioFoto(imagenAnterior, objProducto.ImagenRuta, archivoFotoNuevo);
                     LimpiarTxt();
                 }
                 else
                 {
+                    DescartarFotoNueva(objProducto.ImagenRuta, archivoFotoNuevo);
                     CapaPresentacion.DialogoSistema.Show(mensaje, "Error del Registro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
@@ -406,18 +570,49 @@ namespace CapaPresentacion
                     objProducto.PrecioCompra = costo;
                     objProducto.PrecioVenta = precioVenta;
                     row.Tag = objProducto;
+                    row.Cells["Foto"].Value = GestorImagenProducto.CargarMiniatura(objProducto.ImagenRuta, 76, 76);
+                    ConfirmarCambioFoto(imagenAnterior, objProducto.ImagenRuta, archivoFotoNuevo);
 
                     LimpiarTxt();
                 }
                 else
                 {
+                    DescartarFotoNueva(objProducto.ImagenRuta, archivoFotoNuevo);
                     CapaPresentacion.DialogoSistema.Show(mensaje, "No se pudo actualizar el producto", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
 
         }
+
+        private void ConfirmarCambioFoto(string anterior, string actual, bool archivoNuevo)
+        {
+            rutaImagenActual = actual;
+            LimpiarArchivoTemporal();
+            archivoImagenPendiente = null;
+            rotacionFotoPendiente = 0;
+            btnGirar.Enabled = !string.IsNullOrWhiteSpace(actual);
+            quitarImagen = false;
+            if (!string.IsNullOrWhiteSpace(anterior) && !string.Equals(anterior, actual, StringComparison.OrdinalIgnoreCase))
+                try { GestorImagenProducto.Eliminar(anterior, claveUsuario); } catch { }
+            if (!archivoNuevo) rutaImagenActual = actual;
+        }
+
+        private void DescartarFotoNueva(string ruta, bool archivoNuevo)
+        {
+            if (archivoNuevo && !string.IsNullOrWhiteSpace(ruta))
+                try { GestorImagenProducto.Eliminar(ruta, claveUsuario); } catch { }
+        }
+
+        private void LimpiarArchivoTemporal()
+        {
+            if (archivoImagenTemporal && !string.IsNullOrWhiteSpace(archivoImagenPendiente))
+                try { System.IO.File.Delete(archivoImagenPendiente); } catch { }
+            archivoImagenTemporal = false;
+        }
+
         public void LimpiarTxt()
         {
+            LimpiarArchivoTemporal();
             txtId.Text = "0";
             txtCodigo.Text = "";
             txtNombre.Text = "";
@@ -430,6 +625,7 @@ namespace CapaPresentacion
             txtCantidadMinima.Clear(); txtCantidadMaxima.Clear();
             if (cboGrupoReposicion.Items.Count > 0) cboGrupoReposicion.SelectedIndex = 0;
             if (cboGrupoProveedor.Items.Count > 0) cboGrupoProveedor.SelectedIndex = 0;
+            CargarFoto(null);
             ActualizarLimitesReposicion();
 
         }
@@ -540,7 +736,10 @@ namespace CapaPresentacion
 
                     if (respuesta)
                     {
+                    Producto productoEliminado = dgvData.Rows[Convert.ToInt32(txtIndice.Text)].Tag as Producto;
                         dgvData.Rows.RemoveAt(Convert.ToInt32(txtIndice.Text));
+                    if (productoEliminado != null && !string.IsNullOrWhiteSpace(productoEliminado.ImagenRuta))
+                        try { GestorImagenProducto.Eliminar(productoEliminado.ImagenRuta, claveUsuario); } catch { }
                         LimpiarTxt();
                     }
                     else CapaPresentacion.DialogoSistema.Show(mensaje, "Mensaje del sistema", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
@@ -568,7 +767,7 @@ namespace CapaPresentacion
                 List<Producto> resultados = termino.Length == 0
                     ? new CN_Producto().Listar()
                     : new CN_Producto().Buscar(columna, termino);
-                dgvData.Rows.Clear();
+                LimpiarFilasProductos();
                 foreach (Producto item in resultados)
                     AgregarFilaProducto(item, item.IdProducto, item.Codigo, item.Nombre, item.Descripcion,
                         item.oCategoria.IdCategoria, item.oCategoria.Descripcion, item.Stock, item.PrecioCompra,
@@ -591,7 +790,7 @@ namespace CapaPresentacion
         private void btnCancelar_Click(object sender, EventArgs e)
         {
             txtBusqueda.Text = "";
-            dgvData.Rows.Clear();
+            LimpiarFilasProductos();
             cboBuscar.SelectedIndex = 0;
             txtBusqueda.Focus();
         }
@@ -617,6 +816,7 @@ namespace CapaPresentacion
                     txtPorcentaje.Text = porcentajeVisible.ToString("0.##");
                     sincronizandoPreciosProducto = false;
                     Producto productoFila = dgvData.Rows[indice].Tag as Producto;
+                    CargarFoto(productoFila == null ? null : productoFila.ImagenRuta);
                     SeleccionarCombo(cboGrupoReposicion, productoFila == null ? (int?)null : productoFila.IdGrupoReposicion);
                     SeleccionarCombo(cboGrupoProveedor, productoFila == null ? (int?)null : productoFila.IdGrupoProveedor);
                     txtCantidadMinima.Text = Convert.ToString(dgvData.Rows[indice].Cells["CantidadMinima"].Value);
@@ -645,6 +845,21 @@ namespace CapaPresentacion
             }
         }
 
+        private void LimpiarFilasProductos()
+        {
+            foreach (DataGridViewRow fila in dgvData.Rows)
+                if (fila.Cells["Foto"].Value is Image imagen) imagen.Dispose();
+            dgvData.Rows.Clear();
+        }
+
+        private void dgvData_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0 || dgvData.Columns[e.ColumnIndex].Name != "Foto") return;
+            Producto producto = dgvData.Rows[e.RowIndex].Tag as Producto;
+            if (producto != null && !string.IsNullOrWhiteSpace(producto.ImagenRuta))
+                GestorImagenProducto.MostrarVistaPrevia(this, producto.ImagenRuta, producto.Nombre);
+        }
+
         private void iconButton1_Click(object sender, EventArgs e)
         {
             if (dgvData.Rows.Count < 1)
@@ -656,7 +871,7 @@ namespace CapaPresentacion
                 DataTable dt = new DataTable();
 
                 List<DataGridViewColumn> columnasExportar = dgvData.Columns.Cast<DataGridViewColumn>()
-                    .Where(c => c.Visible && c.HeaderText != "").ToList();
+                    .Where(c => c.Visible && c.HeaderText != "" && c.Name != "Foto").ToList();
                 foreach (DataGridViewColumn columna in columnasExportar)
                 {
                     dt.Columns.Add(columna.HeaderText, typeof(string));

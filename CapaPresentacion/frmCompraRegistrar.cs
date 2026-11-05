@@ -22,6 +22,7 @@ namespace CapaPresentacion
     public partial class frmCompraRegistrar : Form
     {
         private Usuario _Usuario;
+        private Producto _productoActualSeleccionado;
         private bool sincronizandoPrecios;
         private bool evaluandoCambioCosto;
         private decimal costoOriginalProducto;
@@ -64,11 +65,18 @@ namespace CapaPresentacion
         private void ConfigurarTablaCompra()
         {
             dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            if (!dataGridView1.Columns.Contains("Foto"))
+                dataGridView1.Columns.Insert(1, new DataGridViewImageColumn
+                {
+                    Name = "Foto", HeaderText = "FOTO", ImageLayout = DataGridViewImageCellLayout.Zoom,
+                    Width = 68, MinimumWidth = 60, ReadOnly = true, SortMode = DataGridViewColumnSortMode.NotSortable
+                });
             dataGridView1.RowTemplate.Height = 48;
+            dataGridView1.RowTemplate.Height = 68;
             dataGridView1.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
             dataGridView1.Columns["IdProducto"].Visible = false;
             dataGridView1.Columns["PrecioVenta"].Visible = true;
-            string[] orden = { "Cantidad", "Producto", "PrecioCompra", "Porcentaje", "PrecioVenta", "SubTotal", "btnEliminar" };
+            string[] orden = { "Cantidad", "Foto", "Producto", "PrecioCompra", "Porcentaje", "PrecioVenta", "SubTotal", "btnEliminar" };
             for (int i = 0; i < orden.Length; i++)
                 if (dataGridView1.Columns.Contains(orden[i])) dataGridView1.Columns[orden[i]].DisplayIndex = i;
             dataGridView1.Columns["Cantidad"].FillWeight = 60;
@@ -78,7 +86,16 @@ namespace CapaPresentacion
             dataGridView1.Columns["PrecioVenta"].FillWeight = 90;
             dataGridView1.Columns["SubTotal"].FillWeight = 95;
             dataGridView1.Columns["btnEliminar"].FillWeight = 60;
+            dataGridView1.Columns["Foto"].FillWeight = 45;
+            dataGridView1.Columns["Foto"].MinimumWidth = 64;
             dataGridView1.Columns["Porcentaje"].DefaultCellStyle.Format = "P2";
+            dataGridView1.CellClick += (s, e) =>
+            {
+                if (e.RowIndex < 0 || e.ColumnIndex < 0 || dataGridView1.Columns[e.ColumnIndex].Name != "Foto") return;
+                Producto p = dataGridView1.Rows[e.RowIndex].Tag as Producto;
+                if (p != null && !string.IsNullOrWhiteSpace(p.ImagenRuta))
+                    GestorImagenProducto.MostrarVistaPrevia(this, p.ImagenRuta, p.Nombre);
+            };
         }
 
         private void dataGridView1_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
@@ -195,7 +212,7 @@ namespace CapaPresentacion
                             Math.Abs(subtotal - Math.Round(costo * cantidad, 2)) > 0.01m)
                             throw new InvalidOperationException("El borrador contiene un producto, cantidad o precio inválido. No se cargó ningún dato.");
 
-                        datos.Add(new object[] { id, producto.Nombre, costo.ToString("0.00"), venta.ToString("0.00"),
+                        datos.Add(new object[] { id, GestorImagenProducto.CargarMiniatura(producto.ImagenRuta, 52, 52), producto.Nombre, costo.ToString("0.00"), venta.ToString("0.00"),
                             margen.ToString("0.####"), cantidad, subtotal.ToString("0.00") });
                     }
                     if (datos.Count == 0) throw new InvalidOperationException("El borrador no contiene productos.");
@@ -205,7 +222,12 @@ namespace CapaPresentacion
                         return;
 
                     dataGridView1.Rows.Clear();
-                    foreach (object[] fila in datos) dataGridView1.Rows.Add(fila);
+                    foreach (object[] fila in datos)
+                    {
+                        int indiceFila = dataGridView1.Rows.Add(fila);
+                        int idProducto = Convert.ToInt32(dataGridView1.Rows[indiceFila].Cells["IdProducto"].Value);
+                        dataGridView1.Rows[indiceFila].Tag = productosActivos.FirstOrDefault(p => p.IdProducto == idProducto);
+                    }
                     txtIdProveedor.Text = proveedor == null ? "0" : proveedor.IdProveedor.ToString();
                     txtNuevoDocumento.Text = proveedor?.Documento ?? ValorBorrador(raiz, "DocumentoProveedor");
                     txtRazonSocial.Text = proveedor?.RazonSocial ?? ValorBorrador(raiz, "RazonSocial");
@@ -365,6 +387,7 @@ namespace CapaPresentacion
             }
 
             txtIdProducto.Text = producto.IdProducto.ToString();
+            _productoActualSeleccionado = producto;
             txtCodigoProducto.Text = producto.Codigo;
             txtProducto.Text = producto.Nombre;
             sincronizandoPrecios = true;
@@ -429,6 +452,7 @@ namespace CapaPresentacion
 
                 if (result == DialogResult.OK)
                 {
+                    _productoActualSeleccionado = modal._Producto;
                     txtIdProducto.Text = modal._Producto.IdProducto.ToString();
                     txtCodigoProducto.Text = modal._Producto.Codigo;
                     txtProducto.Text = modal._Producto.Nombre;
@@ -770,6 +794,7 @@ namespace CapaPresentacion
                 object[] valores = new object[]
                 {
                     txtIdProducto.Text,
+                    null,
                     txtProducto.Text,
                     precioCompra.ToString("0.00"),
                     precioVenta.ToString("0.00"),
@@ -778,11 +803,18 @@ namespace CapaPresentacion
                     (txtCantidad.Value * precioCompra).ToString("0.00")
                 };
 
+                int indiceFila;
                 if (indiceProductoEditando >= 0 && indiceProductoEditando < dataGridView1.Rows.Count)
+                {
+                    indiceFila = indiceProductoEditando;
+                    string[] columnas = { "IdProducto", "Foto", "Producto", "PrecioCompra", "PrecioVenta", "Porcentaje", "Cantidad", "SubTotal" };
                     for (int columna = 0; columna < valores.Length; columna++)
-                        dataGridView1.Rows[indiceProductoEditando].Cells[columna].Value = valores[columna];
+                        dataGridView1.Rows[indiceFila].Cells[columnas[columna]].Value = valores[columna];
+                }
                 else
-                    dataGridView1.Rows.Add(valores);
+                    indiceFila = dataGridView1.Rows.Add(valores);
+                dataGridView1.Rows[indiceFila].Cells["Foto"].Value = GestorImagenProducto.CargarMiniatura(_productoActualSeleccionado?.ImagenRuta, 52, 52);
+                dataGridView1.Rows[indiceFila].Tag = _productoActualSeleccionado;
 
                 calculatTotal();
                 limpiarProducto();
@@ -797,7 +829,8 @@ namespace CapaPresentacion
 
         private void dataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex < 0 || e.RowIndex >= dataGridView1.Rows.Count) return;
+            if (e.RowIndex < 0 || e.RowIndex >= dataGridView1.Rows.Count ||
+                (e.ColumnIndex >= 0 && dataGridView1.Columns[e.ColumnIndex].Name == "Foto")) return;
             if (indiceProductoEditando >= 0 && indiceProductoEditando != e.RowIndex)
             {
                 CapaPresentacion.DialogoSistema.Show("Termine de editar el producto seleccionado antes de abrir otro.",
@@ -825,6 +858,7 @@ namespace CapaPresentacion
                 return;
             }
 
+            _productoActualSeleccionado = producto;
             indiceProductoEditando = e.RowIndex;
             txtIdProducto.Text = id.ToString();
             txtCodigoProducto.Text = producto.Codigo;
@@ -858,6 +892,7 @@ namespace CapaPresentacion
             txtPorcentaje.Text = "";
             txtCantidad.Value = 1;
             txtCodigoProducto.Text = "";
+            _productoActualSeleccionado = null;
         }
 
         private void calculatTotal()

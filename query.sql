@@ -7,6 +7,7 @@
     Ejecutar con una cuenta administradora del servidor SQL.
     Para una base ya existente ejecuta migracion_finanzas.sql y migracion_reposicion_cotizaciones.sql según corresponda.
 */
+
 create database DBSISTEMA_VENTA
 go
 
@@ -84,6 +85,7 @@ IdGrupoReposicion int NULL,
 CantidadMinima int NULL,
 CantidadMaxima int NULL,
 IdGrupoProveedor int NULL,
+ImagenRuta nvarchar(260) NULL,
 Stock int not null default 0,
 PrecioCompra decimal(10,2) default 0,
 PrecioVenta decimal(10,2) default 0,
@@ -1002,7 +1004,8 @@ CREATE PROCEDURE dbo.sp_RegistrarProducto
     @IdGrupoReposicion int = NULL,
     @CantidadMinima int = NULL,
     @CantidadMaxima int = NULL,
-    @IdGrupoProveedor int = NULL
+    @IdGrupoProveedor int = NULL,
+    @ImagenRuta nvarchar(260) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1023,11 +1026,11 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM dbo.PRODUCTO WHERE Codigo = @Codigo)
     BEGIN
         INSERT INTO dbo.PRODUCTO(Codigo, Nombre, Descripcion, IdCategoria, PrecioCompra, PrecioVenta, Porcentaje, Estado,
-            IdGrupoReposicion, CantidadMinima, CantidadMaxima, IdGrupoProveedor)
+            IdGrupoReposicion, CantidadMinima, CantidadMaxima, IdGrupoProveedor, ImagenRuta)
         VALUES(@Codigo, @Nombre, @Descripcion, @IdCategoria, @PrecioCompra, @PrecioVenta,
             CASE WHEN @PrecioCompra = 0 THEN @Porcentaje
                  ELSE CEILING(((@PrecioVenta - @PrecioCompra) / @PrecioCompra) * 10000) / 10000 END, @Estado,
-            @IdGrupoReposicion, @CantidadMinima, @CantidadMaxima, @IdGrupoProveedor);
+            @IdGrupoReposicion, @CantidadMinima, @CantidadMaxima, @IdGrupoProveedor, @ImagenRuta);
         SET @Resultado = SCOPE_IDENTITY();
     END
     ELSE
@@ -1052,7 +1055,8 @@ CREATE PROCEDURE dbo.sp_ModificarProducto
     @IdGrupoReposicion int = NULL,
     @CantidadMinima int = NULL,
     @CantidadMaxima int = NULL,
-    @IdGrupoProveedor int = NULL
+    @IdGrupoProveedor int = NULL,
+    @ImagenRuta nvarchar(260) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1087,6 +1091,7 @@ BEGIN
         CantidadMinima = @CantidadMinima,
         CantidadMaxima = @CantidadMaxima,
         IdGrupoProveedor = @IdGrupoProveedor,
+        ImagenRuta = @ImagenRuta,
         Porcentaje = CASE WHEN @PrecioCompra = 0 THEN @Porcentaje
             ELSE CEILING(((@PrecioVenta - @PrecioCompra) / @PrecioCompra) * 10000) / 10000 END,
         Estado = @Estado
@@ -1111,7 +1116,7 @@ BEGIN
            COALESCE(p.CantidadMinima, gr.CantidadMinima) AS CantidadMinima,
            COALESCE(p.CantidadMaxima, gr.CantidadMaxima) AS CantidadMaxima,
            p.IdGrupoProveedor, ISNULL(gr.Nombre, '') AS GrupoReposicion,
-           ISNULL(gp.Nombre, '') AS GrupoProveedores
+           ISNULL(gp.Nombre, '') AS GrupoProveedores, p.ImagenRuta
     FROM dbo.PRODUCTO p
     INNER JOIN dbo.CATEGORIA c ON c.IdCategoria = p.IdCategoria
     LEFT JOIN dbo.GRUPO_REPOSICION gr ON gr.IdGrupoReposicion = p.IdGrupoReposicion

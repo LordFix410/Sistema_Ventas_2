@@ -24,6 +24,7 @@ namespace CapaEntidad
         public int? IdGrupoProveedor { get; set; }
         public string GrupoReposicion { get; set; }
         public string GrupoProveedores { get; set; }
+        public string ImagenRuta { get; set; }
         public bool Estado {  get; set; }
         public string FechaRegistro {  get; set; }
 

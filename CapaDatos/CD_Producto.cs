@@ -136,7 +136,7 @@ namespace CapaDatos
                     
 
                     StringBuilder query = new StringBuilder();
-                    query.AppendLine("select p.IdProducto, p.Codigo, p.Nombre, p.Descripcion, c.IdCategoria, c.DESCRIPCION[DescripcionCategoria], p.Stock, p.PrecioCompra, p.PrecioVenta, p.Porcentaje, p.Estado, p.IdGrupoReposicion, COALESCE(p.CantidadMinima, gr.CantidadMinima) CantidadMinima, COALESCE(p.CantidadMaxima, gr.CantidadMaxima) CantidadMaxima, p.IdGrupoProveedor, ISNULL(gr.Nombre,'') GrupoReposicion, ISNULL(gp.Nombre,'') GrupoProveedores from PRODUCTO p");
+                    query.AppendLine("select p.IdProducto, p.Codigo, p.Nombre, p.Descripcion, c.IdCategoria, c.DESCRIPCION[DescripcionCategoria], p.Stock, p.PrecioCompra, p.PrecioVenta, p.Porcentaje, p.Estado, p.IdGrupoReposicion, COALESCE(p.CantidadMinima, gr.CantidadMinima) CantidadMinima, COALESCE(p.CantidadMaxima, gr.CantidadMaxima) CantidadMaxima, p.IdGrupoProveedor, ISNULL(gr.Nombre,'') GrupoReposicion, ISNULL(gp.Nombre,'') GrupoProveedores, p.ImagenRuta from PRODUCTO p");
                     query.AppendLine("inner join CATEGORIA c on c.IdCategoria = p.IdCategoria");
                     query.AppendLine("left join dbo.GRUPO_REPOSICION gr on gr.IdGrupoReposicion=p.IdGrupoReposicion left join dbo.GRUPO_PROVEEDOR gp on gp.IdGrupoProveedor=p.IdGrupoProveedor");
 
@@ -165,7 +165,8 @@ namespace CapaDatos
                                 CantidadMinima = dr["CantidadMinima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMinima"]),
                                 CantidadMaxima = dr["CantidadMaxima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMaxima"]),
                                 IdGrupoProveedor = dr["IdGrupoProveedor"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoProveedor"]),
-                                GrupoReposicion = dr["GrupoReposicion"].ToString(), GrupoProveedores = dr["GrupoProveedores"].ToString()
+                                GrupoReposicion = dr["GrupoReposicion"].ToString(), GrupoProveedores = dr["GrupoProveedores"].ToString(),
+                                ImagenRuta = dr["ImagenRuta"] == DBNull.Value ? null : Convert.ToString(dr["ImagenRuta"])
                             });
                         }
                     }
@@ -173,7 +174,7 @@ namespace CapaDatos
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException("No se pudieron cargar los productos. Verifica que hayas ejecutado migracion_reposicion_cotizaciones.sql en DBSISTEMA_VENTA.", ex);
+                    throw new InvalidOperationException("No se pudieron cargar los productos. Verifica que hayas ejecutado las migraciones de reposición y migracion_foto_producto.sql en DBSISTEMA_VENTA.", ex);
                 }
             }
             return lista;
@@ -217,14 +218,15 @@ namespace CapaDatos
                                 CantidadMaxima = dr["CantidadMaxima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMaxima"]),
                                 IdGrupoProveedor = dr["IdGrupoProveedor"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoProveedor"]),
                                 GrupoReposicion = Convert.ToString(dr["GrupoReposicion"]),
-                                GrupoProveedores = Convert.ToString(dr["GrupoProveedores"])
+                                GrupoProveedores = Convert.ToString(dr["GrupoProveedores"]),
+                                ImagenRuta = dr["ImagenRuta"] == DBNull.Value ? null : Convert.ToString(dr["ImagenRuta"])
                             });
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException("No se pudo buscar el producto por código. Verifica que hayas ejecutado migracion_busqueda_productos.sql en DBSISTEMA_VENTA.", ex);
+                    throw new InvalidOperationException("No se pudo buscar el producto por código. Verifica que hayas ejecutado migracion_busqueda_productos.sql y migracion_foto_producto.sql en DBSISTEMA_VENTA.", ex);
                 }
             }
 
@@ -243,7 +245,7 @@ namespace CapaDatos
                 COALESCE(p.CantidadMinima, gr.CantidadMinima) AS CantidadMinima,
                 COALESCE(p.CantidadMaxima, gr.CantidadMaxima) AS CantidadMaxima,
                 p.IdGrupoProveedor, ISNULL(gr.Nombre, '') AS GrupoReposicion,
-                ISNULL(gp.Nombre, '') AS GrupoProveedores
+                ISNULL(gp.Nombre, '') AS GrupoProveedores, p.ImagenRuta
                 FROM dbo.PRODUCTO p
                 INNER JOIN dbo.CATEGORIA c ON c.IdCategoria = p.IdCategoria
                 LEFT JOIN dbo.GRUPO_REPOSICION gr ON gr.IdGrupoReposicion = p.IdGrupoReposicion
@@ -278,7 +280,8 @@ namespace CapaDatos
                         CantidadMaxima = dr["CantidadMaxima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMaxima"]),
                         IdGrupoProveedor = dr["IdGrupoProveedor"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoProveedor"]),
                         GrupoReposicion = Convert.ToString(dr["GrupoReposicion"]),
-                        GrupoProveedores = Convert.ToString(dr["GrupoProveedores"])
+                        GrupoProveedores = Convert.ToString(dr["GrupoProveedores"]),
+                        ImagenRuta = dr["ImagenRuta"] == DBNull.Value ? null : Convert.ToString(dr["ImagenRuta"])
                     };
                 }
             }
@@ -312,7 +315,7 @@ namespace CapaDatos
                 COALESCE(p.CantidadMinima, gr.CantidadMinima) AS CantidadMinima,
                 COALESCE(p.CantidadMaxima, gr.CantidadMaxima) AS CantidadMaxima,
                 p.IdGrupoProveedor, ISNULL(gr.Nombre, '') AS GrupoReposicion,
-                ISNULL(gp.Nombre, '') AS GrupoProveedores
+                ISNULL(gp.Nombre, '') AS GrupoProveedores, p.ImagenRuta
                 FROM dbo.PRODUCTO p
                 INNER JOIN dbo.CATEGORIA c ON c.IdCategoria = p.IdCategoria
                 LEFT JOIN dbo.GRUPO_REPOSICION gr ON gr.IdGrupoReposicion = p.IdGrupoReposicion
@@ -347,7 +350,8 @@ namespace CapaDatos
                             CantidadMaxima = dr["CantidadMaxima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMaxima"]),
                             IdGrupoProveedor = dr["IdGrupoProveedor"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoProveedor"]),
                             GrupoReposicion = Convert.ToString(dr["GrupoReposicion"]),
-                            GrupoProveedores = Convert.ToString(dr["GrupoProveedores"])
+                            GrupoProveedores = Convert.ToString(dr["GrupoProveedores"]),
+                            ImagenRuta = dr["ImagenRuta"] == DBNull.Value ? null : Convert.ToString(dr["ImagenRuta"])
                         });
                     }
                 }
@@ -376,6 +380,7 @@ namespace CapaDatos
                     AgregarParametroPrecio(cmd, "PrecioCompra", obj.PrecioCompra);
                     AgregarParametroPrecio(cmd, "PrecioVenta", obj.PrecioVenta);
                     AgregarParametrosReposicion(cmd, obj);
+                    cmd.Parameters.Add("ImagenRuta", SqlDbType.NVarChar, 260).Value = (object)obj.ImagenRuta ?? DBNull.Value;
                     cmd.Parameters.AddWithValue("Estado", obj.Estado);
                     cmd.Parameters.Add("Resultado", SqlDbType.Int).Direction = ParameterDirection.Output;
                     cmd.Parameters.Add("Mensaje", SqlDbType.VarChar, 500).Direction = ParameterDirection.Output;
@@ -417,6 +422,7 @@ namespace CapaDatos
                     AgregarParametroPrecio(cmd, "PrecioCompra", obj.PrecioCompra);
                     AgregarParametroPrecio(cmd, "PrecioVenta", obj.PrecioVenta);
                     AgregarParametrosReposicion(cmd, obj);
+                    cmd.Parameters.Add("ImagenRuta", SqlDbType.NVarChar, 260).Value = (object)obj.ImagenRuta ?? DBNull.Value;
                     cmd.Parameters.AddWithValue("Estado", obj.Estado);
                     cmd.Parameters.Add("Resultado", SqlDbType.Int).Direction = ParameterDirection.Output;
                     cmd.Parameters.Add("Mensaje", SqlDbType.VarChar, 500).Direction = ParameterDirection.Output;

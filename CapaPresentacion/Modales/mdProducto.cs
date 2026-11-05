@@ -22,9 +22,18 @@ namespace CapaPresentacion.Modales
         {
             _mostrarMargen = mostrarMargen;
             InitializeComponent();
+            var columnaFoto = new DataGridViewImageColumn
+            {
+                Name = "Foto", HeaderText = "FOTO", ImageLayout = DataGridViewImageCellLayout.Zoom,
+                Width = 68, MinimumWidth = 60, ReadOnly = true, SortMode = DataGridViewColumnSortMode.NotSortable
+            };
+            dgvData.Columns.Insert(1, columnaFoto);
+            columnaFoto.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
             dgvData.Columns["PORCENTAJE"].Visible = _mostrarMargen;
             dgvData.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvData.RowTemplate.Height = 48;
+            dgvData.RowTemplate.Height = 68;
+            if (dgvData.Columns.Contains("Foto")) dgvData.Columns["Foto"].Width = 68;
             if (dgvData.Columns.Contains("Codigo")) dgvData.Columns["Codigo"].FillWeight = 28;
             if (dgvData.Columns.Contains("Nombre")) dgvData.Columns["Nombre"].FillWeight = 48;
             if (dgvData.Columns.Contains("Categoria")) dgvData.Columns["Categoria"].FillWeight = 24;
@@ -32,6 +41,13 @@ namespace CapaPresentacion.Modales
             txtBusqueda.KeyDown += txtBusqueda_KeyDown;
             dgvData.KeyDown += dgvData_KeyDown;
             Shown += mdProducto_Shown;
+            dgvData.CellClick += (s, e) =>
+            {
+                if (e.RowIndex < 0 || e.ColumnIndex < 0 || dgvData.Columns[e.ColumnIndex].Name != "Foto") return;
+                Producto item = dgvData.Rows[e.RowIndex].Tag as Producto;
+                if (item != null && !string.IsNullOrWhiteSpace(item.ImagenRuta))
+                    GestorImagenProducto.MostrarVistaPrevia(this, item.ImagenRuta, item.Nombre);
+            };
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -66,7 +82,11 @@ namespace CapaPresentacion.Modales
             }
             cboBuscar.DisplayMember = "Texto";
             cboBuscar.ValueMember = "Valor";
-            cboBuscar.SelectedIndex = 1;
+            int indiceNombre = cboBuscar.Items
+                .Cast<OpcionCombo>()
+                .ToList()
+                .FindIndex(opcion => string.Equals(Convert.ToString(opcion.Valor), "Nombre", StringComparison.OrdinalIgnoreCase));
+            cboBuscar.SelectedIndex = indiceNombre >= 0 ? indiceNombre : 0;
 
             // No se carga el inventario completo al abrir el modal. El usuario
             // puede escribir un criterio y buscarlo directamente en SQL.
@@ -141,7 +161,8 @@ namespace CapaPresentacion.Modales
                 Porcentaje = _mostrarMargen
                     ? Convert.ToDecimal(fila.Cells["PORCENTAJE"].Value) /
                         (Convert.ToDecimal(fila.Cells["PRECIOCOMPRA"].Value) > 0 ? 100m : 1m)
-                    : 0m
+                    : 0m,
+                ImagenRuta = (fila.Tag as Producto)?.ImagenRuta
             };
             DialogResult = DialogResult.OK;
             Close();
@@ -164,11 +185,17 @@ namespace CapaPresentacion.Modales
                     ? new CN_Producto().Listar().Where(p => p.Estado).ToList()
                     : new CN_Producto().Buscar(columnaFiltro, busqueda, true);
 
+                foreach (DataGridViewRow fila in dgvData.Rows)
+                    if (fila.Cells["Foto"].Value is System.Drawing.Image imagen) imagen.Dispose();
                 dgvData.Rows.Clear();
                 foreach (Producto item in resultados)
-                    dgvData.Rows.Add(new object[] { item.IdProducto, item.Codigo, item.Nombre,
+                {
+                    int indice = dgvData.Rows.Add(item.IdProducto,
+                        GestorImagenProducto.CargarMiniatura(item.ImagenRuta, 52, 52), item.Codigo, item.Nombre,
                         item.oCategoria.Descripcion, item.Stock, item.PrecioCompra, item.PrecioVenta,
-                        FormatoPorcentaje.ParaMostrar(item.Porcentaje, item.PrecioCompra) });
+                        FormatoPorcentaje.ParaMostrar(item.Porcentaje, item.PrecioCompra));
+                    dgvData.Rows[indice].Tag = item;
+                }
 
                 if (resultados.Count == 0)
                     CapaPresentacion.DialogoSistema.Show("No se encontraron productos con ese criterio.", "Búsqueda",

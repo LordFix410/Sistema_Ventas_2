@@ -9,12 +9,12 @@
   <link rel="icon" href="/favicon.png?v=1" type="image/png" sizes="500x500">
   <link rel="apple-touch-icon" href="/favicon.png?v=1">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="css/app.css?v=19">
-  <link rel="stylesheet" href="css/venta.css?v=10">
+  <link rel="stylesheet" href="css/app.css?v=20">
+  <link rel="stylesheet" href="css/venta.css?v=13">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <script src="/js/pwa.js?v=1" defer></script>
-  <script src="js/venta.js?v=9" defer></script>
+  <script src="js/venta.js?v=13" defer></script>
 </head>
 <body class="mobile-sale-page">
   <nav class="site-nav">
@@ -30,32 +30,30 @@
     </section>
 
     <section id="saleApp" hidden>
-      <nav class="sale-tabs" aria-label="Opciones de venta">
-        <button type="button" class="sale-tab active" data-view="saleView">Cobrar venta</button>
-        <button type="button" class="sale-tab" data-view="priceView">Consultar precio</button>
-      </nav>
-
-      <section id="scannerPanel" class="product-panel scanner-panel" hidden>
-        <div class="panel-heading"><h2>Escanear código</h2><button id="closeScanner" class="scanner-close" type="button" aria-label="Cerrar cámara">×</button></div>
-        <div class="scanner-viewport"><video id="scannerVideo" playsinline muted></video><div class="scanner-frame" aria-hidden="true"></div><span class="scanner-hint">Apunta al código de barras</span></div>
-        <p id="scannerMessage" class="inline-message" role="status"></p>
-      </section>
-
       <section id="saleView" class="sale-view">
         <section class="product-panel sale-search-panel">
           <button id="scanSaleButton" class="button button-primary scan-launch" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg> Escanear producto</button>
-          <form id="saleSearchForm" class="scan-row">
-            <label class="visually-hidden" for="saleSearch">Código o nombre del producto</label>
-            <input id="saleSearch" type="search" placeholder="Código o nombre del producto" autocomplete="off">
-            <button class="button button-secondary search-submit" type="submit">Buscar</button>
-          </form>
+          <details class="sale-manual-search">
+            <summary>Buscar por código o nombre</summary>
+            <form id="saleSearchForm" class="scan-row">
+              <label class="visually-hidden" for="saleSearch">Código o nombre del producto</label>
+              <input id="saleSearch" type="search" placeholder="Código o nombre del producto" autocomplete="off">
+              <button class="button button-secondary search-submit" type="submit">Buscar</button>
+            </form>
+          </details>
           <div class="quick-actions"><p id="saleSearchMessage" class="inline-message" role="status"></p><button id="addSpecialButton" class="button button-link" type="button">＋ Artículo especial</button></div>
           <div id="saleResults" class="product-results" aria-live="polite"></div>
         </section>
 
+        <section id="scannerPanel" class="product-panel scanner-panel" hidden>
+          <div class="panel-heading"><h2>Escanear código</h2><button id="closeScanner" class="scanner-close" type="button" aria-label="Cerrar cámara">×</button></div>
+          <div class="scanner-viewport"><video id="scannerVideo" playsinline muted></video><div class="scanner-frame" aria-hidden="true"></div><span class="scanner-hint">Apunta al código de barras</span></div>
+          <p id="scannerMessage" class="inline-message" role="status"></p>
+        </section>
+
         <section class="product-panel cart-panel">
           <div class="panel-heading"><h2>Venta actual <span id="cartCount" class="cart-count">0</span></h2><button id="clearCartButton" class="button button-quiet button-small" type="button" disabled>Vaciar</button></div>
-          <div id="emptyCart" class="empty-cart"><strong>Aún no hay productos</strong><span>Escanea un código o búscalo por nombre.</span></div>
+          <div id="emptyCart" class="empty-cart"><strong>Aún no hay productos</strong><span>Escanea para agregarlos a la venta.</span></div>
           <div id="cartRows" class="cart-rows"></div>
         </section>
 
@@ -104,19 +102,6 @@
           <p id="copyReceiptMessage" class="inline-message" role="status"></p>
           <div class="dialog-actions"><button id="copyReceiptButton" class="button button-secondary" type="button">Copiar número</button><button id="closeReceiptDialog" class="button button-primary" type="button">Continuar</button></div>
         </dialog>
-      </section>
-
-      <section id="priceView" class="sale-view" hidden>
-        <section class="product-panel search-panel price-search-panel">
-          <div class="panel-heading"><h2>Consulta de precio</h2><span class="muted">Escanea o busca</span></div>
-          <details class="price-manual-search">
-            <summary>Buscar por código o nombre</summary>
-            <form id="priceSearchForm" class="search-form"><label class="visually-hidden" for="priceSearch">Código o nombre del producto</label><input id="priceSearch" type="search" placeholder="Código o nombre" autocomplete="off"><button class="button button-secondary search-submit" type="submit">Buscar</button></form>
-          </details>
-          <button id="scanPriceButton" class="button button-primary scan-launch" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg> Escanear para consultar</button>
-          <p id="priceSearchMessage" class="inline-message" role="status"></p>
-          <div id="priceResults" class="product-results" aria-live="polite"></div>
-        </section>
       </section>
 
       <div class="sticky-sale-bar">

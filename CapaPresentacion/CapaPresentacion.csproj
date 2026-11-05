@@ -252,6 +252,7 @@
     <Compile Include="Utilidades\OpcionCombo.cs" />
     <Compile Include="Utilidades\ExperienciaUsuario.cs" />
     <Compile Include="Utilidades\FormatoPorcentaje.cs" />
+    <Compile Include="Utilidades\GestorImagenProducto.cs" />
     <EmbeddedResource Include="frmCategoria.resx">
       <DependentUpon>frmCategoria.cs</DependentUpon>
     </EmbeddedResource>

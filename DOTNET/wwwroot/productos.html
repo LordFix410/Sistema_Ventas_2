@@ -11,10 +11,10 @@
   <meta name="theme-color" content="#0d2f47">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="stylesheet" href="css/app.css?v=17">
-  <link rel="stylesheet" href="css/productos.css?v=8">
+  <link rel="stylesheet" href="css/app.css?v=21">
+  <link rel="stylesheet" href="css/productos.css?v=14">
   <script src="/js/pwa.js?v=1" defer></script>
-  <script src="js/productos.js?v=8" defer></script>
+  <script src="js/productos.js?v=15" defer></script>
 </head>
 <body class="products-page">
   <nav class="site-nav">
@@ -49,6 +49,15 @@
             <label>Categoría *<div class="input-action"><select id="categoria" name="idCategoria" required></select><button id="addCategoryButton" class="button button-add" type="button" aria-label="Crear categoría" title="Crear categoría">＋</button></div></label>
             <label>Grupo de proveedores<select id="supplierGroup" name="idGrupoProveedor"><option value="">Sin grupo</option></select></label>
           </div>
+          <section class="product-photo-field" aria-label="Fotografía del producto">
+            <div><strong>Foto del producto (opcional)</strong><small>Tomá una foto o elegí una imagen. Antes de guardarla podés girarla o quitarle el fondo.</small></div>
+            <input id="productPhoto" type="file" accept="image/*" capture="environment">
+            <label class="button button-quiet photo-select-button" for="productPhoto">Tomar o elegir foto</label>
+            <div id="productPhotoControls" class="product-photo-controls" hidden>
+              <img id="productPhotoPreview" alt="Vista previa de la foto aceptada" hidden>
+              <button id="removeProductPhoto" class="button button-quiet" type="button">Quitar foto</button>
+            </div>
+          </section>
           <div class="price-grid"><label>Precio de compra (Q)<input id="precioCompra" name="precioCompra" type="number" min="0" step="0.01" value="0"><small>Dejalo en 0 si aún no conocés el costo.</small></label><label>Precio de venta (Q)<input id="precioVenta" name="precioVenta" type="number" min="0" step="0.25" value="0"></label><label>Porcentaje de ganancia (%)<input id="porcentaje" name="porcentaje" type="number" min="0" step="0.01" value="61"></label></div>
           <p id="priceHint" class="price-hint"></p>
           <label class="status-check"><input type="checkbox" name="estado" checked> Producto activo</label>
@@ -61,6 +70,30 @@
           <p id="productMessage" class="form-message" role="status"></p>
         </section>
       </form>
+
+      <dialog id="productPhotoEditorDialog" class="product-photo-dialog" aria-label="Editar foto del producto">
+        <div class="product-photo-dialog-shell">
+          <div class="product-photo-dialog-heading"><strong>Preparar foto del producto</strong><button id="closeProductPhotoEditor" type="button" aria-label="Cerrar editor">×</button></div>
+          <div class="product-photo-editor-body">
+            <p id="productPhotoEditorMessage" role="status">Arrastrá para ajustar la posición. Podés quitar el fondo, comparar y girar.</p>
+            <div id="productPhotoProcessing" class="product-photo-processing" role="status" aria-live="polite" hidden>
+              <span class="product-photo-spinner" aria-hidden="true"></span>
+              <div><strong>Procesando la foto</strong><span id="productPhotoProcessingMessage">Preparando el recorte…</span></div>
+              <div class="product-photo-progress" aria-hidden="true"><span></span></div>
+              <small>No cierres esta ventana; el primer recorte puede tardar mientras se carga el modelo.</small>
+            </div>
+            <div class="product-photo-canvas-stage"><canvas id="productPhotoCanvas" width="720" height="720" aria-label="Vista previa editable del producto"></canvas></div>
+            <label class="product-photo-zoom">Tamaño en el cuadro<input id="productPhotoZoom" type="range" min="1" max="3" step="0.05" value="1"></label>
+            <div class="product-photo-editor-actions">
+              <button id="removeProductBackground" class="button button-quiet" type="button">Quitar fondo</button>
+              <button id="compareProductBackground" class="button button-quiet" type="button" hidden>Ver original</button>
+              <button id="rotateProductPhoto" class="button button-quiet" type="button">Girar 90°</button>
+              <button id="acceptProductPhoto" class="button button-primary" type="button">Aceptar foto</button>
+              <button id="cancelProductPhoto" class="button button-quiet" type="button">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      </dialog>
       </section>
       <dialog id="categoryDialog" class="product-dialog category-dialog">
         <form id="quickCategoryForm">

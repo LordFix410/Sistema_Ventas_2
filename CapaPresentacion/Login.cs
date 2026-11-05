@@ -43,7 +43,7 @@ namespace CapaPresentacion
             if (coincidencias.Count == 1)
             {
                 Usuario ousuario = coincidencias[0];
-                Inicio frmInicio = new Inicio(ousuario);
+                Inicio frmInicio = new Inicio(ousuario, txtContrasena.Text);
                 frmInicio.WindowState = FormWindowState.Maximized;
 
                 frmInicio.Show();

@@ -18,6 +18,7 @@ namespace CapaPresentacion
     public partial class Inicio : Form
     {
         private Usuario usuarioActual;
+        private readonly string claveUsuarioActual;
         private IconMenuItem botonActual = null;
         private Form FormularioActivo = null;
         private frmCompraRegistrar formularioCompraEnCurso;
@@ -26,9 +27,12 @@ namespace CapaPresentacion
         private readonly ToolStripMenuItem gruposProductoMenu = new ToolStripMenuItem("Grupos de productos");
         private readonly ToolStripMenuItem reportePedidosMenu = new ToolStripMenuItem("Pedidos");
 
-        public Inicio(Usuario ousuario)
+        public Inicio(Usuario ousuario) : this(ousuario, string.Empty) { }
+
+        public Inicio(Usuario ousuario, string claveUsuario)
         {
             usuarioActual = ousuario;
+            claveUsuarioActual = claveUsuario ?? string.Empty;
             InitializeComponent();
             // Ubicamos cada herramienta en el módulo donde se administra su información.
             menuMantenedor.DropDownItems.Remove(reposicionToolStripMenuItem);
@@ -126,7 +130,7 @@ namespace CapaPresentacion
 
         private void btnProducto_Click(object sender, EventArgs e)
         {
-            AbrirFrm((IconMenuItem)sender, new frmProducto());
+            AbrirFrm((IconMenuItem)sender, new frmProducto(claveUsuarioActual));
         }
 
         private void menuClientes_Click(object sender, EventArgs e)

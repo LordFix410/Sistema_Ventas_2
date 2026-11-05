@@ -121,7 +121,7 @@ WHERE REPLACE(REPLACE(UPPER(LTRIM(RTRIM(Documento))),'-',''),' ','')=@documento;
                 await using var connection = new SqlConnection(ConnectionString);
                 await connection.OpenAsync();
                 await using var command = new SqlCommand(@"
-SELECT TOP (20) IdProducto, Codigo, Nombre, ISNULL(Descripcion, ''), PrecioVenta
+SELECT TOP (20) IdProducto, Codigo, Nombre, ISNULL(Descripcion, ''), PrecioVenta, ImagenRuta
 FROM dbo.PRODUCTO
 WHERE Estado = 1
   AND (Codigo = @exacto OR Codigo LIKE @prefijo ESCAPE '!'
@@ -133,7 +133,7 @@ ORDER BY CASE WHEN Codigo = @exacto THEN 0 WHEN Codigo LIKE @prefijo ESCAPE '!'
                 command.Parameters.Add("@contiene", SqlDbType.VarChar, 210).Value = "%" + escaped + "%";
                 await using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
-                    results.Add(new MobileProduct(reader.GetInt32(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetDecimal(4)));
+                    results.Add(new MobileProduct(reader.GetInt32(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetDecimal(4), reader.IsDBNull(5) ? null : reader.GetString(5)));
                 return Ok(results);
             }
             catch (SqlException ex)
@@ -356,13 +356,14 @@ AND NOT EXISTS (SELECT 1 FROM dbo.DETALLE_COMPRA WHERE IdProducto=@id);", connec
 
     public sealed class MobileProduct
     {
-        public MobileProduct(int id, string codigo, string nombre, string descripcion, decimal precioVenta)
-        { Id = id; Codigo = codigo; Nombre = nombre; Descripcion = descripcion; PrecioVenta = precioVenta; }
+        public MobileProduct(int id, string codigo, string nombre, string descripcion, decimal precioVenta, string? imagenRuta)
+        { Id = id; Codigo = codigo; Nombre = nombre; Descripcion = descripcion; PrecioVenta = precioVenta; ImagenRuta = imagenRuta; }
         public int Id { get; }
         public string Codigo { get; }
         public string Nombre { get; }
         public string Descripcion { get; }
         public decimal PrecioVenta { get; }
+        public string? ImagenRuta { get; }
     }
 
     public sealed class MobileSaleRequest

@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -16,10 +19,12 @@ namespace ImagenPDF.Controllers
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<ProductosController> _logger;
-        public ProductosController(IConfiguration configuration, ILogger<ProductosController> logger)
+        private readonly IWebHostEnvironment _environment;
+        public ProductosController(IConfiguration configuration, ILogger<ProductosController> logger, IWebHostEnvironment environment)
         {
             _configuration = configuration;
             _logger = logger;
+            _environment = environment;
         }
 
         private string? ConnectionString => _configuration.GetConnectionString("ProductDb");
@@ -262,6 +267,7 @@ namespace ImagenPDF.Controllers
         }
 
         [HttpPost]
+        [RequestSizeLimit(8L * 1024 * 1024)]
         public async Task<IActionResult> CreateProduct([FromBody] ProductRequest request)
         {
             if (!IsSignedIn) return Unauthorized();
@@ -299,6 +305,43 @@ namespace ImagenPDF.Controllers
             }
             await using var connection = new SqlConnection(ConnectionString);
             await connection.OpenAsync();
+            string? imageRelativePath = null;
+            string? imageAbsolutePath = null;
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(request.ImagenBase64))
+                {
+                    var imageBytes = Convert.FromBase64String(request.ImagenBase64);
+                    if (imageBytes.Length == 0 || imageBytes.Length > 5L * 1024 * 1024)
+                        return BadRequest(new { mensaje = "La foto debe pesar como máximo 5 MB." });
+                    var extension = request.ImagenTipo?.ToLowerInvariant() switch
+                    {
+                        "image/jpeg" => ".jpg",
+                        "image/png" => ".png",
+                        _ => null
+                    };
+                    if (extension == null || !IsValidImage(imageBytes, extension))
+                        return BadRequest(new { mensaje = "La foto debe ser una imagen JPG o PNG válida." });
+                    var imageRoot = _configuration["ProductImages:Path"];
+                    if (string.IsNullOrWhiteSpace(imageRoot)) imageRoot = Path.Combine(_environment.ContentRootPath, "imagenes");
+                    var folder = Path.Combine(imageRoot, "productos");
+                    Directory.CreateDirectory(folder);
+                    var fileName = Guid.NewGuid().ToString("N") + extension;
+                    imageAbsolutePath = Path.Combine(folder, fileName);
+                    imageRelativePath = "productos/" + fileName;
+                    await System.IO.File.WriteAllBytesAsync(imageAbsolutePath, imageBytes);
+                }
+            }
+            catch (FormatException)
+            {
+                return BadRequest(new { mensaje = "No se pudo leer la fotografía seleccionada." });
+            }
+            catch (IOException ex)
+            {
+                _logger.LogError(ex, "No se pudo guardar la foto del producto en el servidor.");
+                return StatusCode(503, new { mensaje = "No se pudo guardar la foto en la carpeta de imágenes del servidor." });
+            }
+
             await using var command = new SqlCommand("dbo.sp_RegistrarProducto", connection) { CommandType = CommandType.StoredProcedure };
             command.Parameters.Add("@Codigo", SqlDbType.VarChar, 20).Value = request.Codigo.Trim();
             command.Parameters.Add("@Nombre", SqlDbType.VarChar, 30).Value = request.Nombre.Trim();
@@ -314,9 +357,11 @@ namespace ImagenPDF.Controllers
             command.Parameters.Add("@CantidadMinima", SqlDbType.Int).Value = useGroup ? DBNull.Value : (object?)request.CantidadMinima ?? DBNull.Value;
             command.Parameters.Add("@CantidadMaxima", SqlDbType.Int).Value = useGroup ? DBNull.Value : (object?)request.CantidadMaxima ?? DBNull.Value;
             command.Parameters.Add("@IdGrupoProveedor", SqlDbType.Int).Value = (object?)request.IdGrupoProveedor ?? DBNull.Value;
+            command.Parameters.Add("@ImagenRuta", SqlDbType.NVarChar, 260).Value = (object?)imageRelativePath ?? DBNull.Value;
             try { await command.ExecuteNonQueryAsync(); }
             catch (SqlException ex)
             {
+                if (imageAbsolutePath != null && System.IO.File.Exists(imageAbsolutePath)) System.IO.File.Delete(imageAbsolutePath);
                 _logger.LogError(ex, "Error SQL al crear producto. Código SQL {SqlErrorNumber}.", ex.Number);
                 if (ex.Number == 8144 || ex.Number == 201 || ex.Number == 2812)
                     return StatusCode(503, new { mensaje = "El procedimiento dbo.sp_RegistrarProducto está desactualizado. Ejecuta migracion_sp_registrar_producto.sql en la base DBSISTEMA_VENTA y vuelve a intentar." });
@@ -329,8 +374,99 @@ namespace ImagenPDF.Controllers
                 return StatusCode(500, new { mensaje = $"SQL Server no pudo crear el producto (error {ex.Number}). Revisa el registro del servidor." });
             }
             var productId = Convert.ToInt32(result.Value);
-            if (productId <= 0) return Conflict(new { mensaje = Convert.ToString(message.Value) ?? "No se pudo registrar el producto." });
-            return Ok(new { idProducto = productId, precioCompra = purchasePrice, precioVenta = salePrice, mensaje = $"Producto creado · costo Q{purchasePrice:N2} · venta Q{salePrice:N2}. Existencia inicial: 0." });
+            if (productId <= 0)
+            {
+                if (imageAbsolutePath != null && System.IO.File.Exists(imageAbsolutePath)) System.IO.File.Delete(imageAbsolutePath);
+                return Conflict(new { mensaje = Convert.ToString(message.Value) ?? "No se pudo registrar el producto." });
+            }
+            return Ok(new { idProducto = productId, precioCompra = purchasePrice, precioVenta = salePrice, imagenRuta = imageRelativePath, mensaje = $"Producto creado · costo Q{purchasePrice:N2} · venta Q{salePrice:N2}. Existencia inicial: 0." });
+        }
+
+        private static bool IsValidImage(byte[] bytes, string extension)
+        {
+            if (extension == ".jpg") return bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF;
+            return bytes.Length >= 8 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47 && bytes[4] == 0x0D && bytes[5] == 0x0A && bytes[6] == 0x1A && bytes[7] == 0x0A;
+        }
+
+        [HttpPost("imagenes")]
+        [RequestSizeLimit(7L * 1024 * 1024)]
+        [RequestFormLimits(MultipartBodyLengthLimit = 7L * 1024 * 1024)]
+        public async Task<IActionResult> UploadProductImage([FromForm] string clave, [FromForm] IFormFile file)
+        {
+            if (!EsRedLocal(HttpContext.Connection.RemoteIpAddress))
+                return StatusCode(403, new { mensaje = "La carga de fotos de Windows Forms solo se acepta desde la red local del servidor." });
+            if (string.IsNullOrWhiteSpace(ConnectionString)) return DatabaseNotConfigured();
+            if (string.IsNullOrWhiteSpace(clave) || !await ValidarClaveUsuario(clave))
+                return Unauthorized(new { mensaje = "La contraseña no corresponde a un usuario activo único." });
+            if (file == null || file.Length == 0 || file.Length > 5L * 1024 * 1024)
+                return BadRequest(new { mensaje = "Selecciona una foto de hasta 5 MB." });
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (extension != ".jpg" && extension != ".jpeg" && extension != ".png")
+                return BadRequest(new { mensaje = "La foto debe ser JPG o PNG." });
+            try
+            {
+                await using var memory = new MemoryStream();
+                await file.CopyToAsync(memory);
+                var bytes = memory.ToArray();
+                extension = extension == ".png" ? ".png" : ".jpg";
+                if (!IsValidImage(bytes, extension)) return BadRequest(new { mensaje = "El archivo no contiene una imagen JPG o PNG válida." });
+                var folder = ProductImagesFolder();
+                Directory.CreateDirectory(folder);
+                var name = Guid.NewGuid().ToString("N") + extension;
+                await System.IO.File.WriteAllBytesAsync(Path.Combine(folder, name), bytes);
+                return Content("productos/" + name, "text/plain; charset=utf-8");
+            }
+            catch (IOException ex)
+            {
+                _logger.LogError(ex, "No se pudo guardar la foto enviada desde Windows Forms.");
+                return StatusCode(503, new { mensaje = "El servidor no pudo guardar la foto en su carpeta de imágenes." });
+            }
+        }
+
+        [HttpDelete("imagenes")]
+        public async Task<IActionResult> DeleteProductImage([FromQuery] string ruta, [FromQuery] string clave)
+        {
+            if (!EsRedLocal(HttpContext.Connection.RemoteIpAddress))
+                return StatusCode(403, new { mensaje = "La eliminación de fotos de Windows Forms solo se acepta desde la red local del servidor." });
+            if (string.IsNullOrWhiteSpace(ConnectionString)) return DatabaseNotConfigured();
+            if (string.IsNullOrWhiteSpace(clave) || !await ValidarClaveUsuario(clave))
+                return Unauthorized(new { mensaje = "La contraseña no corresponde a un usuario activo único." });
+            var name = Path.GetFileName(ruta ?? string.Empty);
+            if (string.IsNullOrWhiteSpace(name) || !name.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) && !name.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals((ruta ?? string.Empty).Replace('\\', '/'), "productos/" + name, StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { mensaje = "La ruta de la foto no es válida." });
+            var path = Path.Combine(ProductImagesFolder(), name);
+            try { if (System.IO.File.Exists(path)) System.IO.File.Delete(path); return NoContent(); }
+            catch (IOException ex) { _logger.LogError(ex, "No se pudo eliminar la foto {ImageName}.", name); return StatusCode(503, new { mensaje = "No se pudo eliminar la foto del servidor." }); }
+        }
+
+        private string ProductImagesFolder()
+        {
+            var root = _configuration["ProductImages:Path"];
+            if (string.IsNullOrWhiteSpace(root)) root = Path.Combine(_environment.ContentRootPath, "imagenes");
+            return Path.Combine(root, "productos");
+        }
+
+        private async Task<bool> ValidarClaveUsuario(string clave)
+        {
+            await using var connection = new SqlConnection(ConnectionString);
+            await connection.OpenAsync();
+            await using var command = new SqlCommand("SELECT TOP (2) IdUsuario FROM dbo.USUARIO WHERE Estado=1 AND CONVERT(varbinary(100), Clave)=CONVERT(varbinary(100), @clave) ORDER BY IdUsuario", connection);
+            command.Parameters.Add("@clave", SqlDbType.VarChar, 50).Value = clave;
+            await using var reader = await command.ExecuteReaderAsync();
+            if (!await reader.ReadAsync()) return false;
+            return !await reader.ReadAsync();
+        }
+
+        private static bool EsRedLocal(System.Net.IPAddress? address)
+        {
+            if (address == null) return false;
+            if (address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
+            if (System.Net.IPAddress.IsLoopback(address)) return true;
+            var bytes = address.GetAddressBytes();
+            if (bytes.Length != 4) return address.IsIPv6LinkLocal || address.IsIPv6SiteLocal;
+            return bytes[0] == 10 || (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
+                   (bytes[0] == 192 && bytes[1] == 168) || (bytes[0] == 169 && bytes[1] == 254);
         }
 
         private IActionResult DatabaseNotConfigured() => StatusCode(503, new { mensaje = "El servidor no tiene configurada la conexión de productos." });
@@ -347,6 +483,7 @@ namespace ImagenPDF.Controllers
         public int IdCategoria { get; set; } public decimal Porcentaje { get; set; } public decimal PrecioCompra { get; set; } public decimal PrecioVenta { get; set; } public bool CalcularCosto { get; set; }
         public bool Estado { get; set; } = true; public int? IdGrupoReposicion { get; set; } public int? CantidadMinima { get; set; }
         public int? CantidadMaxima { get; set; } public int? IdGrupoProveedor { get; set; }
+        public string? ImagenBase64 { get; set; } public string? ImagenTipo { get; set; }
     }
     public class OptionItem { public OptionItem(int id, string nombre) { Id = id; Nombre = nombre; } public int Id { get; } public string Nombre { get; } }
     public sealed class ReplenishmentItem : OptionItem

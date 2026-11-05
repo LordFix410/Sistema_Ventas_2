@@ -14,7 +14,13 @@
   async function request(path, options = {}) {
     const response = await fetch(`${api}${path}`, { credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
     const body = response.status === 204 ? null : await response.json().catch(() => ({}));
-    if (!response.ok) { const error = new Error(body?.mensaje || `Error ${response.status}`); error.status = response.status; throw error; }
+    if (!response.ok) {
+      const method = (options.method || 'GET').toUpperCase();
+      const fallback = response.status === 404
+        ? `No existe ${method} ${api}${path} en el servidor publicado. Actualiza/reinicia el servidor web para cargar la versión que incluye esta ruta.`
+        : `Error ${response.status}`;
+      const error = new Error(body?.mensaje || fallback); error.status = response.status; throw error;
+    }
     return body;
   }
   function message(element, text, success = false) { if (!element) return; element.textContent = text || ''; element.classList.toggle('success', success); }
@@ -135,10 +141,39 @@
   $('#replenishmentGroup').addEventListener('change', event => { const useGroup = !!event.target.value; $('#individualLimits').hidden = useGroup; $('#individualLimits').querySelectorAll('input').forEach(input => { input.disabled = useGroup; if (useGroup) input.value = ''; }); });
   const purchaseInput = $('#precioCompra'), saleInput = $('#precioVenta'), percentInput = $('#porcentaje');
   const productForm = $('#productForm');
+  const productPhoto = $('#productPhoto');
+  const productPhotoPreview = $('#productPhotoPreview');
+  const productPhotoControls = $('#productPhotoControls');
+  const productPhotoDialog = $('#productPhotoEditorDialog');
+  const productPhotoCanvas = $('#productPhotoCanvas');
+  const productPhotoContext = productPhotoCanvas.getContext('2d');
+  const productPhotoZoom = $('#productPhotoZoom');
+  const productPhotoEditorMessage = $('#productPhotoEditorMessage');
+  const productPhotoProcessing = $('#productPhotoProcessing');
+  const productPhotoProcessingMessage = $('#productPhotoProcessingMessage');
+  const removeProductBackgroundButton = $('#removeProductBackground');
+  const compareProductBackgroundButton = $('#compareProductBackground');
+  const closeProductPhotoEditorButton = $('#closeProductPhotoEditor');
+  const cancelProductPhotoButton = $('#cancelProductPhoto');
+  const rotateProductPhotoButton = $('#rotateProductPhoto');
+  const acceptProductPhotoButton = $('#acceptProductPhoto');
+  let acceptedProductPhoto = null;
+  let originalProductPhoto = null;
+  let processedProductPhoto = null;
+  let showProcessedProductPhoto = false;
+  let productPhotoMime = 'image/jpeg';
+  let productPhotoSourceName = 'foto-producto';
+  let productPhotoZoomValue = 1;
+  let productPhotoPanX = 0, productPhotoPanY = 0;
+  let productPhotoPointer = null;
+  let productPhotoEditGeneration = 0;
+  let productPhotoProcessingActive = false;
+  let productPhotoPreviewUrl = '';
   const minimumInput = $('input[name="cantidadMinima"]', productForm);
   const maximumInput = $('input[name="cantidadMaxima"]', productForm);
   const submitProduct = productForm.querySelector('[type="submit"]');
   let autoPurchaseCost = true;
+  let pendingPriceField = null;
 
   function productFormHasData() {
     return !!($('#codigo').value.trim() || $('#nombre').value.trim() || $('input[name="descripcion"]', productForm).value.trim() ||
@@ -168,13 +203,231 @@
       }
       autoPurchaseCost = typeof draft.costoAutomatico === 'boolean' ? draft.costoAutomatico : (Number(purchaseInput.value) || 0) <= 0;
       $('#replenishmentGroup').dispatchEvent(new Event('change'));
-      updatePricePreview();
+      refreshPriceHint();
       message($('#productMessage'), 'Borrador del producto recuperado. Puedes continuar donde lo dejaste.', true);
     } catch { sessionStorage.removeItem(productDraftKey); }
   }
+  function displayAcceptedProductPhoto(file) {
+    acceptedProductPhoto = file;
+    if (productPhotoPreviewUrl) URL.revokeObjectURL(productPhotoPreviewUrl);
+    productPhotoPreviewUrl = file ? URL.createObjectURL(file) : '';
+    productPhotoPreview.src = productPhotoPreviewUrl;
+    productPhotoPreview.hidden = !file;
+    productPhotoControls.hidden = !file;
+  }
+  const drawableWidth = image => image?.naturalWidth || image?.width || 0;
+  const drawableHeight = image => image?.naturalHeight || image?.height || 0;
+  function currentProductPhotoDrawable() {
+    return showProcessedProductPhoto && processedProductPhoto ? processedProductPhoto : originalProductPhoto;
+  }
+  function drawProductPhotoEditor() {
+    if (!originalProductPhoto) return;
+    const source = currentProductPhotoDrawable();
+    const width = drawableWidth(source), height = drawableHeight(source), side = productPhotoCanvas.width;
+    const scale = Math.max(side / width, side / height) * productPhotoZoomValue;
+    const drawWidth = width * scale, drawHeight = height * scale;
+    productPhotoContext.clearRect(0, 0, side, side);
+    productPhotoContext.drawImage(source, (side - drawWidth) / 2 + productPhotoPanX, (side - drawHeight) / 2 + productPhotoPanY, drawWidth, drawHeight);
+  }
+  function setProductPhotoEditorMessage(text, success = false) {
+    productPhotoEditorMessage.textContent = text || '';
+    productPhotoEditorMessage.classList.toggle('success', success);
+  }
+  function setProductPhotoProcessing(active, text = 'Preparando el recorte…') {
+    productPhotoProcessingActive = active;
+    productPhotoProcessing.hidden = !active;
+    productPhotoProcessingMessage.textContent = text;
+    closeProductPhotoEditorButton.disabled = active;
+    cancelProductPhotoButton.disabled = active;
+    acceptProductPhotoButton.disabled = active || !originalProductPhoto;
+    rotateProductPhotoButton.disabled = active || !originalProductPhoto;
+    compareProductBackgroundButton.disabled = active || !processedProductPhoto;
+    removeProductBackgroundButton.disabled = active || !originalProductPhoto || !!processedProductPhoto;
+  }
+  function clearProductPhotoEditor() {
+    productPhotoEditGeneration++;
+    originalProductPhoto = null;
+    processedProductPhoto = null;
+    showProcessedProductPhoto = false;
+    productPhotoPointer = null;
+  }
+  function cancelProductPhotoEdit() {
+    if (productPhotoProcessingActive) return;
+    clearProductPhotoEditor();
+    if (productPhotoDialog.open) productPhotoDialog.close();
+  }
+  function openProductPhotoEditor(file) {
+    clearProductPhotoEditor();
+    productPhotoMime = file.type;
+    productPhotoSourceName = file.name.replace(/\.[^.]+$/, '') || 'foto-producto';
+    productPhotoZoomValue = 1;
+    productPhotoPanX = productPhotoPanY = 0;
+    productPhotoZoom.value = '1';
+    removeProductBackgroundButton.disabled = true;
+    compareProductBackgroundButton.hidden = true;
+    compareProductBackgroundButton.textContent = 'Ver original';
+    setProductPhotoEditorMessage('Cargando foto…');
+    if (!productPhotoDialog.open) productPhotoDialog.showModal();
+    const generation = productPhotoEditGeneration;
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      if (generation !== productPhotoEditGeneration) return;
+      originalProductPhoto = image;
+      removeProductBackgroundButton.disabled = false;
+      setProductPhotoEditorMessage('Arrastrá la foto para ajustar su posición. Podés girarla o quitar el fondo.');
+      drawProductPhotoEditor();
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      if (generation === productPhotoEditGeneration) setProductPhotoEditorMessage('No se pudo abrir esta foto. Elegí otra imagen.');
+    };
+    image.src = url;
+  }
+
+  removeProductBackgroundButton.addEventListener('click', async () => {
+    if (!originalProductPhoto || processedProductPhoto) return;
+    const generation = productPhotoEditGeneration;
+    removeProductBackgroundButton.disabled = true;
+    setProductPhotoProcessing(true, 'Iniciando el modelo de recorte…');
+    setProductPhotoEditorMessage('El recorte está en marcha. La primera vez puede tardar un poco mientras se carga el modelo.');
+    try {
+      const {removeProductBackground} = await import('./background-removal.js');
+      const cutout = await removeProductBackground(originalProductPhoto, text => {
+        if (generation === productPhotoEditGeneration) productPhotoProcessingMessage.textContent = text;
+      });
+      if (generation !== productPhotoEditGeneration) return;
+      processedProductPhoto = cutout;
+      showProcessedProductPhoto = true;
+      compareProductBackgroundButton.hidden = false;
+      compareProductBackgroundButton.textContent = 'Ver original';
+      removeProductBackgroundButton.textContent = 'Fondo quitado';
+      removeProductBackgroundButton.disabled = true;
+      setProductPhotoEditorMessage('Fondo quitado. Podés comparar con el original, girar y aceptar.', true);
+      drawProductPhotoEditor();
+    } catch (error) {
+      if (generation === productPhotoEditGeneration) {
+        removeProductBackgroundButton.disabled = false;
+        setProductPhotoEditorMessage(error.message || 'No se pudo quitar el fondo. Revisá tu conexión e intentá de nuevo.');
+      }
+    } finally {
+      if (generation === productPhotoEditGeneration) setProductPhotoProcessing(false);
+    }
+  });
+  compareProductBackgroundButton.addEventListener('click', () => {
+    if (!processedProductPhoto) return;
+    showProcessedProductPhoto = !showProcessedProductPhoto;
+    compareProductBackgroundButton.textContent = showProcessedProductPhoto ? 'Ver original' : 'Ver fondo quitado';
+    setProductPhotoEditorMessage(showProcessedProductPhoto ? 'Vista sin fondo. El original sigue guardado para comparar.' : 'Vista original. El recorte sin fondo se conserva.', true);
+    drawProductPhotoEditor();
+  });
+  function rotateProductDrawable(drawable) {
+    const width = drawableWidth(drawable), height = drawableHeight(drawable);
+    const rotated = document.createElement('canvas');
+    rotated.width = height;
+    rotated.height = width;
+    const context = rotated.getContext('2d');
+    context.translate(height / 2, width / 2);
+    context.rotate(Math.PI / 2);
+    context.drawImage(drawable, -width / 2, -height / 2, width, height);
+    return rotated;
+  }
+  $('#rotateProductPhoto').addEventListener('click', () => {
+    if (!originalProductPhoto) return;
+    originalProductPhoto = rotateProductDrawable(originalProductPhoto);
+    if (processedProductPhoto) processedProductPhoto = rotateProductDrawable(processedProductPhoto);
+    productPhotoPanX = productPhotoPanY = 0;
+    setProductPhotoEditorMessage('Foto girada 90°. El recorte y el original se mantienen para comparar.', true);
+    drawProductPhotoEditor();
+  });
+  productPhotoZoom.addEventListener('input', () => {
+    productPhotoZoomValue = Number(productPhotoZoom.value) || 1;
+    drawProductPhotoEditor();
+  });
+  productPhotoCanvas.addEventListener('pointerdown', event => {
+    if (!originalProductPhoto) return;
+    productPhotoPointer = {id: event.pointerId, x: event.clientX, y: event.clientY};
+    productPhotoCanvas.setPointerCapture(event.pointerId);
+  });
+  productPhotoCanvas.addEventListener('pointermove', event => {
+    if (!productPhotoPointer || productPhotoPointer.id !== event.pointerId || !productPhotoCanvas.clientWidth) return;
+    const factor = productPhotoCanvas.width / productPhotoCanvas.clientWidth;
+    productPhotoPanX += (event.clientX - productPhotoPointer.x) * factor;
+    productPhotoPanY += (event.clientY - productPhotoPointer.y) * factor;
+    productPhotoPointer.x = event.clientX;
+    productPhotoPointer.y = event.clientY;
+    drawProductPhotoEditor();
+  });
+  productPhotoCanvas.addEventListener('pointerup', () => { productPhotoPointer = null; });
+  productPhotoCanvas.addEventListener('pointercancel', () => { productPhotoPointer = null; });
+  async function acceptProductPhotoEdit() {
+    if (!originalProductPhoto) return;
+    const generation = productPhotoEditGeneration;
+    const selectedIsCutout = showProcessedProductPhoto && !!processedProductPhoto;
+    const outputType = selectedIsCutout || productPhotoMime === 'image/png' ? 'image/png' : 'image/jpeg';
+    const acceptButton = $('#acceptProductPhoto');
+    acceptButton.disabled = true;
+    acceptButton.textContent = 'Preparando…';
+    try {
+      let blob = null;
+      for (let side = 720; side >= 360; side -= 90) {
+        const output = document.createElement('canvas');
+        output.width = output.height = side;
+        const context = output.getContext('2d');
+        if (outputType === 'image/jpeg') { context.fillStyle = '#fff'; context.fillRect(0, 0, side, side); }
+        context.drawImage(productPhotoCanvas, 0, 0, side, side);
+        blob = await new Promise((resolve, reject) => output.toBlob(value => value ? resolve(value) : reject(new Error('No se pudo preparar la foto.')), outputType, .9));
+        if (blob.size <= 5 * 1024 * 1024) break;
+      }
+      if (!blob || blob.size > 5 * 1024 * 1024) throw new Error('La foto editada supera 5 MB. Reduce el tamaño del archivo original.');
+      if (generation !== productPhotoEditGeneration) return;
+      const extension = outputType === 'image/png' ? 'png' : 'jpg';
+      const filename = `${productPhotoSourceName}.${extension}`.replace(/[^\w.-]/g, '_');
+      displayAcceptedProductPhoto(new File([blob], filename, {type: outputType}));
+      cancelProductPhotoEdit();
+      message($('#productMessage'), 'Foto preparada. Se guardará junto con el producto.', true);
+    } catch (error) {
+      setProductPhotoEditorMessage(error.message || 'No se pudo aceptar esta foto.');
+    } finally {
+      acceptButton.disabled = false;
+      acceptButton.textContent = 'Aceptar foto';
+    }
+  }
+  $('#acceptProductPhoto').addEventListener('click', acceptProductPhotoEdit);
+  $('#cancelProductPhoto').addEventListener('click', cancelProductPhotoEdit);
+  $('#closeProductPhotoEditor').addEventListener('click', cancelProductPhotoEdit);
+  productPhotoDialog.addEventListener('cancel', event => {
+    event.preventDefault();
+    if (!productPhotoProcessingActive) cancelProductPhotoEdit();
+  });
   productForm.addEventListener('input', persistProductDraft);
   productForm.addEventListener('change', persistProductDraft);
-  productForm.addEventListener('reset', () => setTimeout(() => sessionStorage.removeItem(productDraftKey), 0));
+  productForm.addEventListener('reset', () => setTimeout(() => {
+    sessionStorage.removeItem(productDraftKey);
+    cancelProductPhotoEdit();
+    if (productPhotoPreviewUrl) URL.revokeObjectURL(productPhotoPreviewUrl);
+    productPhotoPreviewUrl = '';
+    acceptedProductPhoto = null;
+    productPhoto.value = '';
+    productPhotoPreview.hidden = true;
+    productPhotoPreview.removeAttribute('src');
+    productPhotoControls.hidden = true;
+  }, 0));
+  productPhoto.addEventListener('change', () => {
+    const file = productPhoto.files?.[0];
+    productPhoto.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/') || file.size > 15 * 1024 * 1024) {
+      message($('#productMessage'), 'Selecciona una foto compatible de hasta 15 MB.');
+      return;
+    }
+    openProductPhotoEditor(file);
+  });
+  $('#removeProductPhoto').addEventListener('click', () => {
+    displayAcceptedProductPhoto(null);
+    persistProductDraft();
+  });
   window.addEventListener('beforeunload', event => {
     if (navigationApproved || !hasProductDraft()) return;
     event.preventDefault(); event.returnValue = '';
@@ -207,6 +460,7 @@
     const next = enterNext.get(event.target);
     if (!next) return;
     event.preventDefault();
+    if ([purchaseInput, percentInput, saleInput].includes(event.target)) commitPriceField(event.target);
     if (event.target === $('#replenishmentGroup') && event.target.value) {
       submitProduct.focus();
       return;
@@ -214,45 +468,68 @@
     next.focus();
     if (next instanceof HTMLInputElement && next.type === 'number') next.select();
   });
-  function updatePricePreview() {
-    const cost = Number(purchaseInput.value) || 0;
-    const sale = Number(saleInput.value) || 0;
-    const percent = Number(percentInput.value) || 0;
+  function refreshPriceHint(text) {
     const hint = $('#priceHint');
-    if (autoPurchaseCost) {
-      saleInput.readOnly = false;
-      if (sale > 0 && percent >= 0) {
-        const calculatedCost = Math.round((sale / (1 + percent / 100) + Number.EPSILON) * 100) / 100;
-        purchaseInput.value = calculatedCost.toFixed(2);
-        if (calculatedCost > 0) {
-          // Refleja el margen real tras redondear el costo a centavos, como hace SQL Server.
-          const effectivePercent = (sale - calculatedCost) / calculatedCost * 100;
-          percentInput.value = effectivePercent.toFixed(2).replace(/\.?0+$/, '');
-        }
-        hint.textContent = `Costo calculado: Q${calculatedCost.toFixed(2)}. Si editás este costo, el precio de venta se calculará desde él.`;
-      } else {
-        purchaseInput.value = '0';
-        hint.textContent = 'Escribe el precio de venta y el porcentaje para calcular el costo automáticamente.';
-      }
+    saleInput.readOnly = false;
+    hint.textContent = text || 'El cálculo se aplica al presionar Enter o salir del campo.';
+  }
+  function commitPriceField(source) {
+    if (pendingPriceField && pendingPriceField !== source) return;
+    pendingPriceField = null;
+    if (source !== purchaseInput && source.value.trim() === '') {
+      refreshPriceHint('El campo quedó vacío. Escribe el valor completo y confirma con Enter o sal del campo para calcular.');
       return;
     }
-    if (cost > 0 && percent >= 0) {
-      // Add a tiny epsilon before ceiling to neutralize binary floating point noise.
-      const calculatedSale = Math.ceil((cost * (1 + percent / 100) * 4) - 1e-8) / 4;
-      saleInput.readOnly = true;
-      saleInput.value = calculatedSale.toFixed(2);
-      hint.textContent = `Venta calculada: Q${calculatedSale.toFixed(2)}. Se redondea hacia arriba a intervalos de Q0.25.`;
-    } else {
-      saleInput.readOnly = false;
-      autoPurchaseCost = true;
-      hint.textContent = 'Escribe el precio de venta y el porcentaje para calcular el costo automáticamente.';
+    const cost = purchaseInput.value.trim() === '' ? 0 : Number(purchaseInput.value);
+    const sale = saleInput.value.trim() === '' ? null : Number(saleInput.value);
+    const percent = percentInput.value.trim() === '' ? null : Number(percentInput.value);
+    if (!Number.isFinite(cost) || cost < 0 || (sale !== null && (!Number.isFinite(sale) || sale < 0)) ||
+        (percent !== null && (!Number.isFinite(percent) || percent < 0))) {
+      refreshPriceHint('Revisa los importes y el porcentaje; deben ser valores válidos y no negativos.');
+      return;
     }
+
+    if (source === saleInput && sale !== null && cost > 0) {
+      autoPurchaseCost = false;
+      const effectivePercent = ((sale - cost) / cost) * 100;
+      percentInput.value = effectivePercent.toFixed(2).replace(/\.?0+$/, '');
+      refreshPriceHint(`Margen actualizado: ${percentInput.value || '0'}%. El costo se mantiene en Q${cost.toFixed(2)}.`);
+      return;
+    }
+
+    if (cost > 0) {
+      autoPurchaseCost = false;
+      if (percent === null) { refreshPriceHint('Ingresa el porcentaje para calcular el precio de venta.'); return; }
+      const calculatedSale = Math.ceil((cost * (1 + percent / 100) * 4) - 1e-8) / 4;
+      saleInput.value = calculatedSale.toFixed(2);
+      refreshPriceHint(`Precio de venta calculado: Q${calculatedSale.toFixed(2)} (redondeado hacia arriba a Q0.25).`);
+      return;
+    }
+
+    autoPurchaseCost = true;
+    if (sale === null || sale <= 0 || percent === null) {
+      refreshPriceHint('Para calcular el costo, ingresa el precio de venta y el porcentaje.');
+      return;
+    }
+    const calculatedCost = Math.round((sale / (1 + percent / 100) + Number.EPSILON) * 100) / 100;
+    purchaseInput.value = calculatedCost.toFixed(2);
+    if (calculatedCost > 0) {
+      const effectivePercent = ((sale - calculatedCost) / calculatedCost) * 100;
+      percentInput.value = effectivePercent.toFixed(2).replace(/\.?0+$/, '');
+    }
+    refreshPriceHint(`Costo calculado: Q${calculatedCost.toFixed(2)}. El costo se mantiene editable.`);
   }
-  purchaseInput.addEventListener('input', () => { autoPurchaseCost = (Number(purchaseInput.value) || 0) <= 0; updatePricePreview(); });
-  percentInput.addEventListener('input', updatePricePreview);
-  saleInput.addEventListener('input', updatePricePreview);
-  updatePricePreview();
-  productForm.addEventListener('reset', () => setTimeout(() => { autoPurchaseCost = true; message($('#productMessage'), ''); updatePricePreview(); }, 0));
+  for (const field of [purchaseInput, saleInput, percentInput]) {
+    field.addEventListener('input', () => {
+      pendingPriceField = field;
+      refreshPriceHint('Escribe el valor completo; se calculará al presionar Enter o salir del campo.');
+    });
+    field.addEventListener('blur', () => {
+      if (pendingPriceField === field) commitPriceField(field);
+    });
+  }
+  refreshPriceHint();
+  productForm.addEventListener('reset', () => setTimeout(() => { autoPurchaseCost = true; pendingPriceField = null; message($('#productMessage'), ''); refreshPriceHint(); }, 0));
   productForm.addEventListener('submit', async event => {
     event.preventDefault(); message($('#productMessage'), ''); const form = event.currentTarget, data = new FormData(form), button = form.querySelector('[type=submit]');
     const numeric = name => { const value = data.get(name); return value === '' || value == null ? null : Number(value); };
@@ -263,10 +540,28 @@
     }
     const payload = { codigo: data.get('codigo'), nombre: data.get('nombre'), descripcion: data.get('descripcion') || null, idCategoria: Number(data.get('idCategoria')), precioCompra: numeric('precioCompra') || 0, precioVenta: numeric('precioVenta') || 0, porcentaje: numeric('porcentaje') || 0, calcularCosto: autoPurchaseCost, estado: data.has('estado'), idGrupoReposicion: $('#replenishmentGroup').value ? Number($('#replenishmentGroup').value) : null, cantidadMinima: numeric('cantidadMinima'), cantidadMaxima: numeric('cantidadMaxima'), idGrupoProveedor: $('#supplierGroup').value ? Number($('#supplierGroup').value) : null };
     button.disabled = true; button.textContent = 'Guardando…';
-    try { const result = await request('', { method: 'POST', body: JSON.stringify(payload) }); sessionStorage.removeItem(productDraftKey); message($('#productMessage'), result.mensaje, true); form.reset(); $('#replenishmentGroup').dispatchEvent(new Event('change')); $('#scanButton').focus(); }
+    try {
+      const photo = acceptedProductPhoto;
+      if (photo) {
+        if (photo.size > 5 * 1024 * 1024) throw new Error('La foto no puede superar los 5 MB.');
+        payload.imagenBase64 = await readFileBase64(photo);
+        payload.imagenTipo = photo.type;
+      }
+      const result = await request('', { method: 'POST', body: JSON.stringify(payload) });
+      sessionStorage.removeItem(productDraftKey); message($('#productMessage'), result.mensaje, true); form.reset(); productPhotoPreview.hidden = true; productPhotoControls.hidden = true; productPhotoPreview.removeAttribute('src'); $('#replenishmentGroup').dispatchEvent(new Event('change')); $('#scanButton').focus();
+    }
     catch (error) { if (error.status === 401) { location.reload(); return; } message($('#productMessage'), error.message); }
     finally { button.disabled = false; button.textContent = 'Crear producto'; }
   });
+
+  function readFileBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+      reader.onerror = () => reject(new Error('No se pudo leer la fotografía.'));
+      reader.readAsDataURL(file);
+    });
+  }
 
   Object.entries(managerConfig).forEach(([formId, config]) => {
     const form = $(`#${formId}`); const status = form.parentElement.querySelector('.form-message');

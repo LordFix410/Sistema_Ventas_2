@@ -35,6 +35,7 @@ CapaPresentacion/conexion.txt
 **/appsettings.*.local.json
 DOTNET/publicado/
 DOTNET/logs/
+DOTNET/imagenes/
 
 # Llaves y configuracion local de herramientas
 *.pfx

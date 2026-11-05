@@ -162,7 +162,9 @@ try {
 
     Write-RunLog 'Iniciando la versión recién publicada...'
     $previousEnvironment = $env:ASPNETCORE_ENVIRONMENT
+    $previousProductImagesPath = $env:ProductImages__Path
     $env:ASPNETCORE_ENVIRONMENT = 'Production'
+    $env:ProductImages__Path = Join-Path $PSScriptRoot 'imagenes'
     try {
         $serverProcess = Start-Process -FilePath $dotnetExecutable `
             -ArgumentList @('ImagenPDF.dll', '--urls', "http://0.0.0.0:$port") `
@@ -171,6 +173,7 @@ try {
     }
     finally {
         $env:ASPNETCORE_ENVIRONMENT = $previousEnvironment
+        $env:ProductImages__Path = $previousProductImagesPath
     }
     $startedServer = $true
 

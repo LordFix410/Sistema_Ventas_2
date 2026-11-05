@@ -22,6 +22,7 @@ namespace CapaPresentacion
         private Usuario _Usuario;
         private Cliente _clienteConsumidorFinal;
         private int _productoEnEdicionId;
+        private Producto _productoActualSeleccionado;
         private int _siguienteIdTemporal = -1;
         public frmVentas(Usuario oUsuario = null)
         {
@@ -57,6 +58,7 @@ namespace CapaPresentacion
                 dataGridView1.Rows.Add(new object[]
                 {
                     idTemporal,
+                    null,
                     dialogo.Nombre,
                     dialogo.Precio,
                     dialogo.Cantidad,
@@ -207,6 +209,7 @@ namespace CapaPresentacion
                 return;
             }
 
+            _productoActualSeleccionado = producto;
             txtIdProducto.Text = producto.IdProducto.ToString();
             txtCodigoProducto.Text = producto.Codigo;
             txtProducto.Text = producto.Nombre;
@@ -281,9 +284,16 @@ namespace CapaPresentacion
         {
             dataGridView1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            if (!dataGridView1.Columns.Contains("Foto"))
+                dataGridView1.Columns.Insert(1, new DataGridViewImageColumn
+                {
+                    Name = "Foto", HeaderText = "FOTO", ImageLayout = DataGridViewImageCellLayout.Zoom,
+                    Width = 68, MinimumWidth = 60, ReadOnly = true, SortMode = DataGridViewColumnSortMode.NotSortable
+                });
             dataGridView1.RowHeadersVisible = false;
             dataGridView1.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dataGridView1.RowTemplate.Height = 48;
+            dataGridView1.RowTemplate.Height = 68;
             dataGridView1.ColumnHeadersHeight = 44;
             dataGridView1.DefaultCellStyle.Padding = new Padding(4, 0, 4, 0);
             dataGridView1.DefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 9F);
@@ -291,6 +301,8 @@ namespace CapaPresentacion
 
             IdProducto.Visible = false;
             Producto.FillWeight = 190;
+            dataGridView1.Columns["Foto"].FillWeight = 45;
+            dataGridView1.Columns["Foto"].MinimumWidth = 64;
             Precio.FillWeight = 75;
             Cantidad.FillWeight = 75;
             SubTotal.FillWeight = 85;
@@ -313,6 +325,13 @@ namespace CapaPresentacion
             txtCambio.ReadOnly = true;
             groupBox3.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             btnAgregar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            dataGridView1.CellClick += (s, e) =>
+            {
+                if (e.RowIndex < 0 || e.ColumnIndex < 0 || dataGridView1.Columns[e.ColumnIndex].Name != "Foto") return;
+                Producto p = dataGridView1.Rows[e.RowIndex].Tag as Producto;
+                if (p != null && !string.IsNullOrWhiteSpace(p.ImagenRuta))
+                    GestorImagenProducto.MostrarVistaPrevia(this, p.ImagenRuta, p.Nombre);
+            };
         }
 
         private void btnBuscarProveedor_Click(object sender, EventArgs e)
@@ -341,6 +360,7 @@ namespace CapaPresentacion
 
                 if (result == DialogResult.OK)
                 {
+                    _productoActualSeleccionado = modal._Producto;
                     txtIdProducto.Text = modal._Producto.IdProducto.ToString();
                     txtCodigoProducto.Text = modal._Producto.Codigo;
                     txtProducto.Text = modal._Producto.Nombre;
@@ -391,6 +411,8 @@ namespace CapaPresentacion
                 fila.Cells["Precio"].Value = precioCompra;
                 fila.Cells["Cantidad"].Value = txtCantidad.Value.ToString();
                 fila.Cells["SubTotal"].Value = (txtCantidad.Value * precioCompra).ToString("0.00");
+                fila.Cells["Foto"].Value = GestorImagenProducto.CargarMiniatura(_productoActualSeleccionado?.ImagenRuta, 52, 52);
+                fila.Tag = _productoActualSeleccionado;
                 calculatTotal();
                 limpiarProducto();
                 _productoEnEdicionId = 0;
@@ -398,14 +420,17 @@ namespace CapaPresentacion
             }
             else if (indiceProductoExistente < 0 && idProductoActual > 0)
             {
-                   dataGridView1.Rows.Add(new object[]
+                   int indiceFila = dataGridView1.Rows.Add(new object[]
                    {
                        txtIdProducto.Text.ToString(),
+                        null,
                         txtProducto.Text,
                         precioCompra,
                         txtCantidad.Value.ToString(),
                         (txtCantidad.Value*precioCompra).ToString("0.00")
                    });
+                    dataGridView1.Rows[indiceFila].Cells["Foto"].Value = GestorImagenProducto.CargarMiniatura(_productoActualSeleccionado?.ImagenRuta, 52, 52);
+                    dataGridView1.Rows[indiceFila].Tag = _productoActualSeleccionado;
 
                     calculatTotal();
                     limpiarProducto();
@@ -425,6 +450,7 @@ namespace CapaPresentacion
             txtPrecioCompra.Text = "";
             txtStock.Text = "";
             txtCantidad.Value = 1;
+            _productoActualSeleccionado = null;
         }
         private void calculatTotal()
         {
@@ -446,7 +472,7 @@ namespace CapaPresentacion
         private void dataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0 || e.RowIndex >= dataGridView1.Rows.Count ||
-                (e.ColumnIndex >= 0 && dataGridView1.Columns[e.ColumnIndex].Name == "btnEliminar"))
+                (e.ColumnIndex >= 0 && (dataGridView1.Columns[e.ColumnIndex].Name == "btnEliminar" || dataGridView1.Columns[e.ColumnIndex].Name == "Foto")))
                 return;
 
             DataGridViewRow filaVenta = dataGridView1.Rows[e.RowIndex];
@@ -474,6 +500,7 @@ namespace CapaPresentacion
             }
 
             txtIdProducto.Text = idProducto.ToString();
+            _productoActualSeleccionado = producto;
             txtCodigoProducto.Text = producto == null ? "TEMPORAL" : producto.Codigo;
             txtProducto.Text = producto == null
                 ? Convert.ToString(filaVenta.Cells["Producto"].Value)
