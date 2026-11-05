@@ -25,6 +25,8 @@ TestResults/
 # Cadena de conexión local (contiene credenciales)
 CapaPresentacion/conexion.txt
 **/conexion.txt
+# Token privado usado para publicar la URL del túnel de Cloudflare.
+DOTNET/cloudflare-token.txt
 **/cloudflare-token*
 **/cloudflare-url.txt
 **/cloudflare-output.txt
