@@ -107,10 +107,11 @@ namespace CapaPresentacion
                 formulario.TopLevel = false;
                 formulario.FormBorderStyle = FormBorderStyle.None;
                 formulario.Dock = DockStyle.Fill;
-                formulario.BackColor = Color.SteelBlue;
+                formulario.BackColor = Color.FromArgb(242, 245, 248);
                 contenedor.Controls.Add(formulario);
             }
             formulario.Show();
+            CapaPresentacion.Utilidades.ExperienciaUsuario.AplicarTemaVisual(formulario);
             formulario.BringToFront();
         }
         private void menuUsuarios_Click(object sender, EventArgs e)

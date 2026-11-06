@@ -144,6 +144,9 @@
   const productPhoto = $('#productPhoto');
   const productPhotoPreview = $('#productPhotoPreview');
   const productPhotoControls = $('#productPhotoControls');
+  const productPhotoStatus = $('#productPhotoStatus');
+  const startProductBackgroundButton = $('#startProductBackgroundRemoval');
+  const reviewProductPhotoButton = $('#reviewProductPhoto');
   const productPhotoDialog = $('#productPhotoEditorDialog');
   const productPhotoCanvas = $('#productPhotoCanvas');
   const productPhotoContext = productPhotoCanvas.getContext('2d');
@@ -151,7 +154,6 @@
   const productPhotoEditorMessage = $('#productPhotoEditorMessage');
   const productPhotoProcessing = $('#productPhotoProcessing');
   const productPhotoProcessingMessage = $('#productPhotoProcessingMessage');
-  const removeProductBackgroundButton = $('#removeProductBackground');
   const compareProductBackgroundButton = $('#compareProductBackground');
   const closeProductPhotoEditorButton = $('#closeProductPhotoEditor');
   const cancelProductPhotoButton = $('#cancelProductPhoto');
@@ -165,10 +167,14 @@
   let productPhotoSourceName = 'foto-producto';
   let productPhotoZoomValue = 1;
   let productPhotoPanX = 0, productPhotoPanY = 0;
-  let productPhotoPointer = null;
+  let productPhotoRotation = 0;
+  const productPhotoPointers = new Map();
+  let productPhotoGesture = null;
   let productPhotoEditGeneration = 0;
   let productPhotoProcessingActive = false;
   let productPhotoPreviewUrl = '';
+  let productPhotoNeedsReview = false;
+  let productPhotoEditorSnapshot = null;
   const minimumInput = $('input[name="cantidadMinima"]', productForm);
   const maximumInput = $('input[name="cantidadMaxima"]', productForm);
   const submitProduct = productForm.querySelector('[type="submit"]');
@@ -209,11 +215,25 @@
   }
   function displayAcceptedProductPhoto(file) {
     acceptedProductPhoto = file;
+    setProductPhotoPreview(file);
+  }
+  function setProductPhotoPreview(source) {
     if (productPhotoPreviewUrl) URL.revokeObjectURL(productPhotoPreviewUrl);
-    productPhotoPreviewUrl = file ? URL.createObjectURL(file) : '';
+    productPhotoPreviewUrl = source ? URL.createObjectURL(source) : '';
     productPhotoPreview.src = productPhotoPreviewUrl;
-    productPhotoPreview.hidden = !file;
-    productPhotoControls.hidden = !file;
+    productPhotoPreview.hidden = !source;
+    productPhotoControls.hidden = !source;
+    startProductBackgroundButton.disabled = !originalProductPhoto || productPhotoProcessingActive || !!processedProductPhoto;
+    reviewProductPhotoButton.disabled = !originalProductPhoto || productPhotoProcessingActive;
+  }
+  async function setPreviewFromDrawable(drawable, generation) {
+    const canvas = document.createElement('canvas');
+    canvas.width = drawableWidth(drawable);
+    canvas.height = drawableHeight(drawable);
+    canvas.getContext('2d').drawImage(drawable, 0, 0);
+    const blob = await new Promise((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('No se pudo preparar la vista previa.')), 'image/png'));
+    if (generation !== productPhotoEditGeneration) return;
+    setProductPhotoPreview(blob);
   }
   const drawableWidth = image => image?.naturalWidth || image?.width || 0;
   const drawableHeight = image => image?.naturalHeight || image?.height || 0;
@@ -227,7 +247,11 @@
     const scale = Math.max(side / width, side / height) * productPhotoZoomValue;
     const drawWidth = width * scale, drawHeight = height * scale;
     productPhotoContext.clearRect(0, 0, side, side);
-    productPhotoContext.drawImage(source, (side - drawWidth) / 2 + productPhotoPanX, (side - drawHeight) / 2 + productPhotoPanY, drawWidth, drawHeight);
+    productPhotoContext.save();
+    productPhotoContext.translate(side / 2 + productPhotoPanX, side / 2 + productPhotoPanY);
+    productPhotoContext.rotate(productPhotoRotation);
+    productPhotoContext.drawImage(source, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+    productPhotoContext.restore();
   }
   function setProductPhotoEditorMessage(text, success = false) {
     productPhotoEditorMessage.textContent = text || '';
@@ -237,37 +261,58 @@
     productPhotoProcessingActive = active;
     productPhotoProcessing.hidden = !active;
     productPhotoProcessingMessage.textContent = text;
-    closeProductPhotoEditorButton.disabled = active;
-    cancelProductPhotoButton.disabled = active;
-    acceptProductPhotoButton.disabled = active || !originalProductPhoto;
-    rotateProductPhotoButton.disabled = active || !originalProductPhoto;
-    compareProductBackgroundButton.disabled = active || !processedProductPhoto;
-    removeProductBackgroundButton.disabled = active || !originalProductPhoto || !!processedProductPhoto;
+    startProductBackgroundButton.disabled = active || !originalProductPhoto || !!processedProductPhoto;
+    reviewProductPhotoButton.disabled = active || !originalProductPhoto;
   }
   function clearProductPhotoEditor() {
     productPhotoEditGeneration++;
+    productPhotoProcessingActive = false;
+    productPhotoProcessing.hidden = true;
+    productPhotoEditorSnapshot = null;
     originalProductPhoto = null;
     processedProductPhoto = null;
     showProcessedProductPhoto = false;
-    productPhotoPointer = null;
+    productPhotoPointers.clear();
+    productPhotoGesture = null;
   }
   function cancelProductPhotoEdit() {
-    if (productPhotoProcessingActive) return;
-    clearProductPhotoEditor();
+    if (productPhotoEditorSnapshot) {
+      ({originalProductPhoto, processedProductPhoto, showProcessedProductPhoto, productPhotoZoomValue, productPhotoPanX, productPhotoPanY, productPhotoRotation} = productPhotoEditorSnapshot);
+      productPhotoZoom.value = String(productPhotoZoomValue);
+      productPhotoEditorSnapshot = null;
+      compareProductBackgroundButton.hidden = !processedProductPhoto;
+      drawProductPhotoEditor();
+    }
     if (productPhotoDialog.open) productPhotoDialog.close();
   }
-  function openProductPhotoEditor(file) {
-    clearProductPhotoEditor();
-    productPhotoMime = file.type;
-    productPhotoSourceName = file.name.replace(/\.[^.]+$/, '') || 'foto-producto';
+  function openProductPhotoEditor() {
+    if (!originalProductPhoto || productPhotoProcessingActive) return;
+    productPhotoEditorSnapshot = {originalProductPhoto, processedProductPhoto, showProcessedProductPhoto, productPhotoZoomValue, productPhotoPanX, productPhotoPanY, productPhotoRotation};
     productPhotoZoomValue = 1;
     productPhotoPanX = productPhotoPanY = 0;
     productPhotoZoom.value = '1';
-    removeProductBackgroundButton.disabled = true;
+    compareProductBackgroundButton.hidden = !processedProductPhoto;
+    compareProductBackgroundButton.textContent = showProcessedProductPhoto ? 'Ver original' : 'Ver fondo quitado';
+    setProductPhotoEditorMessage('Arrastrá la foto para ajustar su posición. Podés girarla y comparar el fondo.');
+    drawProductPhotoEditor();
+    if (!productPhotoDialog.open) productPhotoDialog.showModal();
+  }
+  function loadProductPhoto(file) {
+    clearProductPhotoEditor();
+    productPhotoMime = file.type;
+    productPhotoSourceName = file.name.replace(/\.[^.]+$/, '') || 'foto-producto';
+    productPhotoNeedsReview = false;
+    productPhotoZoomValue = 1;
+    productPhotoPanX = productPhotoPanY = 0;
+    productPhotoRotation = 0;
+    productPhotoZoom.value = '1';
     compareProductBackgroundButton.hidden = true;
     compareProductBackgroundButton.textContent = 'Ver original';
-    setProductPhotoEditorMessage('Cargando foto…');
-    if (!productPhotoDialog.open) productPhotoDialog.showModal();
+    if (productPhotoDialog.open) productPhotoDialog.close();
+    acceptedProductPhoto = file;
+    setProductPhotoPreview(file);
+    productPhotoStatus.textContent = 'Foto lista. Ahora podés escanear el código y completar los datos.';
+    productPhotoStatus.classList.remove('success');
     const generation = productPhotoEditGeneration;
     const url = URL.createObjectURL(file);
     const image = new Image();
@@ -275,8 +320,10 @@
       URL.revokeObjectURL(url);
       if (generation !== productPhotoEditGeneration) return;
       originalProductPhoto = image;
-      removeProductBackgroundButton.disabled = false;
-      setProductPhotoEditorMessage('Arrastrá la foto para ajustar su posición. Podés girarla o quitar el fondo.');
+      setProductPhotoProcessing(false);
+      productPhotoStatus.textContent = 'Foto cargada. Si querés, quita el fondo ahora; podés seguir llenando el formulario mientras se procesa.';
+      startProductBackgroundButton.disabled = false;
+      reviewProductPhotoButton.disabled = false;
       drawProductPhotoEditor();
     };
     image.onerror = () => {
@@ -286,30 +333,33 @@
     image.src = url;
   }
 
-  removeProductBackgroundButton.addEventListener('click', async () => {
+  startProductBackgroundButton.addEventListener('click', async () => {
     if (!originalProductPhoto || processedProductPhoto) return;
     const generation = productPhotoEditGeneration;
-    removeProductBackgroundButton.disabled = true;
+    productPhotoStatus.textContent = 'Quitando el fondo en segundo plano. Podés seguir completando el producto.';
+    productPhotoStatus.classList.remove('success');
     setProductPhotoProcessing(true, 'Iniciando el modelo de recorte…');
-    setProductPhotoEditorMessage('El recorte está en marcha. La primera vez puede tardar un poco mientras se carga el modelo.');
     try {
-      const {removeProductBackground} = await import('./background-removal.js');
+      const {removeProductBackground} = await import('./background-removal.js?v=2');
       const cutout = await removeProductBackground(originalProductPhoto, text => {
         if (generation === productPhotoEditGeneration) productPhotoProcessingMessage.textContent = text;
       });
       if (generation !== productPhotoEditGeneration) return;
       processedProductPhoto = cutout;
       showProcessedProductPhoto = true;
+      productPhotoNeedsReview = true;
       compareProductBackgroundButton.hidden = false;
       compareProductBackgroundButton.textContent = 'Ver original';
-      removeProductBackgroundButton.textContent = 'Fondo quitado';
-      removeProductBackgroundButton.disabled = true;
-      setProductPhotoEditorMessage('Fondo quitado. Podés comparar con el original, girar y aceptar.', true);
+      startProductBackgroundButton.textContent = 'Fondo quitado';
+      productPhotoStatus.textContent = 'Fondo quitado. Cuando termines los datos, toca “Revisar y ajustar” para centrar, girar y aceptar la foto.';
+      productPhotoStatus.classList.add('success');
+      reviewProductPhotoButton.disabled = false;
+      await setPreviewFromDrawable(processedProductPhoto, generation);
       drawProductPhotoEditor();
     } catch (error) {
       if (generation === productPhotoEditGeneration) {
-        removeProductBackgroundButton.disabled = false;
-        setProductPhotoEditorMessage(error.message || 'No se pudo quitar el fondo. Revisá tu conexión e intentá de nuevo.');
+        productPhotoStatus.textContent = error.message || 'No se pudo quitar el fondo. Revisá tu conexión e intentá de nuevo.';
+        productPhotoStatus.classList.remove('success');
       }
     } finally {
       if (generation === productPhotoEditGeneration) setProductPhotoProcessing(false);
@@ -322,45 +372,68 @@
     setProductPhotoEditorMessage(showProcessedProductPhoto ? 'Vista sin fondo. El original sigue guardado para comparar.' : 'Vista original. El recorte sin fondo se conserva.', true);
     drawProductPhotoEditor();
   });
-  function rotateProductDrawable(drawable) {
-    const width = drawableWidth(drawable), height = drawableHeight(drawable);
-    const rotated = document.createElement('canvas');
-    rotated.width = height;
-    rotated.height = width;
-    const context = rotated.getContext('2d');
-    context.translate(height / 2, width / 2);
-    context.rotate(Math.PI / 2);
-    context.drawImage(drawable, -width / 2, -height / 2, width, height);
-    return rotated;
-  }
-  $('#rotateProductPhoto').addEventListener('click', () => {
+  rotateProductPhotoButton.addEventListener('click', () => {
     if (!originalProductPhoto) return;
-    originalProductPhoto = rotateProductDrawable(originalProductPhoto);
-    if (processedProductPhoto) processedProductPhoto = rotateProductDrawable(processedProductPhoto);
-    productPhotoPanX = productPhotoPanY = 0;
-    setProductPhotoEditorMessage('Foto girada 90°. El recorte y el original se mantienen para comparar.', true);
+    productPhotoRotation += Math.PI / 2;
+    setProductPhotoEditorMessage('Foto girada 90°. También podés girarla libremente con dos dedos.', true);
     drawProductPhotoEditor();
   });
   productPhotoZoom.addEventListener('input', () => {
     productPhotoZoomValue = Number(productPhotoZoom.value) || 1;
     drawProductPhotoEditor();
   });
+  const pointerPair = () => [...productPhotoPointers.values()].slice(0, 2);
+  function beginProductPhotoGesture() {
+    const [first, second] = pointerPair();
+    if (!first || !second) { productPhotoGesture = null; return; }
+    productPhotoGesture = {
+      distance: Math.hypot(second.x - first.x, second.y - first.y),
+      angle: Math.atan2(second.y - first.y, second.x - first.x),
+      centerX: (first.x + second.x) / 2,
+      centerY: (first.y + second.y) / 2,
+      zoom: productPhotoZoomValue,
+      rotation: productPhotoRotation,
+      panX: productPhotoPanX,
+      panY: productPhotoPanY
+    };
+  }
   productPhotoCanvas.addEventListener('pointerdown', event => {
     if (!originalProductPhoto) return;
-    productPhotoPointer = {id: event.pointerId, x: event.clientX, y: event.clientY};
     productPhotoCanvas.setPointerCapture(event.pointerId);
+    productPhotoPointers.set(event.pointerId, {x: event.clientX, y: event.clientY});
+    if (productPhotoPointers.size >= 2) beginProductPhotoGesture();
   });
   productPhotoCanvas.addEventListener('pointermove', event => {
-    if (!productPhotoPointer || productPhotoPointer.id !== event.pointerId || !productPhotoCanvas.clientWidth) return;
+    const previous = productPhotoPointers.get(event.pointerId);
+    if (!previous || !productPhotoCanvas.clientWidth) return;
+    productPhotoPointers.set(event.pointerId, {x: event.clientX, y: event.clientY});
     const factor = productPhotoCanvas.width / productPhotoCanvas.clientWidth;
-    productPhotoPanX += (event.clientX - productPhotoPointer.x) * factor;
-    productPhotoPanY += (event.clientY - productPhotoPointer.y) * factor;
-    productPhotoPointer.x = event.clientX;
-    productPhotoPointer.y = event.clientY;
+    if (productPhotoPointers.size >= 2 && productPhotoGesture) {
+      const [first, second] = pointerPair();
+      const distance = Math.hypot(second.x - first.x, second.y - first.y);
+      const angle = Math.atan2(second.y - first.y, second.x - first.x);
+      const centerX = (first.x + second.x) / 2, centerY = (first.y + second.y) / 2;
+      let angleDelta = angle - productPhotoGesture.angle;
+      while (angleDelta > Math.PI) angleDelta -= Math.PI * 2;
+      while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
+      productPhotoZoomValue = Math.max(1, Math.min(3, productPhotoGesture.zoom * distance / Math.max(1, productPhotoGesture.distance)));
+      productPhotoZoom.value = String(productPhotoZoomValue);
+      productPhotoRotation = productPhotoGesture.rotation + angleDelta;
+      productPhotoPanX = productPhotoGesture.panX + (centerX - productPhotoGesture.centerX) * factor;
+      productPhotoPanY = productPhotoGesture.panY + (centerY - productPhotoGesture.centerY) * factor;
+    } else {
+      productPhotoPanX += (event.clientX - previous.x) * factor;
+      productPhotoPanY += (event.clientY - previous.y) * factor;
+    }
     drawProductPhotoEditor();
   });
-  productPhotoCanvas.addEventListener('pointerup', () => { productPhotoPointer = null; });
-  productPhotoCanvas.addEventListener('pointercancel', () => { productPhotoPointer = null; });
+  function endProductPhotoGesture(event) {
+    productPhotoPointers.delete(event.pointerId);
+    productPhotoGesture = null;
+    if (productPhotoPointers.size >= 2) beginProductPhotoGesture();
+  }
+  productPhotoCanvas.addEventListener('pointerup', endProductPhotoGesture);
+  productPhotoCanvas.addEventListener('pointercancel', endProductPhotoGesture);
   async function acceptProductPhotoEdit() {
     if (!originalProductPhoto) return;
     const generation = productPhotoEditGeneration;
@@ -371,6 +444,7 @@
     acceptButton.textContent = 'Preparando…';
     try {
       let blob = null;
+      let acceptedCanvas = null;
       for (let side = 720; side >= 360; side -= 90) {
         const output = document.createElement('canvas');
         output.width = output.height = side;
@@ -378,6 +452,7 @@
         if (outputType === 'image/jpeg') { context.fillStyle = '#fff'; context.fillRect(0, 0, side, side); }
         context.drawImage(productPhotoCanvas, 0, 0, side, side);
         blob = await new Promise((resolve, reject) => output.toBlob(value => value ? resolve(value) : reject(new Error('No se pudo preparar la foto.')), outputType, .9));
+        acceptedCanvas = output;
         if (blob.size <= 5 * 1024 * 1024) break;
       }
       if (!blob || blob.size > 5 * 1024 * 1024) throw new Error('La foto editada supera 5 MB. Reduce el tamaño del archivo original.');
@@ -385,7 +460,20 @@
       const extension = outputType === 'image/png' ? 'png' : 'jpg';
       const filename = `${productPhotoSourceName}.${extension}`.replace(/[^\w.-]/g, '_');
       displayAcceptedProductPhoto(new File([blob], filename, {type: outputType}));
-      cancelProductPhotoEdit();
+      productPhotoMime = outputType;
+      originalProductPhoto = acceptedCanvas;
+      processedProductPhoto = null;
+      showProcessedProductPhoto = false;
+      productPhotoZoomValue = 1;
+      productPhotoPanX = productPhotoPanY = 0;
+      productPhotoRotation = 0;
+      productPhotoNeedsReview = false;
+      productPhotoEditorSnapshot = null;
+      compareProductBackgroundButton.hidden = true;
+      startProductBackgroundButton.textContent = 'Quitar fondo';
+      productPhotoStatus.textContent = 'Foto revisada y lista. Se guardará junto con el producto.';
+      productPhotoStatus.classList.add('success');
+      productPhotoDialog.close();
       message($('#productMessage'), 'Foto preparada. Se guardará junto con el producto.', true);
     } catch (error) {
       setProductPhotoEditorMessage(error.message || 'No se pudo aceptar esta foto.');
@@ -395,20 +483,30 @@
     }
   }
   $('#acceptProductPhoto').addEventListener('click', acceptProductPhotoEdit);
+  reviewProductPhotoButton.addEventListener('click', openProductPhotoEditor);
   $('#cancelProductPhoto').addEventListener('click', cancelProductPhotoEdit);
   $('#closeProductPhotoEditor').addEventListener('click', cancelProductPhotoEdit);
   productPhotoDialog.addEventListener('cancel', event => {
     event.preventDefault();
-    if (!productPhotoProcessingActive) cancelProductPhotoEdit();
+    cancelProductPhotoEdit();
   });
   productForm.addEventListener('input', persistProductDraft);
   productForm.addEventListener('change', persistProductDraft);
   productForm.addEventListener('reset', () => setTimeout(() => {
     sessionStorage.removeItem(productDraftKey);
     cancelProductPhotoEdit();
+    clearProductPhotoEditor();
     if (productPhotoPreviewUrl) URL.revokeObjectURL(productPhotoPreviewUrl);
     productPhotoPreviewUrl = '';
     acceptedProductPhoto = null;
+    productPhotoNeedsReview = false;
+    processedProductPhoto = null;
+    originalProductPhoto = null;
+    showProcessedProductPhoto = false;
+    productPhotoProcessingActive = false;
+    productPhotoProcessing.hidden = true;
+    startProductBackgroundButton.textContent = 'Quitar fondo';
+    productPhotoStatus.textContent = '';
     productPhoto.value = '';
     productPhotoPreview.hidden = true;
     productPhotoPreview.removeAttribute('src');
@@ -422,10 +520,16 @@
       message($('#productMessage'), 'Selecciona una foto compatible de hasta 15 MB.');
       return;
     }
-    openProductPhotoEditor(file);
+    loadProductPhoto(file);
   });
   $('#removeProductPhoto').addEventListener('click', () => {
+    clearProductPhotoEditor();
     displayAcceptedProductPhoto(null);
+    productPhotoNeedsReview = false;
+    productPhotoProcessingActive = false;
+    productPhotoProcessing.hidden = true;
+    startProductBackgroundButton.textContent = 'Quitar fondo';
+    productPhotoStatus.textContent = '';
     persistProductDraft();
   });
   window.addEventListener('beforeunload', event => {
@@ -532,6 +636,16 @@
   productForm.addEventListener('reset', () => setTimeout(() => { autoPurchaseCost = true; pendingPriceField = null; message($('#productMessage'), ''); refreshPriceHint(); }, 0));
   productForm.addEventListener('submit', async event => {
     event.preventDefault(); message($('#productMessage'), ''); const form = event.currentTarget, data = new FormData(form), button = form.querySelector('[type=submit]');
+    if (productPhotoProcessingActive) {
+      message($('#productMessage'), 'La foto todavía se está procesando. Puedes seguir llenando el producto y guardarlo cuando termine.');
+      productPhotoStatus.scrollIntoView({behavior: 'smooth', block: 'center'});
+      return;
+    }
+    if (productPhotoNeedsReview) {
+      message($('#productMessage'), 'El recorte está listo. Revisa y acepta la foto antes de guardar el producto.');
+      reviewProductPhotoButton.focus();
+      return;
+    }
     const numeric = name => { const value = data.get(name); return value === '' || value == null ? null : Number(value); };
     if (!$('#replenishmentGroup').value) {
       const minimum = numeric('cantidadMinima'), maximum = numeric('cantidadMaxima');

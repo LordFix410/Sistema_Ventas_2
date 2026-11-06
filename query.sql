@@ -2,10 +2,10 @@
     INSTALACIÓN LIMPIA: ejecutar este único archivo en SQL Server Management Studio.
     Crea DBSISTEMA_VENTA, estructura, procedimientos y datos iniciales.
     No lo ejecutes sobre una base ya creada ni contiene DROP DATABASE.
-    Incluye las tablas de obligaciones personales y permisos de Finanzas.
+    Incluye las tablas de obligaciones personales, cierres temporales web y permisos de Finanzas.
     Al final crea o actualiza el login de aplicación ventas_app2.
     Ejecutar con una cuenta administradora del servidor SQL.
-    Para una base ya existente ejecuta migracion_finanzas.sql y migracion_reposicion_cotizaciones.sql según corresponda.
+    Para una base ya existente ejecuta migracion_finanzas_temporal.sql y las migraciones requeridas por tu versión.
 */
 
 create database DBSISTEMA_VENTA
@@ -342,6 +342,36 @@ CREATE TABLE FIN_DEPOSITO(
     Referencia varchar(100) null,
     CONSTRAINT CK_FIN_DEPOSITO_Montos CHECK(Capital >= 0 AND Ganancia >= 0 AND Capital + Ganancia > 0)
 )
+go
+
+-- Cierres web temporales mientras termina de cargarse el inventario.
+-- El reparto 61/39 se registra como saldo asignado, sin crear ventas ni productos.
+CREATE TABLE FIN_CIERRE_TEMPORAL(
+    IdCierreTemporal int primary key identity(1,1),
+    FechaCierre datetime2(0) not null,
+    Ventas decimal(12,2) not null,
+    CapitalAsignado decimal(12,2) not null,
+    PersonalAsignado decimal(12,2) not null,
+    IdUsuario int null references USUARIO(IdUsuario),
+    FechaRegistro datetime2(0) not null constraint DF_FIN_CIERRE_TEMPORAL_FechaRegistro default(sysdatetime()),
+    constraint CK_FIN_CIERRE_TEMPORAL_Montos check(Ventas >= 0 AND CapitalAsignado >= 0 AND PersonalAsignado >= 0 AND CapitalAsignado + PersonalAsignado = Ventas)
+)
+go
+
+-- Depósitos reales con comprobante y usuario de la sesión web autenticada.
+CREATE TABLE FIN_DEPOSITO_TEMPORAL(
+    IdDepositoTemporal int primary key identity(1,1),
+    Cuenta varchar(15) not null,
+    Monto decimal(12,2) not null,
+    Fecha date not null,
+    Comprobante varchar(100) not null,
+    IdUsuario int null references USUARIO(IdUsuario),
+    FechaRegistro datetime2(0) not null constraint DF_FIN_DEPOSITO_TEMPORAL_FechaRegistro default(sysdatetime()),
+    constraint CK_FIN_DEPOSITO_TEMPORAL_Cuenta check(Cuenta in ('Capital','Personal')),
+    constraint CK_FIN_DEPOSITO_TEMPORAL_Monto check(Monto > 0)
+)
+go
+CREATE INDEX IX_FIN_DEPOSITO_TEMPORAL_CuentaFecha ON FIN_DEPOSITO_TEMPORAL(Cuenta,Fecha)
 go
 
 CREATE INDEX IX_FIN_CIERRE_Fecha ON FIN_CIERRE_CAJA(FechaCierre)

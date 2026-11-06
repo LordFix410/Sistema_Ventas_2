@@ -3,6 +3,20 @@ let birefnetPromise = null;
 const imageWidth = image => image.naturalWidth || image.width;
 const imageHeight = image => image.naturalHeight || image.height;
 
+// Las cámaras actuales producen fotos de muchos megapíxeles. La máscara del
+// modelo trabaja a 512 px y el catálogo muestra una miniatura, así que limitar
+// la imagen de trabajo reduce memoria y el tiempo de composición en el teléfono.
+function prepareImageForSegmentation(image, maxSide = 1600) {
+  const width = imageWidth(image), height = imageHeight(image);
+  const scale = Math.min(1, maxSide / Math.max(width, height));
+  if (scale === 1) return image;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
+  canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
 async function getBiRefNet() {
   if (!birefnetPromise) {
     birefnetPromise = (async () => {
@@ -145,16 +159,17 @@ async function getPersonSegmenter() {
 
 
 export async function removeProductBackground(image, onProgress = () => {}) {
+  const workingImage = prepareImageForSegmentation(image);
   try {
     onProgress('Preparando el recorte de alta precisión…');
-    return await segmentWithBiRefNet(image);
+    return await segmentWithBiRefNet(workingImage);
   } catch (error) {
     onProgress('Usando el modelo compatible para separar la persona…');
   }
   const segmenter = await getPersonSegmenter();
   onProgress('Afinando el contorno…');
   await new Promise(resolve => requestAnimationFrame(resolve));
-    const result = segmenter.segment(image);
+    const result = segmenter.segment(workingImage);
     const masks = result.confidenceMasks || [];
     let maskWidth;
     let maskHeight;
@@ -262,10 +277,10 @@ export async function removeProductBackground(image, onProgress = () => {}) {
     maskContext.putImageData(maskPixels, 0, 0);
 
     const subject = document.createElement('canvas');
-    subject.width = imageWidth(image);
-    subject.height = imageHeight(image);
+    subject.width = imageWidth(workingImage);
+    subject.height = imageHeight(workingImage);
     const subjectContext = subject.getContext('2d');
-    subjectContext.drawImage(image, 0, 0);
+    subjectContext.drawImage(workingImage, 0, 0);
     subjectContext.globalCompositeOperation = 'destination-in';
     subjectContext.drawImage(maskCanvas, 0, 0, subject.width, subject.height);
     subjectContext.globalCompositeOperation = 'source-over';

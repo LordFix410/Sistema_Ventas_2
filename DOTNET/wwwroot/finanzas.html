@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d2f47">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Finanzas · Librería Digital</title>
+  <link rel="icon" href="/favicon.ico?v=1" type="image/x-icon">
+  <link rel="apple-touch-icon" href="/favicon.png?v=1">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="css/app.css?v=19">
+  <link rel="stylesheet" href="css/finanzas.css?v=1">
+  <script src="/js/pwa.js?v=1" defer></script>
+  <script src="js/finanzas.js?v=1" defer></script>
+</head>
+<body class="finance-page">
+  <nav class="site-nav"><a class="brand" href="index.html">Librería Digital</a><div class="nav-links"><a href="index.html">Inicio</a><a class="active" href="finanzas.html">Finanzas</a></div></nav>
+  <main class="finance-wrap">
+    <section id="loginPanel" class="finance-card login-panel">
+      <p class="eyebrow">ACCESO PROTEGIDO</p>
+      <h1>Control financiero</h1>
+      <p class="muted">Inicia sesión con tu contraseña. El sistema guardará quién registra cada cierre, depósito y salida.</p>
+      <form id="loginForm" class="finance-form"><label>Contraseña<input name="clave" type="password" autocomplete="current-password" required></label><button class="button button-primary" type="submit">Entrar</button></form>
+      <p id="loginMessage" class="form-message" role="status"></p>
+    </section>
+
+    <section id="financeApp" hidden>
+      <header class="finance-heading"><div><p class="eyebrow">CIERRE TEMPORAL</p><h1>Resumen de cuentas</h1><p id="monthLabel" class="muted"></p></div><div class="signed-in"><span id="responsibleName"></span><button id="logoutButton" class="button button-quiet" type="button">Salir</button></div></header>
+      <p id="pageMessage" class="form-message" role="status"></p>
+
+      <section class="account-grid" aria-label="Saldos acumulados">
+        <article class="account-card capital-card"><div class="account-title"><span class="account-icon">▣</span><h2>Capital</h2></div><strong id="capitalBalance" class="account-amount">Q 0.00</strong><p>Depositado <b id="capitalDeposited">Q 0.00</b></p><div class="account-track"><span id="capitalProgress"></span></div><small id="capitalHint">Saldo acumulado después de salidas de empresa</small></article>
+        <article class="account-card personal-card"><div class="account-title"><span class="account-icon">◉</span><h2>Personal</h2></div><strong id="personalBalance" class="account-amount">Q 0.00</strong><p>Depositado <b id="personalDeposited">Q 0.00</b></p><div class="account-track"><span id="personalProgress"></span></div><small id="personalProgressText">Avance de obligaciones personales del mes</small></article>
+      </section>
+
+      <section class="finance-card obligation-card">
+        <div class="section-heading"><div><p class="eyebrow">COMPROMISOS DEL MES</p><h2>Gastos personales</h2></div><span class="month-chip" id="monthChip"></span></div>
+        <div class="obligation-summary"><div><small>Total previsto</small><strong id="obligationTotal">Q 0.00</strong></div><div><small>Pagado</small><strong id="obligationPaid">Q 0.00</strong></div><div><small>Pendiente</small><strong id="obligationPending">Q 0.00</strong></div></div>
+        <p class="next-due">Próximo vencimiento: <b id="nextExpense">Sin pendientes</b></p>
+      </section>
+
+      <section class="finance-card close-card">
+        <div class="section-heading"><div><p class="step-tag">01</p><h2>Cierre del día</h2></div><span class="quiet-tag">No requiere inventario</span></div>
+        <form id="closingForm" class="finance-form">
+          <label>Fecha y hora del cierre<input id="closingDate" name="fecha" type="datetime-local" required></label>
+          <label>Total vendido desde el cierre anterior<input id="salesAmount" name="ventas" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></label>
+          <p class="helper-text">Puedes guardar más de un cierre al día. En cada uno escribe solo lo vendido desde el cierre anterior.</p>
+          <div class="allocation-preview"><div><span>A capital · 61%</span><strong id="capitalPreview">Q 0.00</strong></div><div><span>A personal · 39%</span><strong id="personalPreview">Q 0.00</strong></div></div>
+          <button id="saveClosing" class="button button-primary" type="submit">Guardar cierre</button>
+        </form>
+      </section>
+
+      <section class="finance-card deposit-card">
+        <div class="section-heading"><div><p class="step-tag">02</p><h2>Registrar depósito</h2></div></div>
+        <form id="depositForm" class="finance-form">
+          <fieldset class="account-picker"><legend>Cuenta</legend><label><input type="radio" name="cuenta" value="Capital" checked><span>Capital</span></label><label><input type="radio" name="cuenta" value="Personal"><span>Personal</span></label></fieldset>
+          <label>Monto depositado<input name="monto" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required></label>
+          <label>No. de comprobante<input name="comprobante" maxlength="100" autocomplete="off" placeholder="Número del recibo o boleta" required></label>
+          <label>Fecha<input id="depositDate" name="fecha" type="date" required></label>
+          <p class="responsible-note">Responsable: <b id="depositResponsible"></b> (sesión iniciada)</p>
+          <button class="button button-primary" type="submit">Registrar depósito</button>
+        </form>
+      </section>
+
+      <section class="finance-card expense-card">
+        <div class="section-heading"><div><p class="step-tag">03</p><h2>Registrar salida</h2></div></div>
+        <form id="expenseForm" class="finance-form">
+          <label>Tipo de salida<select id="expenseType" name="tipo"><option value="Personal">Gasto personal</option><option value="Empresa">Gasto de empresa</option></select></label>
+          <label id="personalCategoryField">¿Qué gasto personal se pagó?<select id="personalCategory" name="idPeriodoGastoPersonal" required><option value="">Selecciona un gasto pendiente</option></select></label>
+          <label>Monto<input name="monto" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required></label>
+          <label id="expenseConceptField" hidden>Concepto<input name="concepto" maxlength="150" placeholder="Ej. compra de bolsas"></label>
+          <label>Fecha<input id="expenseDate" name="fecha" type="date" required></label>
+          <p id="expenseHelp" class="helper-text">La salida personal se resta del saldo personal y se aplica al gasto seleccionado.</p>
+          <button class="button button-primary" type="submit">Registrar salida</button>
+        </form>
+      </section>
+
+      <section class="finance-card movements-card">
+        <div class="section-heading"><div><p class="eyebrow">AUDITORÍA</p><h2>Actividad reciente</h2></div><button id="refreshButton" class="button button-quiet" type="button">Actualizar</button></div>
+        <div id="emptyMovements" class="empty-state" hidden>Aún no hay movimientos registrados.</div>
+        <div id="movementList" class="movement-list" aria-live="polite"></div>
+      </section>
+    </section>
+  </main>
+  <script src="js/file-transfer.js" defer></script>
+</body>
+</html>

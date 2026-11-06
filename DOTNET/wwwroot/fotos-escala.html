@@ -11,10 +11,11 @@
   <meta name="theme-color" content="#0d2f47">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="stylesheet" href="css/app.css?v=22">
+  <link rel="stylesheet" href="css/app.css?v=33">
+  <link rel="stylesheet" href="css/fotos-escala.css?v=5">
   <script src="/js/pwa.js?v=1" defer></script>
   <script src="js/file-transfer.js?v=1" defer></script>
-  <script src="js/fotos-escala.js?v=22" defer></script>
+  <script src="js/fotos-escala.js?v=42" defer></script>
 </head>
 <body class="photo-tool">
   <nav class="site-nav">
@@ -26,57 +27,190 @@
       <a href="cedula-fotografia.html">Cédula y fotografía</a>
     </div>
   </nav>
-  <main class="wrap photo-layout">
-    <section class="card photo-settings">
-      <div id="photoStatus" class="empty">Arrastrá imágenes o un archivo ZIP/RAR a cualquier parte de la página.</div>
-      <details id="photoSettingsDetails" class="photo-control-details" open>
-        <summary>Ajustes de foto, papel y salida</summary>
+
+  <main id="photoApp" class="wrap photo-layout">
+
+    <!-- IZQUIERDA: lo que vale para TODAS las fotos y para la hoja -->
+    <section id="photoPanel" class="card photo-settings" aria-label="Ajustes generales">
+      <div class="panel-head">
+        <div id="photoStatus" class="empty">Arrastrá imágenes o un archivo ZIP/RAR a cualquier parte de la página.</div>
+        <p id="layoutInfo" class="photo-layout-info"></p>
+      </div>
+
+      <div class="panel-body">
         <div id="photoSettingsDock" class="photo-control-sections">
-          <section id="photoSettings" class="photo-control-group format-group"><h2 class="photo-control-title">Tamaño de las fotos</h2>
-            <div class="setting-row"><label id="photoScaleField" class="photo-scale-field"><span class="photo-scale-caption">Tamaño global</span><span id="photoSizeValue">5 × 5 cm</span><input id="photoWidthScale" type="range" min="1" max="15" step="0.1" value="5"></label></div>
-            <details class="photo-advanced"><summary>Más opciones de formato</summary><div class="setting-row">
-              <label>Formato<select id="photoPreset"><option value="custom" hidden>Personalizado</option><option value="cedula">Cédula · 2.5 × 3 cm</option><option value="photo">Fotografía · 10 × 15 cm</option></select></label>
-              <label id="photoOrientationField" hidden>Orientación<select id="photoOrientation"><option value="portrait">Vertical · 10 × 15 cm</option><option value="landscape">Horizontal · 15 × 10 cm</option></select></label>
+
+          <section id="photoSettings" class="photo-control-group format-group">
+            <h2 class="photo-control-title">Tamaño de todas las fotos</h2>
+            <div class="setting-row">
+              <label class="preset-quick">Medida rápida
+                <select id="photoPreset">
+                  <option value="custom" hidden>Personalizado</option>
+                  <option value="cedula">Cédula · 2.5 × 3 cm</option>
+                  <option value="photo">Fotografía · 10 × 15 cm</option>
+                </select>
+              </label>
+              <label id="photoOrientationField" hidden>Orientación de la foto
+                <select id="photoOrientation">
+                  <option value="portrait">Vertical · 10 × 15 cm</option>
+                  <option value="landscape">Horizontal · 15 × 10 cm</option>
+                </select>
+              </label>
+              <label id="photoScaleField" class="photo-scale-field"><span class="photo-scale-caption">Tamaño global</span><span id="photoSizeValue">5 × 5 cm</span><input id="photoWidthScale" type="range" min="1" max="15" step="0.1" value="5"></label>
               <label class="square-option"><input id="squareMode" type="checkbox" checked> Foto cuadrada</label>
-              <label><span id="photoWidthLabel">Medida de cada lado (cm)</span><span class="size-input"><input id="photoWidth" type="number" min="1" max="15" step="0.1" value="5"><span>cm</span></span></label>
-              <label id="heightField" hidden>Alto de cada foto (cm)<span class="size-input"><input id="photoHeight" type="number" min="1" max="40" step="0.1" value="5"><span>cm</span></span></label>
-              <label>Relación de aspecto<select id="ratioMode"><option value="none">Ninguna</option><option value="1:1">1:1</option><option value="3:4">3:4</option><option value="4:5">4:5</option><option value="3:16">3:16</option><option value="custom" hidden>Personalizada</option></select></label>
-              <label id="ratioCustomAField" hidden>Relación ancho<span class="size-input"><input id="ratioA" type="number" min="0.1" max="100" step="0.1" value="3"></span></label>
-              <label id="ratioCustomBField" hidden>Relación alto<span class="size-input"><input id="ratioB" type="number" min="0.1" max="100" step="0.1" value="4"></span></label>
-            </div></details>
+              <label class="fit-control">Encuadre de las fotos
+                <select id="fitMode"><option value="contain">Mostrar la foto completa</option><option value="cover">Llenar el cuadro</option></select>
+              </label>
+              <label class="page-fit-option"><input id="pageFitMode" type="checkbox"> Una foto por hoja, usando el área disponible</label>
+              <label class="border-option"><input id="photoBorder" type="checkbox" checked> Borde negro alrededor de cada foto</label>
+            </div>
+            <details class="photo-advanced">
+              <summary>Medidas exactas y proporción</summary>
+              <div class="setting-row">
+                <label><span id="photoWidthLabel">Medida de cada lado (cm)</span><span class="size-input"><input id="photoWidth" type="number" min="1" max="15" step="0.1" value="5"><span>cm</span></span></label>
+                <label id="heightField" hidden>Alto de cada foto (cm)<span class="size-input"><input id="photoHeight" type="number" min="1" max="40" step="0.1" value="5"><span>cm</span></span></label>
+                <label>Relación de aspecto
+                  <select id="ratioMode">
+                    <option value="none">Ninguna</option><option value="1:1">1:1</option><option value="3:4">3:4</option><option value="4:5">4:5</option><option value="3:16">3:16</option><option value="custom" hidden>Personalizada</option>
+                  </select>
+                </label>
+                <label id="ratioCustomAField" hidden>Relación ancho<span class="size-input"><input id="ratioA" type="number" min="0.1" max="100" step="0.1" value="3"></span></label>
+                <label id="ratioCustomBField" hidden>Relación alto<span class="size-input"><input id="ratioB" type="number" min="0.1" max="100" step="0.1" value="4"></span></label>
+              </div>
+            </details>
           </section>
           <p id="pageFitNotice" class="muted page-fit-notice" hidden>Se imprimirá una foto en cada hoja, ajustada al área disponible y respetando el margen elegido.</p>
-          <section class="photo-control-group"><h2 class="photo-control-title">Presentación</h2><div class="setting-row">
-            <label class="fit-control">Encuadre<select id="fitMode"><option value="cover">Llenar el cuadro</option><option value="contain">Mostrar la foto completa</option></select></label>
-            <label class="page-fit-option"><input id="pageFitMode" type="checkbox"> Una foto por hoja, ocupar el área disponible</label>
-            <label class="border-option"><input id="photoBorder" type="checkbox" checked> Borde negro alrededor de cada foto</label>
-          </div><details class="photo-advanced"><summary>Más opciones de papel</summary><div class="setting-row">
-            <label>Tamaño de hoja<select id="paperSize"><option value="letter">Carta · 21.59 × 27.94 cm</option><option value="oficio">Oficio · 21.59 × 33.02 cm</option></select></label>
-            <label>Orientación de hoja<select id="paperOrientation"><option value="portrait">Vertical</option><option value="landscape">Horizontal</option></select></label>
-            <label class="margin-option"><input id="includeMargin" type="checkbox" checked> Incluir margen de hoja (1 cm)</label>
-          </div></details></section>
-          <section class="photo-control-group output-group"><h2 class="photo-control-title">Salida</h2><div class="output-controls">
-            <div class="color-mode-control"><span>Impresión</span><button id="photoColorMode" type="button" aria-pressed="false">Color</button></div>
-            <button id="printPhotos" class="action-print" disabled>Imprimir</button><button id="wordPhotos" class="action-word" disabled>Descargar Word</button>
-          </div></section>
+
+          <section class="photo-control-group paper-group">
+            <details id="paperSettings" class="photo-advanced">
+            <summary>Propiedades de la hoja</summary>
+            <div class="setting-row">
+              <label>Tamaño de hoja
+                <select id="paperSize"><option value="letter">Carta · 21.59 × 27.94 cm</option><option value="oficio">Oficio · 21.59 × 33.02 cm</option></select>
+              </label>
+              <label>Orientación de la hoja
+                <select id="paperOrientation"><option value="portrait">Vertical</option><option value="landscape">Horizontal</option></select>
+              </label>
+              <label class="margin-option"><input id="includeMargin" type="checkbox" checked> Dejar margen de 1 cm en la hoja</label>
+            </div>
+            </details>
+          </section>
+
+          <div id="photoToolbar" class="photo-toolbar" role="toolbar" aria-label="Editar la foto seleccionada">
+            <p id="photoToolbarEmpty" class="tb-empty">Seleccioná una foto de la hoja para ver sus ajustes.</p>
+            <div id="photoToolbarBody" class="tb-body" hidden>
+              <div class="tb-head">
+                <strong id="photoEditorTitle" class="tb-title">Foto seleccionada</strong>
+                <div class="tb-head-actions">
+                  <button id="photoEditorRemove" type="button" class="danger">Quitar foto</button>
+                  <button id="photoEditorClose" type="button" class="secondary">Listo</button>
+                </div>
+              </div>
+              <div class="tb-groups">
+                <div class="tb-group">
+                  <span class="tb-caption">Tamaño de esta foto</span>
+                  <div class="tb-row">
+                    <label class="tb-field">Ancho<span class="size-input"><input id="editorPhotoWidth" type="number" min="1" max="60" step="0.1"><span>cm</span></span></label>
+                    <label class="tb-field">Alto<span class="size-input"><input id="editorPhotoHeight" type="number" min="1" max="60" step="0.1"><span>cm</span></span></label>
+                    <button id="editorPhotoFullPage" type="button" class="secondary photo-full-page" aria-pressed="false">Toda la hoja</button>
+                  </div>
+                  <label class="tb-scale-field">Agrandar o reducir <span id="editorPhotoScaleValue">100%</span><input id="editorPhotoScale" type="range" min="25" max="300" step="1" value="100"></label>
+                </div>
+                <div class="tb-group">
+                  <span class="tb-caption">Voltear</span>
+                  <div class="tb-row">
+                    <button id="editorPhotoRotate" type="button" class="secondary">Girar imagen</button>
+                    <button id="editorPhotoOrient" type="button" class="secondary">Marco horizontal</button>
+                  </div>
+                </div>
+                <div class="tb-group">
+                  <span class="tb-caption">Recorte</span>
+                  <div class="tb-row">
+                    <button id="editorCropMode" type="button" class="primary" aria-pressed="false">Recortar</button>
+                    <button id="editorPhotoReset" type="button" class="secondary" hidden>Restaurar original</button>
+                    <label class="tb-field">Encuadre
+                      <select id="editorPhotoFit"><option value="cover">Llenar y recortar</option><option value="contain">Mostrar completa</option></select>
+                    </label>
+                  </div>
+                </div>
+                <div class="tb-group">
+                  <span class="tb-caption">Posición y color</span>
+                  <div class="tb-row">
+                    <label class="tb-field">Posición
+                      <select id="editorPhotoAlign"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select>
+                    </label>
+                    <label class="tb-field">Filtro
+                      <select id="editorPhotoFilter"><option value="none">Original</option><option value="contrast">Más contraste</option><option value="bright">Más brillo</option><option value="soft">Suave</option><option value="grayscale">Blanco y negro</option><option value="sepia">Sepia</option><option value="document">Documento / recibo</option></select>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </details>
-      <button id="enterScalePreview" class="photo-expand-button" type="button" disabled>Vista de hoja al 100%</button>
-      <h2 class="loaded-photos-title">Imágenes y ajustes por foto</h2>
-      <p class="photo-edit-hint">Ajusta alto y ancho por separado o usa la barra para cambiar ambos proporcionalmente.</p>
-      <div id="photoGrid" class="preview-small"></div>
-      <p id="layoutInfo" class="photo-layout-info"></p>
+
+        <button id="enterScalePreview" class="photo-expand-button" type="button" disabled>Ver hoja a tamaño real (100%)</button>
+      </div>
+
+      <div class="panel-footer">
+        <div class="output-controls">
+          <div class="color-mode-control"><span>Impresión</span><button id="photoColorMode" type="button" aria-pressed="false">Color</button></div>
+          <button id="printPhotos" class="action-print" disabled>Imprimir</button>
+          <button id="wordPhotos" class="action-word" disabled>Descargar Word</button>
+        </div>
+      </div>
     </section>
-    <section class="preview-section">
+
+    <!-- DERECHA: la hoja y, pegada a ella, la edición de UNA foto -->
+    <section id="photoPreview" class="preview-section">
       <aside id="scalePreviewBar" class="scale-preview-bar" hidden aria-label="Controles de vista ampliada">
         <button id="exitScalePreview" type="button" class="secondary">Volver</button>
         <section class="scale-preview-group"><h2>Imprimir o descargar</h2><div id="scalePreviewOutputActions"></div></section>
         <section class="scale-preview-group"><h2>Tamaño de foto</h2><div id="scalePreviewSlot"></div></section>
         <div id="scalePreviewTitle" class="scale-preview-zoom">Escala 100%</div>
       </aside>
-      <div id="sheets" class="sheets"></div>
+
+      <div id="sheetZoomToolbar" class="sheet-zoom-toolbar" role="toolbar" aria-label="Zoom de la vista previa de la hoja">
+        <span>Vista de hoja</span>
+        <button id="sheetZoomOut" type="button" class="secondary" aria-label="Alejar">−</button>
+        <input id="sheetZoomRange" type="range" min="50" max="200" step="10" value="100" aria-label="Nivel de zoom de la hoja">
+        <button id="sheetZoomIn" type="button" class="secondary" aria-label="Acercar">+</button>
+        <button id="sheetZoomReset" type="button" class="secondary">100%</button>
+        <output id="sheetZoomValue" for="sheetZoomRange">100%</output>
+      </div>
+      <div id="sheetsScroll" class="sheets-scroll"><div id="sheetZoomStage" class="sheet-zoom-stage"><div id="sheets" class="sheets"></div></div></div>
     </section>
   </main>
+
+  <!-- Recorte: se abre con doble clic en la foto o con «Recortar» -->
+  <div id="cropOverlay" class="crop-overlay" hidden>
+    <div class="crop-dialog" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+      <div class="crop-head">
+        <div>
+          <h2 id="cropTitle">Recortar foto</h2>
+          <p>Arrastrá los ocho tiradores para elegir exactamente qué parte conservar. Revisá la vista previa y confirmá el recorte.</p>
+        </div>
+      </div>
+      <div id="cropStageHost" class="crop-stage-host">
+        <div id="photoEditorStage" class="photo-editor-stage" aria-label="Foto para recortar">
+          <div id="photoEditorImageViewport" class="photo-editor-image-viewport"><img id="photoEditorImage" alt="Foto para recortar"></div>
+          <div id="cropSelection" class="photo-crop-selection" aria-label="Área que se conservará">
+            <button type="button" class="crop-handle" data-handle="nw" aria-label="Ajustar esquina superior izquierda"></button>
+            <button type="button" class="crop-handle" data-handle="n" aria-label="Ajustar borde superior"></button>
+            <button type="button" class="crop-handle" data-handle="ne" aria-label="Ajustar esquina superior derecha"></button>
+            <button type="button" class="crop-handle" data-handle="e" aria-label="Ajustar borde derecho"></button>
+            <button type="button" class="crop-handle" data-handle="se" aria-label="Ajustar esquina inferior derecha"></button>
+            <button type="button" class="crop-handle" data-handle="s" aria-label="Ajustar borde inferior"></button>
+            <button type="button" class="crop-handle" data-handle="sw" aria-label="Ajustar esquina inferior izquierda"></button>
+            <button type="button" class="crop-handle" data-handle="w" aria-label="Ajustar borde izquierdo"></button>
+          </div>
+        </div>
+      </div>
+      <div class="crop-footer-actions"><button id="cropCancel" type="button" class="secondary">Cancelar</button><button id="cropAccept" type="button" class="primary">Aceptar recorte</button></div>
+    </div>
+  </div>
+
+  <div id="photoToast" class="photo-toast" role="status" aria-live="polite" hidden></div>
   <footer>La composición y la vista previa se procesan en tu equipo.</footer>
   <style id="printPageStyle"></style>
 </body>

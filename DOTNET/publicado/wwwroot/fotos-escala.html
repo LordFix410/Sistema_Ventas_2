@@ -11,10 +11,10 @@
   <meta name="theme-color" content="#0d2f47">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="stylesheet" href="css/app.css?v=19">
+  <link rel="stylesheet" href="css/app.css?v=22">
   <script src="/js/pwa.js?v=1" defer></script>
   <script src="js/file-transfer.js?v=1" defer></script>
-  <script src="js/fotos-escala.js?v=19" defer></script>
+  <script src="js/fotos-escala.js?v=22" defer></script>
 </head>
 <body class="photo-tool">
   <nav class="site-nav">
@@ -32,26 +32,29 @@
       <details id="photoSettingsDetails" class="photo-control-details" open>
         <summary>Ajustes de foto, papel y salida</summary>
         <div id="photoSettingsDock" class="photo-control-sections">
-          <section id="photoSettings" class="photo-control-group format-group"><h2 class="photo-control-title">Formato de foto</h2><div class="setting-row">
-            <label>Formato<select id="photoPreset"><option value="custom">Personalizado</option><option value="cedula">Cédula · 2.5 × 3 cm</option><option value="photo">Fotografía · 10 × 15 cm</option></select></label>
-            <label id="photoOrientationField" hidden>Orientación<select id="photoOrientation"><option value="portrait">Vertical · 10 × 15 cm</option><option value="landscape">Horizontal · 15 × 10 cm</option></select></label>
-            <label class="square-option"><input id="squareMode" type="checkbox" checked> Foto cuadrada</label>
-            <label><span id="photoWidthLabel">Medida de cada lado (cm)</span><span class="size-input"><input id="photoWidth" type="number" min="1" max="15" step="0.1" value="5"><span>cm</span></span></label>
-            <label id="heightField" hidden>Alto de cada foto (cm)<span class="size-input"><input id="photoHeight" type="number" min="1" max="40" step="0.1" value="5"><span>cm</span></span></label>
-            <label>Relación de aspecto<select id="ratioMode"><option value="none">Ninguna</option><option value="1:1">1:1</option><option value="3:4">3:4</option><option value="4:5">4:5</option><option value="3:16">3:16</option><option value="custom">Personalizada</option></select></label>
-            <label id="ratioCustomAField" hidden>Relación ancho<span class="size-input"><input id="ratioA" type="number" min="0.1" max="100" step="0.1" value="3"></span></label>
-            <label id="ratioCustomBField" hidden>Relación alto<span class="size-input"><input id="ratioB" type="number" min="0.1" max="100" step="0.1" value="4"></span></label>
-            <label id="photoScaleField" class="photo-scale-field"><span class="photo-scale-caption">Medida resultante</span><span id="photoSizeValue">5 × 5 cm</span><input id="photoWidthScale" type="range" min="1" max="15" step="0.1" value="5"></label>
-          </div></section>
+          <section id="photoSettings" class="photo-control-group format-group"><h2 class="photo-control-title">Tamaño de las fotos</h2>
+            <div class="setting-row"><label id="photoScaleField" class="photo-scale-field"><span class="photo-scale-caption">Tamaño global</span><span id="photoSizeValue">5 × 5 cm</span><input id="photoWidthScale" type="range" min="1" max="15" step="0.1" value="5"></label></div>
+            <details class="photo-advanced"><summary>Más opciones de formato</summary><div class="setting-row">
+              <label>Formato<select id="photoPreset"><option value="custom" hidden>Personalizado</option><option value="cedula">Cédula · 2.5 × 3 cm</option><option value="photo">Fotografía · 10 × 15 cm</option></select></label>
+              <label id="photoOrientationField" hidden>Orientación<select id="photoOrientation"><option value="portrait">Vertical · 10 × 15 cm</option><option value="landscape">Horizontal · 15 × 10 cm</option></select></label>
+              <label class="square-option"><input id="squareMode" type="checkbox" checked> Foto cuadrada</label>
+              <label><span id="photoWidthLabel">Medida de cada lado (cm)</span><span class="size-input"><input id="photoWidth" type="number" min="1" max="15" step="0.1" value="5"><span>cm</span></span></label>
+              <label id="heightField" hidden>Alto de cada foto (cm)<span class="size-input"><input id="photoHeight" type="number" min="1" max="40" step="0.1" value="5"><span>cm</span></span></label>
+              <label>Relación de aspecto<select id="ratioMode"><option value="none">Ninguna</option><option value="1:1">1:1</option><option value="3:4">3:4</option><option value="4:5">4:5</option><option value="3:16">3:16</option><option value="custom" hidden>Personalizada</option></select></label>
+              <label id="ratioCustomAField" hidden>Relación ancho<span class="size-input"><input id="ratioA" type="number" min="0.1" max="100" step="0.1" value="3"></span></label>
+              <label id="ratioCustomBField" hidden>Relación alto<span class="size-input"><input id="ratioB" type="number" min="0.1" max="100" step="0.1" value="4"></span></label>
+            </div></details>
+          </section>
           <p id="pageFitNotice" class="muted page-fit-notice" hidden>Se imprimirá una foto en cada hoja, ajustada al área disponible y respetando el margen elegido.</p>
-          <section class="photo-control-group"><h2 class="photo-control-title">Papel y encuadre</h2><div class="setting-row">
-            <label>Tamaño de hoja<select id="paperSize"><option value="letter">Carta · 21.59 × 27.94 cm</option><option value="oficio">Oficio · 21.59 × 33.02 cm</option></select></label>
-            <label>Orientación de hoja<select id="paperOrientation"><option value="portrait">Vertical</option><option value="landscape">Horizontal</option></select></label>
-            <label class="margin-option"><input id="includeMargin" type="checkbox" checked> Incluir margen de hoja (1 cm)</label>
+          <section class="photo-control-group"><h2 class="photo-control-title">Presentación</h2><div class="setting-row">
             <label class="fit-control">Encuadre<select id="fitMode"><option value="cover">Llenar el cuadro</option><option value="contain">Mostrar la foto completa</option></select></label>
             <label class="page-fit-option"><input id="pageFitMode" type="checkbox"> Una foto por hoja, ocupar el área disponible</label>
             <label class="border-option"><input id="photoBorder" type="checkbox" checked> Borde negro alrededor de cada foto</label>
-          </div></section>
+          </div><details class="photo-advanced"><summary>Más opciones de papel</summary><div class="setting-row">
+            <label>Tamaño de hoja<select id="paperSize"><option value="letter">Carta · 21.59 × 27.94 cm</option><option value="oficio">Oficio · 21.59 × 33.02 cm</option></select></label>
+            <label>Orientación de hoja<select id="paperOrientation"><option value="portrait">Vertical</option><option value="landscape">Horizontal</option></select></label>
+            <label class="margin-option"><input id="includeMargin" type="checkbox" checked> Incluir margen de hoja (1 cm)</label>
+          </div></details></section>
           <section class="photo-control-group output-group"><h2 class="photo-control-title">Salida</h2><div class="output-controls">
             <div class="color-mode-control"><span>Impresión</span><button id="photoColorMode" type="button" aria-pressed="false">Color</button></div>
             <button id="printPhotos" class="action-print" disabled>Imprimir</button><button id="wordPhotos" class="action-word" disabled>Descargar Word</button>
@@ -59,9 +62,10 @@
         </div>
       </details>
       <button id="enterScalePreview" class="photo-expand-button" type="button" disabled>Vista de hoja al 100%</button>
-      <h2 class="loaded-photos-title">Imágenes cargadas</h2>
+      <h2 class="loaded-photos-title">Imágenes y ajustes por foto</h2>
+      <p class="photo-edit-hint">Ajusta alto y ancho por separado o usa la barra para cambiar ambos proporcionalmente.</p>
       <div id="photoGrid" class="preview-small"></div>
-      <p id="layoutInfo" hidden></p>
+      <p id="layoutInfo" class="photo-layout-info"></p>
     </section>
     <section class="preview-section">
       <aside id="scalePreviewBar" class="scale-preview-bar" hidden aria-label="Controles de vista ampliada">
