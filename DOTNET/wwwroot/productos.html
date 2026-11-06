@@ -12,9 +12,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="stylesheet" href="css/app.css?v=21">
-  <link rel="stylesheet" href="css/productos.css?v=14">
+  <link rel="stylesheet" href="css/productos.css?v=15">
   <script src="/js/pwa.js?v=1" defer></script>
-  <script src="js/productos.js?v=15" defer></script>
+  <script src="js/productos.js?v=17" defer></script>
 </head>
 <body class="products-page">
   <nav class="site-nav">
@@ -38,10 +38,30 @@
       <p id="catalogMessage" class="catalog-status" role="status" aria-live="polite"></p>
       <section id="viewProduct" class="workspace-view">
       <section id="scannerPanel" class="product-panel scanner-panel" hidden><div class="scanner-title"><h2>Escanear código</h2><button id="closeScanner" class="scanner-close" type="button" aria-label="Cerrar cámara">×</button></div><div class="scanner-viewport"><video id="scannerVideo" playsinline muted></video><div class="scanner-frame" aria-hidden="true"></div><span class="scanner-hint">Apunta al código de barras</span></div><div id="scanCandidates" class="scan-candidates"></div><p id="scannerMessage" class="form-message" role="status"></p></section>
-      <button id="scanButton" class="button button-primary scan-launch" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg> Escanear código de barras</button>
       <form id="productForm" class="product-grid">
         <section class="product-panel product-main">
           <div class="panel-title"><div><div><h2>Producto</h2></div></div></div>
+          <section class="product-photo-field" aria-label="Fotografía del producto">
+            <div><strong>1. Foto del producto (opcional)</strong><small>Tomá la foto primero y seguí completando los datos mientras se procesa. Al terminar, podrás ajustar el recorte.</small></div>
+            <input id="productPhoto" type="file" accept="image/*" capture="environment">
+            <label class="button button-quiet photo-select-button" for="productPhoto">Tomar o elegir foto</label>
+            <div id="productPhotoControls" class="product-photo-controls" hidden>
+              <img id="productPhotoPreview" alt="Vista previa de la foto del producto" hidden>
+              <div class="photo-actions">
+                <button id="startProductBackgroundRemoval" class="button button-primary" type="button" disabled>Quitar fondo</button>
+                <button id="reviewProductPhoto" class="button button-quiet" type="button" disabled>Revisar y ajustar</button>
+                <button id="removeProductPhoto" class="button button-quiet" type="button">Quitar foto</button>
+              </div>
+            </div>
+            <div id="productPhotoProcessing" class="product-photo-processing" role="status" aria-live="polite" hidden>
+              <span class="product-photo-spinner" aria-hidden="true"></span>
+              <div><strong>Procesando foto en segundo plano</strong><span id="productPhotoProcessingMessage">Preparando el recorte…</span></div>
+              <div class="product-photo-progress" aria-hidden="true"><span></span></div>
+              <small>Podés seguir llenando los datos del producto. Te avisaremos cuando esté lista para revisar.</small>
+            </div>
+            <p id="productPhotoStatus" class="form-message" role="status" aria-live="polite"></p>
+          </section>
+          <button id="scanButton" class="button button-primary scan-launch" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg> 2. Escanear código de barras</button>
           <div class="field-grid">
             <label class="span-2">Código de barras *<input id="codigo" name="codigo" maxlength="20" required autocomplete="off"></label>
             <label>Nombre *<input id="nombre" name="nombre" maxlength="30" required></label>
@@ -49,15 +69,6 @@
             <label>Categoría *<div class="input-action"><select id="categoria" name="idCategoria" required></select><button id="addCategoryButton" class="button button-add" type="button" aria-label="Crear categoría" title="Crear categoría">＋</button></div></label>
             <label>Grupo de proveedores<select id="supplierGroup" name="idGrupoProveedor"><option value="">Sin grupo</option></select></label>
           </div>
-          <section class="product-photo-field" aria-label="Fotografía del producto">
-            <div><strong>Foto del producto (opcional)</strong><small>Tomá una foto o elegí una imagen. Antes de guardarla podés girarla o quitarle el fondo.</small></div>
-            <input id="productPhoto" type="file" accept="image/*" capture="environment">
-            <label class="button button-quiet photo-select-button" for="productPhoto">Tomar o elegir foto</label>
-            <div id="productPhotoControls" class="product-photo-controls" hidden>
-              <img id="productPhotoPreview" alt="Vista previa de la foto aceptada" hidden>
-              <button id="removeProductPhoto" class="button button-quiet" type="button">Quitar foto</button>
-            </div>
-          </section>
           <div class="price-grid"><label>Precio de compra (Q)<input id="precioCompra" name="precioCompra" type="number" min="0" step="0.01" value="0"><small>Dejalo en 0 si aún no conocés el costo.</small></label><label>Precio de venta (Q)<input id="precioVenta" name="precioVenta" type="number" min="0" step="0.25" value="0"></label><label>Porcentaje de ganancia (%)<input id="porcentaje" name="porcentaje" type="number" min="0" step="0.01" value="61"></label></div>
           <p id="priceHint" class="price-hint"></p>
           <label class="status-check"><input type="checkbox" name="estado" checked> Producto activo</label>
@@ -75,17 +86,10 @@
         <div class="product-photo-dialog-shell">
           <div class="product-photo-dialog-heading"><strong>Preparar foto del producto</strong><button id="closeProductPhotoEditor" type="button" aria-label="Cerrar editor">×</button></div>
           <div class="product-photo-editor-body">
-            <p id="productPhotoEditorMessage" role="status">Arrastrá para ajustar la posición. Podés quitar el fondo, comparar y girar.</p>
-            <div id="productPhotoProcessing" class="product-photo-processing" role="status" aria-live="polite" hidden>
-              <span class="product-photo-spinner" aria-hidden="true"></span>
-              <div><strong>Procesando la foto</strong><span id="productPhotoProcessingMessage">Preparando el recorte…</span></div>
-              <div class="product-photo-progress" aria-hidden="true"><span></span></div>
-              <small>No cierres esta ventana; el primer recorte puede tardar mientras se carga el modelo.</small>
-            </div>
-            <div class="product-photo-canvas-stage"><canvas id="productPhotoCanvas" width="720" height="720" aria-label="Vista previa editable del producto"></canvas></div>
+            <p id="productPhotoEditorMessage" role="status">Arrastrá con un dedo para centrar. Con dos dedos acercá, alejé o girá libremente.</p>
+            <div class="product-photo-canvas-stage"><canvas id="productPhotoCanvas" width="720" height="720" aria-label="Vista previa editable del producto. Arrastra con un dedo; usa dos dedos para acercar, alejar y girar."></canvas></div>
             <label class="product-photo-zoom">Tamaño en el cuadro<input id="productPhotoZoom" type="range" min="1" max="3" step="0.05" value="1"></label>
             <div class="product-photo-editor-actions">
-              <button id="removeProductBackground" class="button button-quiet" type="button">Quitar fondo</button>
               <button id="compareProductBackground" class="button button-quiet" type="button" hidden>Ver original</button>
               <button id="rotateProductPhoto" class="button button-quiet" type="button">Girar 90°</button>
               <button id="acceptProductPhoto" class="button button-primary" type="button">Aceptar foto</button>

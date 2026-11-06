@@ -91,6 +91,8 @@ body.photo-preview-100 .scale-preview-bar:not([hidden]){position:fixed;inset:0 a
 .scale-preview-bar .photo-scale-field{display:grid;grid-template-columns:1fr;align-items:start;gap:8px;min-width:0;color:#fff;font-size:14px;font-weight:700}
 .scale-preview-bar .photo-scale-caption{font-size:12px;font-weight:600;color:#d5e8f5}
 .scale-preview-bar .photo-scale-field input[type=range]{width:100%;max-width:none;margin:0;accent-color:#79c2ff}
+.scale-preview-bar .square-option{display:flex;align-items:center;gap:8px;color:#fff;font-size:12px;font-weight:650}
+.scale-preview-bar .square-option input{width:auto;min-width:0;margin:0;accent-color:#79c2ff}
 .scale-preview-zoom{margin-top:auto;padding:10px 8px;border:1px solid #ffffff73;border-radius:7px;color:#fff;font-size:14px;font-weight:750;text-align:center}
 .scale-preview-bar button{flex:0 0 auto;background:#fff;color:#123b59;padding:9px 11px;white-space:nowrap}
 .scale-preview-bar button:hover{background:#e6f3fc}
@@ -126,7 +128,7 @@ body.photo-preview-100 .print-sheet{transform:none!important;transform-origin:to
 @media print{
   html,body.photo-tool{width:auto!important;height:auto!important;min-height:0!important;overflow:visible!important;margin:0!important;padding:0!important;background:#fff!important}
   body.photo-tool .photo-layout{position:static!important;inset:auto!important;display:block!important;grid-template-columns:none!important;gap:0!important;width:auto!important;height:auto!important;max-width:none!important;overflow:visible!important;margin:0!important;padding:0!important}
-  body.photo-tool .site-nav,body.photo-tool>.page-heading,body.photo-tool .photo-settings,body.photo-tool>footer,body.photo-tool #scalePreviewBar,body.photo-tool .preview-heading,body.photo-tool .preview-toolbar{display:none!important}
+  body.photo-tool .site-nav,body.photo-tool>.page-heading,body.photo-tool .photo-settings,body.photo-tool>footer,body.photo-tool #scalePreviewBar,body.photo-tool .preview-heading,body.photo-tool .preview-toolbar,body.photo-tool .loaded-photos-title,body.photo-tool .photo-edit-hint,body.photo-tool .photo-editor,body.photo-tool #photoGrid{display:none!important}
   body.photo-tool .preview-section{position:static!important;display:block!important;grid-column:auto!important;width:auto!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;margin:0!important;padding:0!important}
   body.photo-tool .sheets{position:static!important;inset:auto!important;display:block!important;width:auto!important;height:auto!important;overflow:visible!important;padding:0!important;margin:0!important}
   body.photo-tool .sheet-shell{position:static!important;display:block!important;width:var(--paper-w)!important;height:var(--paper-h)!important;overflow:visible!important;transform:none!important;margin:0!important;page-break-after:always;break-after:page}
@@ -252,4 +254,54 @@ body.id-photo-tool .id-sheet{transform:scale(1)!important;transform-origin:top c
 .tool-mark{display:grid;place-items:center;width:38px;height:38px;margin:0;border-radius:11px;background:#e7f2f9;color:#1769aa;font-size:23px;line-height:1}
 @media(min-width:700px){.tool-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.tool-card{min-height:136px}.home-wrap{padding:0 18px}}
 @media(max-width:340px){.tool-grid{grid-template-columns:1fr}.tool-card{min-height:86px;flex-direction:row;justify-content:flex-start;padding:12px 16px;text-align:left}}
+
+/* Editor directo por foto en Escala */
+.editable-photo{cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s}
+.editable-photo.selected{border:2px solid #1769aa;box-shadow:0 0 0 3px #1769aa25}
+.editable-photo:focus-visible{outline:3px solid #63a7d4;outline-offset:2px}
+.photo-editor{margin:12px 0;padding:12px;border:1px solid #9bbbd0;border-radius:10px;background:#f4f9fc}
+.photo-editor[hidden]{display:none!important}
+.photo-editor-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.photo-editor-heading-actions{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+.photo-editor-heading h2{min-width:0;margin:0;overflow-wrap:anywhere;font-size:15px}
+.photo-editor-stage{position:relative;width:min(100%,380px);max-height:55vh;margin:0 auto;overflow:hidden;border:2px solid #1769aa;border-radius:8px;background:#e7edf2;touch-action:none;line-height:0}
+.photo-editor-image-viewport{position:absolute;inset:0;overflow:hidden;border-radius:6px;pointer-events:none}
+.photo-editor-stage img{display:block;width:100%;height:100%;object-fit:cover;user-select:none;-webkit-user-drag:none;pointer-events:auto}
+.photo-editor-stage.can-pan{cursor:grab}
+.photo-editor-stage.can-pan:active{cursor:grabbing}
+.photo-editor-help{margin:7px 0;color:#526779;font-size:12px;line-height:1.4}
+.photo-editor-controls{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;align-items:stretch}
+.photo-editor-control-group{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;align-content:start;min-width:0;padding:9px;border:1px solid #c7d8e3;border-radius:8px;background:#fff}
+.photo-editor-control-group>strong{grid-column:1/-1;color:#1769aa;font-size:13px}
+.photo-editor-control-group>.wide-control{grid-column:1}
+.photo-editor-controls label{display:grid;gap:4px;color:#344b5c;font-size:12px;font-weight:700}
+.photo-editor-controls input,.photo-editor-controls select{box-sizing:border-box;width:100%;min-width:0;height:38px;padding:7px 9px;border:1px solid #b9c8d2;border-radius:6px;background:#fff;color:#17212b;font:inherit}
+.photo-editor-controls input[type=range]{height:24px;padding:0}
+.photo-editor-controls button{min-height:38px;padding:8px;font-size:12px}
+.photo-editor-controls .photo-full-page{width:max-content;max-width:180px;min-height:32px;padding:6px 10px;background:#167849;font-size:11px}
+.photo-editor-controls .photo-full-page[aria-pressed=true]{background:#9a5b00}
+#photoSettings.page-fit-active .setting-row>label.square-option{display:flex!important;visibility:visible!important}
+.photo-tile{cursor:move;user-select:none;overflow:visible!important;touch-action:none}
+.photo-tile-image-viewport{position:absolute;inset:1px;overflow:hidden}
+.photo-tile.no-border .photo-tile-image-viewport{inset:0}
+.photo-tile.selected-for-edit{outline:3px solid #1769aa;outline-offset:1px;z-index:2}
+.photo-tile.crop-edit-active{outline-color:#e68a00;cursor:crosshair}
+.photo-tile.crop-edit-active .photo-tile-image-viewport{cursor:grab}
+.photo-editor-stage.manual-crop-active{outline:3px solid #e68a00;outline-offset:2px;overflow:visible;cursor:crosshair}
+.photo-editor-stage.manual-crop-active img{pointer-events:none}
+.photo-editor-stage.manual-crop-active .photo-editor-image-viewport{overflow:hidden}
+.photo-editor-stage.manual-preview-loading .photo-editor-image-viewport{opacity:0}
+.photo-editor-stage.manual-preview-loading::after{content:'Preparando foto…';position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:#e7edf2;color:#1769aa;font-weight:700}
+.photo-crop-selection{position:absolute;z-index:4;box-sizing:border-box;border:2px solid #fff;box-shadow:0 0 0 1px #1769aa;touch-action:none;cursor:move}
+.photo-crop-selection[hidden]{display:none!important}
+.photo-crop-handle{position:absolute!important;z-index:5;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;margin:0!important;padding:0!important;border:2px solid #fff!important;border-radius:50%!important;background:#1769aa!important;box-shadow:0 1px 5px #0008;touch-action:none;display:block!important;transform:translate(-50%,-50%)}
+.crop-nw{left:0;top:0;cursor:nwse-resize}.crop-n{left:50%;top:0;cursor:ns-resize}.crop-ne{left:100%;top:0;cursor:nesw-resize}.crop-e{left:100%;top:50%;cursor:ew-resize}.crop-se{left:100%;top:100%;cursor:nwse-resize}.crop-s{left:50%;top:100%;cursor:ns-resize}.crop-sw{left:0;top:100%;cursor:nesw-resize}.crop-w{left:0;top:50%;cursor:ew-resize}
+.photo-tile.crop-edit-active .photo-resize-handle{background:#e68a00!important}
+#editorCropMode[aria-pressed=true]{background:#e68a00;color:#fff}
+.photo-tile img{pointer-events:none;-webkit-user-drag:none;user-select:none}
+#photoGrid[hidden]{display:none!important}
+.photo-resize-handle{position:absolute!important;z-index:5;width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;margin:0!important;padding:0!important;border:2px solid #fff!important;border-radius:50%!important;background:#1769aa!important;box-shadow:0 1px 4px #0008;flex:none!important;touch-action:none;display:block!important}
+.handle-nw{top:-8px;left:-8px;cursor:nwse-resize}.handle-n{top:-8px;left:calc(50% - 8px);cursor:ns-resize}.handle-ne{top:-8px;right:-8px;cursor:nesw-resize}.handle-e{top:calc(50% - 8px);right:-8px;cursor:ew-resize}.handle-se{right:-8px;bottom:-8px;cursor:nwse-resize}.handle-s{bottom:-8px;left:calc(50% - 8px);cursor:ns-resize}.handle-sw{bottom:-8px;left:-8px;cursor:nesw-resize}.handle-w{top:calc(50% - 8px);left:-8px;cursor:ew-resize}
+@media(max-width:600px){.photo-editor{padding:9px}.photo-editor-stage{width:min(100%,300px);max-height:40vh}.photo-editor-heading button{flex:0 0 auto;padding:8px 10px;font-size:11px}.photo-editor-controls{grid-template-columns:1fr;gap:6px}.photo-editor-control-group{grid-template-columns:minmax(0,1fr)}.photo-editor-controls button{font-size:12px}.photo-editor-controls label{max-width:none}.photo-editor-controls input,.photo-editor-controls select{max-width:none}}
+@media print{.scale-preview-bar,.photo-resize-handle{display:none!important}.photo-tile.selected-for-edit{outline:none!important;z-index:auto!important}body.photo-preview-100{height:auto!important;overflow:visible!important;background:#fff!important}body.photo-preview-100 .photo-layout{position:static!important;inset:auto!important;display:block!important;max-width:none!important;margin:0!important;padding:0!important}body.photo-preview-100 .preview-section{position:static!important;height:auto!important;width:auto!important;padding:0!important}body.photo-preview-100 .sheets{position:static!important;inset:auto!important;display:block!important;overflow:visible!important;padding:0!important}body.photo-preview-100 .sheet-shell{width:auto!important;height:auto!important;margin:0!important}}
 

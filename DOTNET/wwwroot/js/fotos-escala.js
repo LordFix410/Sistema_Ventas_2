@@ -1,4 +1,24 @@
 const imageGrid = document.getElementById('photoGrid');
+const photoEditor = document.getElementById('photoEditor');
+const photoEditorTitle = document.getElementById('photoEditorTitle');
+const photoEditorStage = document.getElementById('photoEditorStage');
+const photoEditorImageViewport = document.getElementById('photoEditorImageViewport');
+const photoEditorImage = document.getElementById('photoEditorImage');
+const cropSelection = document.getElementById('cropSelection');
+const editorPhotoWidth = document.getElementById('editorPhotoWidth');
+const editorPhotoHeight = document.getElementById('editorPhotoHeight');
+const editorPhotoFit = document.getElementById('editorPhotoFit');
+const editorPhotoAlign = document.getElementById('editorPhotoAlign');
+const editorPhotoRotate = document.getElementById('editorPhotoRotate');
+const editorCropMode = document.getElementById('editorCropMode');
+const editorCropApply = document.getElementById('editorCropApply');
+const editorPhotoFullPage = document.getElementById('editorPhotoFullPage');
+const editorPhotoReset = document.getElementById('editorPhotoReset');
+const editorPhotoFiltersToggle = document.getElementById('editorPhotoFiltersToggle');
+const editorPhotoFilterField = document.getElementById('editorPhotoFilterField');
+const editorPhotoFilter = document.getElementById('editorPhotoFilter');
+const photoEditorClose = document.getElementById('photoEditorClose');
+const photoEditorRemove = document.getElementById('photoEditorRemove');
 const photoStatus = document.getElementById('photoStatus');
 const sheets = document.getElementById('sheets');
 const widthInput = document.getElementById('photoWidth');
@@ -29,22 +49,39 @@ const enterScalePreviewButton = document.getElementById('enterScalePreview');
 const exitScalePreviewButton = document.getElementById('exitScalePreview');
 const scalePreviewBar = document.getElementById('scalePreviewBar');
 const scalePreviewSlot = document.getElementById('scalePreviewSlot');
+const scalePreviewEditGroup = document.getElementById('scalePreviewEditGroup');
+const scalePreviewEditSlot = document.getElementById('scalePreviewEditSlot');
 const scalePreviewOutputActions = document.getElementById('scalePreviewOutputActions');
 const scalePreviewTitle = document.getElementById('scalePreviewTitle');
 const layoutInfo = document.getElementById('layoutInfo');
 const printPageStyle = document.getElementById('printPageStyle');
 const scaleFieldHome = photoScaleField.parentElement;
 const scaleFieldNextSibling = photoScaleField.nextSibling;
+const squareModeField = squareModeInput.closest('.square-option');
+const squareModeFieldHome = squareModeField.parentElement;
+const squareModeFieldNextSibling = squareModeField.nextSibling;
 const outputControls = document.querySelector('.output-controls');
 const outputControlsHome = outputControls.parentElement;
 const outputControlsNextSibling = outputControls.nextSibling;
+const photoEditorHome = photoEditor.parentElement;
+const photoEditorNextSibling = photoEditor.nextSibling;
 
 let photos = [];
+let selectedPhoto = null;
+let cropBoxDrag = null;
+let cropBox = {x: 0, y: 0, width: 1, height: 1};
+let tileDrag = null;
+let resizeDrag = null;
+let cropEditMode = false;
+let lastCropTap = null;
+const manualPreviewCache = new WeakMap();
 let pageFitPercent = 100;
 let workStarted = false;
 let zipLoadingCount = 0;
 const objectUrls = new WeakMap();
 const photoRotations = new WeakMap();
+const photoOriginals = new WeakMap();
+const photoOriginalRotations = new WeakMap();
 const photoOverrides = new Map();
 const cmToPx = cm => cm * 96 / 2.54;
 const cmToTwips = cm => Math.round(cm * 567);
@@ -103,10 +140,13 @@ document.addEventListener('dragleave', event => {
 });
 document.addEventListener('drop', async event => {
   if (!hasFileDrag(event)) return;
+  const dropped = [...(event.dataTransfer?.files || [])];
+  // Solo se aceptan archivos reales. Arrastrar una foto ya cargada en la hoja
+  // no debe volver a incorporarla a la lista.
+  if (!dropped.length) return;
   event.preventDefault();
   dragDepth = 0;
   document.body.classList.remove('page-drop-active');
-  const dropped = [...event.dataTransfer.files];
   addPhotos(dropped);
   for (const file of dropped.filter(item => /\.(zip|rar)$/i.test(item.name))) await addArchive(file);
 });
@@ -182,7 +222,23 @@ function settings() {
 
 function optionsFor(file, base = settings()) {
   const override = photoOverrides.get(file);
-  return override ? {...base, ...override, pageFit: false} : {...base, fit: fitInput.value, position: 'center'};
+  return override ? {...base, alignment: 'auto', photoFilter: 'none', ...override, pageFit: false} : {...base, fit: fitInput.value, cropX: 50, cropY: 50, cropZoom: 1, fullPage: false, alignment: 'auto', photoFilter: 'none'};
+}
+
+function photoFilterCss(filter) {
+  return ({
+    contrast: 'contrast(1.25) saturate(1.08)',
+    bright: 'brightness(1.18) contrast(1.04)',
+    soft: 'brightness(1.06) saturate(.82)',
+    grayscale: 'grayscale(1)',
+    sepia: 'sepia(.72) contrast(1.08)',
+    document: 'grayscale(1) contrast(1.65) brightness(1.12)'
+  })[filter] || '';
+}
+
+function filterForPrint(filter) {
+  // Mantén los filtros CSS de la vista previa también al rasterizar para imprimir.
+  return photoFilterCss(filter) || 'none';
 }
 
 function inputNumber(labelText, value, min, max, step, handler) {
@@ -211,7 +267,14 @@ function savePhotoOverride(file, changes) {
     photoWidth: changes.photoWidth ?? current.photoWidth,
     photoHeight: changes.photoHeight ?? current.photoHeight,
     fit: changes.fit ?? current.fit ?? fitInput.value,
-    position: changes.position ?? current.position ?? 'center'
+    cropX: changes.cropX ?? current.cropX ?? 50,
+    cropY: changes.cropY ?? current.cropY ?? 50,
+    cropZoom: changes.cropZoom ?? current.cropZoom ?? 1,
+    fullPage: changes.fullPage ?? current.fullPage ?? false,
+    photoFilter: changes.photoFilter ?? current.photoFilter ?? 'none',
+    alignment: Object.hasOwn(changes, 'alignment') ? changes.alignment : current.alignment ?? 'auto',
+    x: Object.hasOwn(changes, 'x') ? changes.x : current.x,
+    y: Object.hasOwn(changes, 'y') ? changes.y : current.y
   });
   if (pageFitInput.checked) {
     pageFitInput.checked = false;
@@ -219,11 +282,477 @@ function savePhotoOverride(file, changes) {
   }
 }
 
+function applyImageCropPresentation(image, file, frameWidth, frameHeight, rotation = 0) {
+  if (!image || !frameWidth || !frameHeight) return;
+  image.dataset.cropFrameWidth = String(frameWidth);
+  image.dataset.cropFrameHeight = String(frameHeight);
+  image.dataset.cropRotation = String(rotation);
+  if (!image.complete || !image.naturalWidth || !image.naturalHeight) {
+    if (image.dataset.cropLoadPending !== 'true') {
+      image.dataset.cropLoadPending = 'true';
+      image.addEventListener('load', () => {
+        image.dataset.cropLoadPending = 'false';
+        applyImageCropPresentation(image, file, Number(image.dataset.cropFrameWidth), Number(image.dataset.cropFrameHeight), Number(image.dataset.cropRotation) || 0);
+      }, {once: true});
+    }
+    return;
+  }
+  const config = optionsFor(file);
+  const zoom = Math.max(1, Number(config.cropZoom) || 1);
+  const cropX = Math.max(0, Math.min(100, Number(config.cropX) || 0));
+  const cropY = Math.max(0, Math.min(100, Number(config.cropY) || 0));
+  const swapsAxes = Math.abs(rotation % 180) === 90;
+  const orientedWidth = swapsAxes ? image.naturalHeight : image.naturalWidth;
+  const orientedHeight = swapsAxes ? image.naturalWidth : image.naturalHeight;
+  const baseScale = (config.fit || fitInput.value) === 'cover'
+    ? Math.max(frameWidth / orientedWidth, frameHeight / orientedHeight)
+    : Math.min(frameWidth / orientedWidth, frameHeight / orientedHeight);
+  const scale = baseScale * zoom;
+  const scaledWidth = image.naturalWidth * scale;
+  const scaledHeight = image.naturalHeight * scale;
+  const overflowX = Math.max(0, orientedWidth * scale - frameWidth);
+  const overflowY = Math.max(0, orientedHeight * scale - frameHeight);
+  const translateX = (0.5 - cropX / 100) * overflowX;
+  const translateY = (0.5 - cropY / 100) * overflowY;
+  image.style.position = 'absolute';
+  image.style.left = '50%';
+  image.style.top = '50%';
+  image.style.width = `${scaledWidth}px`;
+  image.style.height = `${scaledHeight}px`;
+  image.style.maxWidth = 'none';
+  image.style.maxHeight = 'none';
+  image.style.objectFit = 'fill';
+  image.style.objectPosition = '50% 50%';
+  image.style.transformOrigin = '50% 50%';
+  image.style.transform = `translate(-50%, -50%) translate(${translateX}px, ${translateY}px) rotate(${rotation}deg)`;
+}
+
+function applyManualSourcePresentation(image, frameWidth, frameHeight, rotation = 0) {
+  if (!image?.naturalWidth || !image?.naturalHeight || !frameWidth || !frameHeight) return;
+  const swapsAxes = Math.abs(rotation % 180) === 90;
+  const orientedWidth = swapsAxes ? image.naturalHeight : image.naturalWidth;
+  const orientedHeight = swapsAxes ? image.naturalWidth : image.naturalHeight;
+  const scale = Math.min(frameWidth / orientedWidth, frameHeight / orientedHeight);
+  image.style.position = 'absolute';
+  image.style.left = '50%';
+  image.style.top = '50%';
+  image.style.width = `${image.naturalWidth * scale}px`;
+  image.style.height = `${image.naturalHeight * scale}px`;
+  image.style.maxWidth = 'none';
+  image.style.maxHeight = 'none';
+  image.style.objectFit = 'fill';
+  image.style.transformOrigin = '50% 50%';
+  image.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+}
+
+function orientedManualPreview(file, rotation) {
+  let previews = manualPreviewCache.get(file);
+  if (!previews) { previews = new Map(); manualPreviewCache.set(file, previews); }
+  if (previews.has(rotation)) return previews.get(rotation);
+  const preview = new Promise((resolve, reject) => {
+    const source = new Image();
+    source.onload = () => {
+      const normalized = ((rotation % 360) + 360) % 360;
+      const swapsAxes = normalized === 90 || normalized === 270;
+      const width = swapsAxes ? source.naturalHeight : source.naturalWidth;
+      const height = swapsAxes ? source.naturalWidth : source.naturalHeight;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      context.translate(width / 2, height / 2);
+      context.rotate(normalized * Math.PI / 180);
+      context.drawImage(source, -source.naturalWidth / 2, -source.naturalHeight / 2);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    source.onerror = () => reject(new Error('No se pudo preparar la orientación de la foto.'));
+    source.src = objectUrl(file);
+  });
+  previews.set(rotation, preview);
+  return preview;
+}
+
+function renderCropBox() {
+  cropSelection.style.left = `${cropBox.x * 100}%`;
+  cropSelection.style.top = `${cropBox.y * 100}%`;
+  cropSelection.style.width = `${cropBox.width * 100}%`;
+  cropSelection.style.height = `${cropBox.height * 100}%`;
+}
+
+function cropPointFromPointer(event) {
+  // Quita el borde del escenario para alinear el área visible con los píxeles recortados.
+  const bounds = photoEditorStage.getBoundingClientRect();
+  const width = Math.max(1, photoEditorStage.clientWidth);
+  const height = Math.max(1, photoEditorStage.clientHeight);
+  return {
+    x: Math.max(0, Math.min(1, (event.clientX - bounds.left - photoEditorStage.clientLeft) / width)),
+    y: Math.max(0, Math.min(1, (event.clientY - bounds.top - photoEditorStage.clientTop) / height))
+  };
+}
+
+function selectPhoto(file) {
+  if (!photos.includes(file)) return;
+  if (selectedPhoto === file) {
+    renderPhotoEditor();
+    return;
+  }
+  cropEditMode = false;
+  cropBox = {x: 0, y: 0, width: 1, height: 1};
+  selectedPhoto = file;
+  render();
+  photoEditor.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+
+function isCropDoubleTap(event, file) {
+  const now = Date.now();
+  const isSecondTap = lastCropTap?.file === file
+    && now - lastCropTap.time < 450
+    && Math.hypot(event.clientX - lastCropTap.x, event.clientY - lastCropTap.y) < 28;
+  lastCropTap = isSecondTap ? null : {file, time: now, x: event.clientX, y: event.clientY};
+  return isSecondTap;
+}
+
+function renderPhotoEditor() {
+  const inScalePreview = document.body.classList.contains('photo-preview-100');
+  if (!selectedPhoto || !photos.includes(selectedPhoto)) {
+    photoEditor.hidden = true;
+    if (inScalePreview) scalePreviewEditGroup.hidden = true;
+    return;
+  }
+  const file = selectedPhoto;
+  const config = optionsFor(file);
+  photoEditor.hidden = false;
+  if (inScalePreview) scalePreviewEditGroup.hidden = false;
+  photoEditorTitle.textContent = `Editando: ${file.name}`;
+  photoEditorImage.alt = file.name;
+  const rotation = photoRotations.get(file) || 0;
+  const renderKey = `${objectUrl(file)}|${rotation}|${cropEditMode ? 'manual' : 'normal'}`;
+  if (photoEditorImage.dataset.renderKey !== renderKey && photoEditorImage.dataset.pendingKey !== renderKey) {
+    if (cropEditMode && rotation) {
+      photoEditorImage.dataset.pendingKey = renderKey;
+      photoEditorImage.style.visibility = 'hidden';
+      orientedManualPreview(file, rotation).then(src => {
+        if (selectedPhoto !== file || !cropEditMode || (photoRotations.get(file) || 0) !== rotation) return;
+        photoEditorImage.dataset.renderKey = renderKey;
+        photoEditorImage.dataset.pendingKey = '';
+        photoEditorImage.src = src;
+        photoEditorImage.style.visibility = 'visible';
+        renderPhotoEditor();
+      }).catch(error => {
+        photoEditorImage.dataset.pendingKey = '';
+        photoStatus.textContent = error.message;
+        photoStatus.className = 'tip';
+      });
+    } else {
+      photoEditorImage.dataset.renderKey = renderKey;
+      photoEditorImage.dataset.pendingKey = '';
+      photoEditorImage.src = objectUrl(file);
+      photoEditorImage.style.visibility = 'visible';
+      photoEditorImage.onload = () => { if (selectedPhoto === file) renderPhotoEditor(); };
+    }
+  }
+  const sourceWidth = Math.max(1, photoEditorImage.naturalWidth || 1);
+  const sourceHeight = Math.max(1, photoEditorImage.naturalHeight || 1);
+  const manualPreviewReady = cropEditMode && photoEditorImage.dataset.renderKey === renderKey;
+  const swapsAxes = !manualPreviewReady && Math.abs(rotation % 180) === 90;
+  const width = cropEditMode
+    ? (swapsAxes ? sourceHeight : sourceWidth)
+    : (config.fullPage ? settings().paperWidth : config.photoWidth);
+  const height = cropEditMode
+    ? (swapsAxes ? sourceWidth : sourceHeight)
+    : (config.fullPage ? settings().paperHeight : config.photoHeight);
+  photoEditorStage.style.aspectRatio = `${width} / ${height}`;
+  const availableWidth = Math.max(120, photoEditorStage.parentElement.clientWidth - 20);
+  const maxWidth = Math.min(380, availableWidth);
+  const maxHeight = Math.min(window.innerWidth <= 600 ? window.innerHeight * 0.4 : window.innerHeight * 0.55, 520);
+  const stageScale = Math.min(maxWidth / width, maxHeight / height);
+  photoEditorStage.style.width = `${width * stageScale}px`;
+  photoEditorStage.style.height = `${height * stageScale}px`;
+  if (cropEditMode) applyManualSourcePresentation(photoEditorImage, photoEditorImageViewport.clientWidth, photoEditorImageViewport.clientHeight, manualPreviewReady ? 0 : rotation);
+  else applyImageCropPresentation(photoEditorImage, file, photoEditorImageViewport.clientWidth, photoEditorImageViewport.clientHeight, rotation);
+  cropSelection.hidden = !cropEditMode || (Boolean(rotation) && !manualPreviewReady);
+  if (cropEditMode) renderCropBox();
+  editorPhotoWidth.value = Number(config.fullPage ? settings().paperWidth : config.photoWidth).toFixed(1);
+  editorPhotoHeight.value = Number(config.fullPage ? settings().paperHeight : config.photoHeight).toFixed(1);
+  editorPhotoFit.value = config.fit || fitInput.value;
+  editorPhotoFilter.value = config.photoFilter || 'none';
+  photoEditorImage.style.filter = [colorModeButton.getAttribute('aria-pressed') === 'true' ? 'grayscale(1)' : '', photoFilterCss(config.photoFilter)].filter(Boolean).join(' ') || 'none';
+  editorPhotoFit.disabled = cropEditMode;
+  editorPhotoAlign.value = photoAlignment(file, config);
+  editorPhotoAlign.disabled = cropEditMode || config.fullPage;
+  editorPhotoRotate.disabled = cropEditMode;
+  editorPhotoWidth.disabled = cropEditMode;
+  editorPhotoHeight.disabled = cropEditMode;
+  editorCropMode.textContent = cropEditMode ? 'Cancelar edición' : 'Editar manualmente';
+  editorCropMode.setAttribute('aria-pressed', String(cropEditMode));
+  editorCropApply.hidden = !cropEditMode;
+  editorCropApply.disabled = !cropEditMode || (Boolean(rotation) && !manualPreviewReady);
+  editorPhotoFullPage.textContent = config.fullPage ? 'Usar tamaño normal' : 'Ocupar toda la hoja';
+  editorPhotoFullPage.setAttribute('aria-pressed', String(Boolean(config.fullPage)));
+  editorPhotoFullPage.disabled = cropEditMode;
+  editorPhotoReset.disabled = !cropEditMode && !photoOriginals.has(file);
+  editorPhotoReset.textContent = cropEditMode ? 'Seleccionar foto completa' : photoOriginals.has(file) ? 'Restaurar original' : 'Centrar encuadre';
+  photoEditorStage.classList.add('can-pan');
+  photoEditorStage.classList.toggle('manual-crop-active', cropEditMode);
+  photoEditorStage.classList.toggle('manual-preview-loading', cropEditMode && Boolean(rotation) && !manualPreviewReady);
+}
+
+function toggleCropMode(file = selectedPhoto) {
+  if (!file) return;
+  selectedPhoto = file;
+  cropEditMode = !cropEditMode;
+  if (cropEditMode) {
+    cropBox = {x: 0, y: 0, width: 1, height: 1};
+  }
+  cropBoxDrag = null;
+  renderSheets();
+  renderPhotoEditor();
+  photoEditor.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+
+function updateSelectedPhotoDimensions() {
+  if (!selectedPhoto) return;
+  const width = Math.max(1, Math.min(60, Number(editorPhotoWidth.value) || 1));
+  const height = Math.max(1, Math.min(60, Number(editorPhotoHeight.value) || 1));
+  editorPhotoWidth.value = width.toFixed(1);
+  editorPhotoHeight.value = height.toFixed(1);
+  updatePhotoOverride(selectedPhoto, {photoWidth: width, photoHeight: height, fullPage: false});
+}
+
+function photoAlignment(file, config = optionsFor(file)) {
+  return ['left', 'center', 'right'].includes(config.alignment) ? config.alignment : 'left';
+}
+
+function setSelectedPhotoAlignment() {
+  if (!selectedPhoto) return;
+  updatePhotoOverride(selectedPhoto, {alignment: editorPhotoAlign.value, x: undefined, y: undefined, fullPage: false});
+}
+
+function rotateSelectedPhoto() {
+  if (!selectedPhoto || cropEditMode) return;
+  photoRotations.set(selectedPhoto, ((photoRotations.get(selectedPhoto) || 0) + 90) % 360);
+  workStarted = true;
+  render();
+}
+
+for (const input of [editorPhotoWidth, editorPhotoHeight]) input.addEventListener('change', updateSelectedPhotoDimensions);
+editorPhotoFit.addEventListener('change', () => {
+  if (!selectedPhoto) return;
+  const resetCrop = editorPhotoFit.value === 'contain' ? {cropZoom: 1, cropX: 50, cropY: 50} : {};
+  updatePhotoOverride(selectedPhoto, {fit: editorPhotoFit.value, ...resetCrop});
+});
+editorPhotoAlign.addEventListener('change', setSelectedPhotoAlignment);
+editorPhotoRotate.addEventListener('click', rotateSelectedPhoto);
+editorPhotoFiltersToggle.addEventListener('click', () => {
+  const open = editorPhotoFilterField.hidden;
+  editorPhotoFilterField.hidden = !open;
+  editorPhotoFiltersToggle.setAttribute('aria-expanded', String(open));
+  if (open) editorPhotoFilter.focus();
+});
+editorPhotoFilter.addEventListener('change', () => {
+  if (selectedPhoto) updatePhotoOverride(selectedPhoto, {photoFilter: editorPhotoFilter.value});
+});
+editorCropMode.addEventListener('click', () => {
+  toggleCropMode();
+});
+editorCropApply.addEventListener('click', async () => {
+  try {
+    await applyManualCrop();
+  } catch (error) {
+    photoStatus.textContent = error.message || 'No se pudo aplicar el recorte.';
+    photoStatus.className = 'tip';
+  }
+});
+editorPhotoFullPage.addEventListener('click', () => {
+  if (!selectedPhoto) return;
+  const current = optionsFor(selectedPhoto);
+  updatePhotoOverride(selectedPhoto, {fullPage: !current.fullPage});
+});
+editorPhotoReset.addEventListener('click', () => {
+  if (!selectedPhoto) return;
+  if (cropEditMode) {
+    cropBox = {x: 0, y: 0, width: 1, height: 1};
+    renderCropBox();
+    return;
+  }
+  if (photoOriginals.has(selectedPhoto)) restoreOriginalPhoto();
+  else updatePhotoOverride(selectedPhoto, {cropX: 50, cropY: 50, cropZoom: 1});
+});
+photoEditorClose.addEventListener('click', () => {
+  selectedPhoto = null;
+  cropEditMode = false;
+  cropBoxDrag = null;
+  render();
+});
+photoEditorRemove.addEventListener('click', () => {
+  if (!selectedPhoto) return;
+  const removed = selectedPhoto;
+  photos = photos.filter(file => file !== removed);
+  photoOverrides.delete(removed);
+  selectedPhoto = photos[0] || null;
+  cropEditMode = false;
+  cropBoxDrag = null;
+  workStarted = true;
+  render();
+});
+
+photoEditorStage.addEventListener('pointerdown', event => {
+  if (!cropEditMode || !selectedPhoto) return;
+  const {x, y} = cropPointFromPointer(event);
+  const handle = event.target.closest('[data-crop-handle]');
+  const onSelection = event.target.closest('#cropSelection');
+  if (handle) {
+    cropBoxDrag = {pointerId: event.pointerId, mode: 'resize', handle: handle.dataset.cropHandle, x, y, initial: {...cropBox}};
+  } else if (onSelection) {
+    cropBoxDrag = {pointerId: event.pointerId, mode: 'move', x, y, initial: {...cropBox}};
+  } else {
+    cropBox = {x, y, width: 0, height: 0};
+    cropBoxDrag = {pointerId: event.pointerId, mode: 'draw', x, y, initial: {...cropBox}};
+    renderCropBox();
+  }
+  photoEditorStage.setPointerCapture(event.pointerId);
+  event.preventDefault();
+});
+
+photoEditorStage.addEventListener('pointermove', event => {
+  if (!cropBoxDrag || cropBoxDrag.pointerId !== event.pointerId) return;
+  const {x, y} = cropPointFromPointer(event);
+  const dx = x - cropBoxDrag.x;
+  const dy = y - cropBoxDrag.y;
+  const start = cropBoxDrag.initial;
+  if (cropBoxDrag.mode === 'move') {
+    cropBox.x = Math.max(0, Math.min(1 - start.width, start.x + dx));
+    cropBox.y = Math.max(0, Math.min(1 - start.height, start.y + dy));
+  } else if (cropBoxDrag.mode === 'draw') {
+    cropBox = {x: Math.min(cropBoxDrag.x, x), y: Math.min(cropBoxDrag.y, y), width: Math.abs(dx), height: Math.abs(dy)};
+  } else {
+    let left = start.x, top = start.y, right = start.x + start.width, bottom = start.y + start.height;
+    const edges = cropBoxDrag.handle;
+    if (edges.includes('w')) left = Math.max(0, Math.min(right - 0.02, start.x + dx));
+    if (edges.includes('e')) right = Math.min(1, Math.max(left + 0.02, start.x + start.width + dx));
+    if (edges.includes('n')) top = Math.max(0, Math.min(bottom - 0.02, start.y + dy));
+    if (edges.includes('s')) bottom = Math.min(1, Math.max(top + 0.02, start.y + start.height + dy));
+    cropBox = {x: left, y: top, width: right - left, height: bottom - top};
+  }
+  renderCropBox();
+});
+
+function finishCropBoxDrag(event) {
+  if (!cropBoxDrag || cropBoxDrag.pointerId !== event.pointerId) return;
+  cropBoxDrag = null;
+}
+photoEditorStage.addEventListener('pointerup', finishCropBoxDrag);
+photoEditorStage.addEventListener('pointercancel', finishCropBoxDrag);
+
+document.addEventListener('pointerdown', event => {
+  if (!selectedPhoto || event.target.closest('.photo-editor') || event.target.closest('.photo-tile')) return;
+  if (!event.target.closest('.print-sheet, #sheets')) return;
+  selectedPhoto = null;
+  cropEditMode = false;
+  cropBoxDrag = null;
+  render();
+});
+
+async function applyManualCrop() {
+  if (!selectedPhoto || !cropEditMode || !photoEditorImage.naturalWidth) return;
+  if (cropBox.width < 0.02 || cropBox.height < 0.02) {
+    throw new Error('Marca un área más grande para aplicar el recorte.');
+  }
+  const sourceFile = selectedPhoto;
+  const sourceRotation = ((photoRotations.get(sourceFile) || 0) % 360 + 360) % 360;
+  // En modo manual la vista ya está orientada; no se vuelve a girar al aplicar el recorte.
+  const orientedWidth = photoEditorImage.naturalWidth;
+  const orientedHeight = photoEditorImage.naturalHeight;
+  const left = Math.max(0, Math.min(orientedWidth - 1, Math.round(cropBox.x * orientedWidth)));
+  const top = Math.max(0, Math.min(orientedHeight - 1, Math.round(cropBox.y * orientedHeight)));
+  const cropWidth = Math.max(1, Math.min(orientedWidth - left, Math.round(cropBox.width * orientedWidth)));
+  const cropHeight = Math.max(1, Math.min(orientedHeight - top, Math.round(cropBox.height * orientedHeight)));
+  const oriented = document.createElement('canvas');
+  oriented.width = orientedWidth;
+  oriented.height = orientedHeight;
+  const orientedContext = oriented.getContext('2d');
+  orientedContext.drawImage(photoEditorImage, 0, 0);
+  const cropped = document.createElement('canvas');
+  cropped.width = cropWidth;
+  cropped.height = cropHeight;
+  cropped.getContext('2d').drawImage(oriented, left, top, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+  const blob = await new Promise(resolve => cropped.toBlob(resolve, 'image/png'));
+  if (!blob) throw new Error('No se pudo preparar el recorte.');
+  const baseName = sourceFile.name.replace(/(?:_recortada)?\.[^.]+$/i, '');
+  const croppedFile = new File([blob], `${baseName}_recortada.png`, {type: 'image/png', lastModified: Date.now()});
+  const current = optionsFor(sourceFile);
+  const rootOriginal = photoOriginals.get(sourceFile) || sourceFile;
+  const rootRotation = photoOriginalRotations.get(sourceFile) ?? sourceRotation;
+  photoOriginals.set(croppedFile, rootOriginal);
+  photoOriginalRotations.set(croppedFile, rootRotation);
+  photoRotations.set(croppedFile, 0);
+  photoOverrides.set(croppedFile, {
+    photoWidth: current.photoWidth,
+    photoHeight: current.photoHeight,
+    fit: current.fit,
+    cropX: 50,
+    cropY: 50,
+    cropZoom: 1,
+    alignment: current.alignment || 'auto',
+    fullPage: current.fullPage,
+    photoFilter: current.photoFilter || 'none',
+    x: current.x,
+    y: current.y
+  });
+  photoOverrides.delete(sourceFile);
+  const photoIndex = photos.indexOf(sourceFile);
+  if (photoIndex >= 0) photos[photoIndex] = croppedFile;
+  selectedPhoto = croppedFile;
+  cropEditMode = false;
+  cropBox = {x: 0, y: 0, width: 1, height: 1};
+  workStarted = true;
+  render();
+  renderSheets();
+  photoStatus.textContent = `Recorte aplicado a ${croppedFile.name}. La foto original se puede restaurar desde el editor.`;
+}
+
+function restoreOriginalPhoto() {
+  if (!selectedPhoto || !photoOriginals.has(selectedPhoto)) return;
+  const editedFile = selectedPhoto;
+  const originalFile = photoOriginals.get(editedFile);
+  const current = optionsFor(editedFile);
+  const originalRotation = photoOriginalRotations.get(editedFile) || 0;
+  const index = photos.indexOf(editedFile);
+  if (index >= 0) photos[index] = originalFile;
+  photoRotations.set(originalFile, originalRotation);
+  photoOverrides.set(originalFile, {
+    photoWidth: current.photoWidth,
+    photoHeight: current.photoHeight,
+    fit: current.fit,
+    cropX: 50,
+    cropY: 50,
+    cropZoom: 1,
+    alignment: current.alignment || 'auto',
+    fullPage: current.fullPage,
+    photoFilter: current.photoFilter || 'none',
+    x: current.x,
+    y: current.y
+  });
+  photoOverrides.delete(editedFile);
+  selectedPhoto = originalFile;
+  workStarted = true;
+  render();
+  renderSheets();
+  photoStatus.textContent = `Se restauró la foto original: ${originalFile.name}.`;
+}
+
 function render() {
   imageGrid.replaceChildren();
   for (const file of photos) {
     const figure = document.createElement('figure');
-    figure.className = 'editable-photo';
+    figure.className = `editable-photo${file === selectedPhoto ? ' selected' : ''}`;
+    figure.tabIndex = 0;
+    figure.setAttribute('role', 'button');
+    figure.setAttribute('aria-label', `Seleccionar ${file.name} para editar`);
+    figure.addEventListener('click', event => {
+      if (event.target.closest('button, input, select, summary')) return;
+      selectPhoto(file);
+    });
     const photoConfig = optionsFor(file);
     const image = document.createElement('img');
     image.src = objectUrl(file);
@@ -234,9 +763,9 @@ function render() {
     caption.textContent = file.name;
     const dimensions = document.createElement('div');
     dimensions.className = 'per-photo-dimensions';
-    const heightLabel = inputNumber('Alto (cm)', photoConfig.photoHeight, 1, 40, 0.1, value => updatePhotoOverride(file, {photoHeight: value}));
+    const heightLabel = inputNumber('Alto (cm)', photoConfig.photoHeight, 1, 40, 0.1, value => updatePhotoOverride(file, {photoHeight: value, fullPage: false}));
     heightLabel.querySelector('input').dataset.photoDimension = 'height';
-    const widthLabel = inputNumber('Ancho (cm)', photoConfig.photoWidth, 1, 40, 0.1, value => updatePhotoOverride(file, {photoWidth: value}));
+    const widthLabel = inputNumber('Ancho (cm)', photoConfig.photoWidth, 1, 40, 0.1, value => updatePhotoOverride(file, {photoWidth: value, fullPage: false}));
     widthLabel.querySelector('input').dataset.photoDimension = 'width';
     dimensions.append(heightLabel, widthLabel);
     const aspect = photoConfig.photoWidth / Math.max(0.1, photoConfig.photoHeight);
@@ -251,7 +780,7 @@ function render() {
     sizeSlider.addEventListener('input', () => {
       const newHeight = Number(sizeSlider.value);
       const newWidth = Math.round(newHeight * aspect * 10) / 10;
-      savePhotoOverride(file, {photoHeight: newHeight, photoWidth: newWidth});
+      savePhotoOverride(file, {photoHeight: newHeight, photoWidth: newWidth, fullPage: false});
       dimensions.querySelector('[data-photo-dimension="height"]').value = newHeight.toFixed(1);
       dimensions.querySelector('[data-photo-dimension="width"]').value = newWidth.toFixed(1);
       workStarted = true;
@@ -268,18 +797,22 @@ function render() {
     const fitSelect = document.createElement('select');
     fitSelect.innerHTML = '<option value="cover">Llenar cuadro</option><option value="contain">Foto completa</option>';
     fitSelect.value = photoConfig.fit || fitInput.value;
-    fitSelect.addEventListener('change', () => updatePhotoOverride(file, {fit: fitSelect.value}));
+    fitSelect.addEventListener('change', () => updatePhotoOverride(file, {fit: fitSelect.value, ...(fitSelect.value === 'contain' ? {cropZoom: 1, cropX: 50, cropY: 50} : {})}));
     fitLabel.append(fitSelect);
-    const positionLabel = document.createElement('label'); positionLabel.textContent = 'Posición';
+    const positionLabel = document.createElement('label'); positionLabel.textContent = 'Punto de recorte';
     const positionSelect = document.createElement('select');
     positionSelect.innerHTML = '<option value="center">Centro</option><option value="top">Arriba</option><option value="bottom">Abajo</option><option value="left">Izquierda</option><option value="right">Derecha</option>';
-    positionSelect.value = photoConfig.position || 'center';
-    positionSelect.addEventListener('change', () => updatePhotoOverride(file, {position: positionSelect.value}));
+    positionSelect.value = photoConfig.cropY === 0 ? 'top' : photoConfig.cropY === 100 ? 'bottom' : photoConfig.cropX === 0 ? 'left' : photoConfig.cropX === 100 ? 'right' : 'center';
+    positionSelect.addEventListener('change', () => {
+      const points = {center: [50, 50], top: [50, 0], bottom: [50, 100], left: [0, 50], right: [100, 50]};
+      const [cropX, cropY] = points[positionSelect.value];
+      updatePhotoOverride(file, {cropX, cropY});
+    });
     positionLabel.append(positionSelect);
     options.append(fitLabel, positionLabel);
     const orientation = document.createElement('button');
     orientation.type = 'button'; orientation.className = 'photo-orientation'; orientation.textContent = '↔ Cambiar horizontal / vertical';
-    orientation.addEventListener('click', () => updatePhotoOverride(file, {photoWidth: photoConfig.photoHeight, photoHeight: photoConfig.photoWidth}));
+    orientation.addEventListener('click', () => updatePhotoOverride(file, {photoWidth: photoConfig.photoHeight, photoHeight: photoConfig.photoWidth, fullPage: false}));
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'remove-photo';
@@ -287,6 +820,7 @@ function render() {
     remove.addEventListener('click', () => {
       photos = photos.filter(photo => photo !== file);
       photoOverrides.delete(file);
+      if (selectedPhoto === file) selectedPhoto = photos[0] || null;
       render();
     });
     const actions = document.createElement('div');
@@ -314,6 +848,7 @@ function render() {
     figure.append(image, caption, dimensions, sizeLabel, advanced, actions);
     imageGrid.append(figure);
   }
+  renderPhotoEditor();
   photoStatus.textContent = photos.length
     ? `${photos.length} imagen${photos.length === 1 ? '' : 'es'} cargada${photos.length === 1 ? '' : 's'}.`
     : 'Arrastrá imágenes o un archivo ZIP/RAR a cualquier parte de la página.';
@@ -368,32 +903,153 @@ function renderSheets() {
     sheet.style.transform = `scale(${scale})`;
     sheet.style.transformOrigin = 'top center';
     for (const placement of layout.pages[page]) {
-      const {file, photoWidth, photoHeight, fit, position, x, y} = placement;
+      const {file, photoWidth, photoHeight, fit, cropX, cropY, cropZoom, x, y, fullPage} = placement;
       const frame = document.createElement('div');
-      frame.className = `photo-tile${fit === 'contain' ? ' contain' : ''}${photoBorderInput.checked ? '' : ' no-border'}`;
+      frame.className = `photo-tile${fit === 'contain' ? ' contain' : ''}${photoBorderInput.checked && !fullPage ? '' : ' no-border'}${file === selectedPhoto ? ' selected-for-edit' : ''}`;
+      if (file === selectedPhoto && cropEditMode) frame.classList.add('crop-edit-active');
       Object.assign(frame.style, {position: 'absolute', left: `${x}cm`, top: `${y}cm`, width: `${photoWidth}cm`, height: `${photoHeight}cm`});
+      frame.dataset.photoName = file.name;
+      frame.addEventListener('pointerdown', event => {
+        if (event.button !== undefined && event.button !== 0) return;
+        if (isCropDoubleTap(event, file)) {
+          event.preventDefault();
+          event.stopPropagation();
+          toggleCropMode(file);
+          return;
+        }
+        if (cropEditMode) {
+          selectedPhoto = file;
+          renderPhotoEditor();
+          event.preventDefault();
+          return;
+        }
+        tileDrag = {pointerId: event.pointerId, file, frame, sheet, startX: event.clientX, startY: event.clientY, originX: x, originY: y, moved: false};
+        frame.setPointerCapture(event.pointerId);
+        event.preventDefault();
+      });
+      frame.addEventListener('pointermove', event => {
+        if (!tileDrag || tileDrag.pointerId !== event.pointerId || tileDrag.frame !== frame) return;
+        const deltaX = event.clientX - tileDrag.startX;
+        const deltaY = event.clientY - tileDrag.startY;
+        if (Math.abs(deltaX) + Math.abs(deltaY) > 3) tileDrag.moved = true;
+        if (!tileDrag.moved) return;
+        const sheetRect = sheet.getBoundingClientRect();
+        const scaleX = config.paperWidth / Math.max(1, sheetRect.width);
+        const scaleY = config.paperHeight / Math.max(1, sheetRect.height);
+        const nextX = Math.max(0, Math.min(config.paperWidth - photoWidth, tileDrag.originX + deltaX * scaleX));
+        const nextY = Math.max(0, Math.min(config.paperHeight - photoHeight, tileDrag.originY + deltaY * scaleY));
+        frame.style.left = `${nextX}cm`;
+        frame.style.top = `${nextY}cm`;
+      });
+      const finishTileDrag = event => {
+        if (!tileDrag || tileDrag.pointerId !== event.pointerId || tileDrag.frame !== frame) return;
+        const drag = tileDrag;
+        tileDrag = null;
+        if (!drag.moved) return;
+        const sheetRect = sheet.getBoundingClientRect();
+        const scaleX = config.paperWidth / Math.max(1, sheetRect.width);
+        const scaleY = config.paperHeight / Math.max(1, sheetRect.height);
+        const nextX = Math.max(0, Math.min(config.paperWidth - photoWidth, drag.originX + (event.clientX - drag.startX) * scaleX));
+        const nextY = Math.max(0, Math.min(config.paperHeight - photoHeight, drag.originY + (event.clientY - drag.startY) * scaleY));
+        savePhotoOverride(file, {x: nextX, y: nextY, alignment: 'auto'});
+        workStarted = true;
+        render();
+      };
+      frame.addEventListener('pointerup', finishTileDrag);
+      frame.addEventListener('pointercancel', finishTileDrag);
+      frame.addEventListener('click', event => {
+        event.stopPropagation();
+        if (event.target.closest('.photo-resize-handle')) return;
+        selectPhoto(file);
+      });
       const image = document.createElement('img');
       image.src = objectUrl(file);
       image.alt = file.name;
       image.draggable = false;
-      image.style.objectPosition = position || 'center';
       const rotation = photoRotations.get(file) || 0;
-      if (rotation % 180) {
-        image.style.position = 'absolute';
-        image.style.width = `${photoHeight}cm`;
-        image.style.height = `${photoWidth}cm`;
-        image.style.left = '50%';
-        image.style.top = '50%';
-        image.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
-        frame.style.position = 'relative';
-      } else if (rotation) image.style.transform = `rotate(${rotation}deg)`;
-      if (colorModeButton.getAttribute('aria-pressed') === 'true') image.style.filter = 'grayscale(1)';
-      frame.append(image);
+      image.style.filter = [colorModeButton.getAttribute('aria-pressed') === 'true' ? 'grayscale(1)' : '', photoFilterCss(placement.photoFilter)].filter(Boolean).join(' ') || 'none';
+      const imageViewport = document.createElement('div');
+      imageViewport.className = 'photo-tile-image-viewport';
+      imageViewport.append(image);
+      frame.append(imageViewport);
+      applyImageCropPresentation(image, file, Math.max(1, cmToPx(photoWidth) - 2), Math.max(1, cmToPx(photoHeight) - 2), rotation);
+      if (file === selectedPhoto && !cropEditMode) {
+        for (const handleName of ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']) {
+          const handle = document.createElement('button');
+          handle.type = 'button';
+          handle.className = `photo-resize-handle handle-${handleName}`;
+          handle.setAttribute('aria-label', `Cambiar tamaño desde ${handleName} de ${file.name}`);
+          handle.dataset.handle = handleName;
+          handle.addEventListener('pointerdown', event => {
+            event.stopPropagation();
+            if (isCropDoubleTap(event, file)) {
+              event.preventDefault();
+              toggleCropMode(file);
+              return;
+            }
+            if (cropEditMode) return;
+            resizeDrag = {pointerId: event.pointerId, file, frame, handle, startX: event.clientX, startY: event.clientY, x, y, width: photoWidth, height: photoHeight};
+            handle.setPointerCapture(event.pointerId);
+          });
+          handle.addEventListener('pointermove', event => {
+            if (!resizeDrag || resizeDrag.pointerId !== event.pointerId || resizeDrag.handle !== handle) return;
+            const sheetRect = sheet.getBoundingClientRect();
+            const scaleX = config.paperWidth / Math.max(1, sheetRect.width);
+            const scaleY = config.paperHeight / Math.max(1, sheetRect.height);
+            const dx = (event.clientX - resizeDrag.startX) * scaleX;
+            const dy = (event.clientY - resizeDrag.startY) * scaleY;
+            const edge = handle.dataset.handle;
+            let nextX = resizeDrag.x, nextY = resizeDrag.y;
+            let nextWidth = resizeDrag.width, nextHeight = resizeDrag.height;
+            if (edge.includes('w')) {
+              nextX = Math.max(0, Math.min(resizeDrag.x + resizeDrag.width - 1, resizeDrag.x + dx));
+              nextWidth = resizeDrag.width + resizeDrag.x - nextX;
+            } else if (edge.includes('e')) nextWidth = Math.max(1, Math.min(config.paperWidth - resizeDrag.x, resizeDrag.width + dx));
+            if (edge.includes('n')) {
+              nextY = Math.max(0, Math.min(resizeDrag.y + resizeDrag.height - 1, resizeDrag.y + dy));
+              nextHeight = resizeDrag.height + resizeDrag.y - nextY;
+            } else if (edge.includes('s')) nextHeight = Math.max(1, Math.min(config.paperHeight - resizeDrag.y, resizeDrag.height + dy));
+            frame.style.left = `${nextX}cm`;
+            frame.style.top = `${nextY}cm`;
+            frame.style.width = `${nextWidth}cm`;
+            frame.style.height = `${nextHeight}cm`;
+          });
+          const finishResize = event => {
+            if (!resizeDrag || resizeDrag.pointerId !== event.pointerId || resizeDrag.handle !== handle) return;
+            const drag = resizeDrag;
+            resizeDrag = null;
+            const sheetRect = sheet.getBoundingClientRect();
+            const scaleX = config.paperWidth / Math.max(1, sheetRect.width);
+            const scaleY = config.paperHeight / Math.max(1, sheetRect.height);
+            const dx = (event.clientX - drag.startX) * scaleX;
+            const dy = (event.clientY - drag.startY) * scaleY;
+            if (Math.abs(dx) + Math.abs(dy) < 0.05) return;
+            const edge = handle.dataset.handle;
+            let nextX = drag.x, nextY = drag.y;
+            let nextWidth = drag.width, nextHeight = drag.height;
+            if (edge.includes('w')) {
+              nextX = Math.max(0, Math.min(drag.x + drag.width - 1, drag.x + dx));
+              nextWidth = drag.width + drag.x - nextX;
+            } else if (edge.includes('e')) nextWidth = Math.max(1, Math.min(config.paperWidth - drag.x, drag.width + dx));
+            if (edge.includes('n')) {
+              nextY = Math.max(0, Math.min(drag.y + drag.height - 1, drag.y + dy));
+              nextHeight = drag.height + drag.y - nextY;
+            } else if (edge.includes('s')) nextHeight = Math.max(1, Math.min(config.paperHeight - drag.y, drag.height + dy));
+            savePhotoOverride(file, {photoWidth: nextWidth, photoHeight: nextHeight, x: nextX, y: nextY, alignment: 'auto', fullPage: false});
+            workStarted = true;
+            render();
+          };
+          handle.addEventListener('pointerup', finishResize);
+          handle.addEventListener('pointercancel', finishResize);
+          frame.append(handle);
+        }
+      }
       sheet.append(frame);
     }
     shell.append(sheet);
     sheets.append(shell);
   }
+  renderPhotoEditor();
 }
 
 function makePhotoPlacements(config) {
@@ -403,10 +1059,38 @@ function makePhotoPlacements(config) {
   let page = [], x = config.margin, y = config.margin, rowHeight = 0;
   for (const file of photos) {
     const current = optionsFor(file, config);
+    if (current.fullPage) {
+      if (page.length) pages.push(page);
+      page = [];
+      pages.push([{file, photoWidth: config.paperWidth, photoHeight: config.paperHeight, fit: current.fit || 'cover', cropX: current.cropX ?? 50, cropY: current.cropY ?? 50, cropZoom: current.cropZoom ?? 1, x: 0, y: 0, fullPage: true}]);
+      x = config.margin; y = config.margin; rowHeight = 0;
+      continue;
+    }
     const photoWidth = Number(current.photoWidth) || config.photoWidth;
     const photoHeight = Number(current.photoHeight) || config.photoHeight;
     if (photoWidth > config.paperWidth - config.margin * 2 || photoHeight > config.paperHeight - config.margin * 2) {
       return {pages: [], error: `${file.name}: ${photoWidth.toFixed(1)} × ${photoHeight.toFixed(1)} cm no cabe en la hoja con el margen elegido.`};
+    }
+    if (current.alignment && current.alignment !== 'auto') {
+      if (rowHeight > 0) {
+        y += rowHeight + config.gap;
+        x = config.margin;
+        rowHeight = 0;
+      }
+      if (y + photoHeight > maxY + 0.001) {
+        if (page.length) pages.push(page);
+        page = []; x = config.margin; y = config.margin; rowHeight = 0;
+      }
+      const alignedX = current.alignment === 'center'
+        ? (config.paperWidth - photoWidth) / 2
+        : current.alignment === 'right'
+          ? config.paperWidth - config.margin - photoWidth
+          : config.margin;
+      page.push({file, photoWidth, photoHeight, fit: current.fit || fitInput.value, cropX: current.cropX ?? 50, cropY: current.cropY ?? 50, cropZoom: current.cropZoom ?? 1, photoFilter: current.photoFilter || 'none', x: alignedX, y});
+      y += photoHeight + config.gap;
+      x = config.margin;
+      rowHeight = 0;
+      continue;
     }
     if (x + photoWidth > maxX + 0.001) {
       x = config.margin; y += rowHeight + config.gap; rowHeight = 0;
@@ -415,7 +1099,9 @@ function makePhotoPlacements(config) {
       if (page.length) pages.push(page);
       page = []; x = config.margin; y = config.margin; rowHeight = 0;
     }
-    page.push({file, photoWidth, photoHeight, fit: current.fit || fitInput.value, position: current.position || 'center', x, y});
+    const placementX = current.x === undefined ? x : Math.max(0, Math.min(config.paperWidth - photoWidth, Number(current.x)));
+    const placementY = current.y === undefined ? y : Math.max(0, Math.min(config.paperHeight - photoHeight, Number(current.y)));
+    page.push({file, photoWidth, photoHeight, fit: current.fit || fitInput.value, cropX: current.cropX ?? 50, cropY: current.cropY ?? 50, cropZoom: current.cropZoom ?? 1, photoFilter: current.photoFilter || 'none', x: placementX, y: placementY});
     x += photoWidth + config.gap;
     rowHeight = Math.max(rowHeight, photoHeight);
   }
@@ -553,8 +1239,10 @@ function enterScalePreview() {
   const orientationName = paperOrientationInput.value === 'landscape' ? 'horizontal' : 'vertical';
   scalePreviewTitle.textContent = `100% · ${paperName} ${orientationName} · ${config.paperWidth.toFixed(2)} × ${config.paperHeight.toFixed(2)} cm`;
   scalePreviewBar.hidden = false;
-  scalePreviewSlot.append(photoScaleField);
+  scalePreviewSlot.append(photoScaleField, squareModeField);
   scalePreviewOutputActions.append(outputControls);
+  scalePreviewEditSlot.append(photoEditor);
+  scalePreviewEditGroup.hidden = !selectedPhoto;
   document.body.classList.add('photo-preview-100');
   renderSheets();
   exitScalePreviewButton.focus();
@@ -563,8 +1251,13 @@ function enterScalePreview() {
 function exitScalePreview() {
   if (scaleFieldNextSibling && scaleFieldNextSibling.parentNode === scaleFieldHome) scaleFieldHome.insertBefore(photoScaleField, scaleFieldNextSibling);
   else scaleFieldHome.append(photoScaleField);
+  if (squareModeFieldNextSibling && squareModeFieldNextSibling.parentNode === squareModeFieldHome) squareModeFieldHome.insertBefore(squareModeField, squareModeFieldNextSibling);
+  else squareModeFieldHome.append(squareModeField);
   if (outputControlsNextSibling && outputControlsNextSibling.parentNode === outputControlsHome) outputControlsHome.insertBefore(outputControls, outputControlsNextSibling);
   else outputControlsHome.append(outputControls);
+  if (photoEditorNextSibling && photoEditorNextSibling.parentNode === photoEditorHome) photoEditorHome.insertBefore(photoEditor, photoEditorNextSibling);
+  else photoEditorHome.append(photoEditor);
+  scalePreviewEditGroup.hidden = true;
   document.body.classList.remove('photo-preview-100');
   scalePreviewBar.hidden = true;
   renderSheets();
@@ -577,7 +1270,7 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && document.body.classList.contains('photo-preview-100')) exitScalePreview();
 });
 
-function preparePhoto(file, widthCm, heightCm, fit, blackWhite, border, rotation = 0, position = 'center') {
+function preparePhoto(file, widthCm, heightCm, fit, blackWhite, border, rotation = 0, cropX = 50, cropY = 50, cropZoom = 1, photoFilter = 'none') {
   return new Promise((resolve, reject) => {
     const image = new Image();
     const source = URL.createObjectURL(file);
@@ -594,18 +1287,18 @@ function preparePhoto(file, widthCm, heightCm, fit, blackWhite, border, rotation
       const swapsAxes = normalizedRotation === 90 || normalizedRotation === 270;
       const orientedWidth = swapsAxes ? image.naturalHeight : image.naturalWidth;
       const orientedHeight = swapsAxes ? image.naturalWidth : image.naturalHeight;
-      const scale = fit === 'cover'
+      const scale = (fit === 'cover'
         ? Math.max((widthPixels - 6) / orientedWidth, (heightPixels - 6) / orientedHeight)
-        : Math.min((widthPixels - 6) / orientedWidth, (heightPixels - 6) / orientedHeight);
+        : Math.min((widthPixels - 6) / orientedWidth, (heightPixels - 6) / orientedHeight)) * Math.max(1, Number(cropZoom) || 1);
       const width = image.naturalWidth * scale;
       const height = image.naturalHeight * scale;
       const visualWidth = swapsAxes ? height : width;
       const visualHeight = swapsAxes ? width : height;
-      const horizontal = position === 'left' ? 0 : position === 'right' ? 1 : 0.5;
-      const vertical = position === 'top' ? 0 : position === 'bottom' ? 1 : 0.5;
+      const horizontal = Math.max(0, Math.min(100, Number(cropX) || 0)) / 100;
+      const vertical = Math.max(0, Math.min(100, Number(cropY) || 0)) / 100;
       const drawX = (widthPixels - visualWidth) * horizontal;
       const drawY = (heightPixels - visualHeight) * vertical;
-      ctx.filter = blackWhite ? 'grayscale(1)' : 'none';
+      ctx.filter = [blackWhite ? 'grayscale(1)' : '', filterForPrint(photoFilter)].filter(Boolean).join(' ') || 'none';
       ctx.save();
       ctx.translate(drawX + visualWidth / 2, drawY + visualHeight / 2);
       ctx.rotate(normalizedRotation * Math.PI / 180);
@@ -672,7 +1365,7 @@ async function exportWord() {
   for (let index = 0; index < placements.length; index++) {
     const placement = placements[index];
     photoStatus.textContent = `Preparando foto ${index + 1} de ${placements.length} para Word…`;
-    processed.push(await preparePhoto(placement.file, placement.photoWidth, placement.photoHeight, placement.fit, blackWhite, photoBorderInput.checked, photoRotations.get(placement.file) || 0, placement.position));
+    processed.push(await preparePhoto(placement.file, placement.photoWidth, placement.photoHeight, placement.fit, blackWhite, photoBorderInput.checked && !placement.fullPage, photoRotations.get(placement.file) || 0, placement.cropX, placement.cropY, placement.cropZoom, placement.photoFilter));
   }
   const relationships = processed.map((_, index) => `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image${index + 1}.jpg"/>`).join('');
   const body = [];
