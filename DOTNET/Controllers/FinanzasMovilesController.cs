@@ -14,7 +14,8 @@ namespace ImagenPDF.Controllers
     [Route("api/finanzas")]
     public sealed class FinanzasMovilesController : ControllerBase
     {
-        private const decimal CapitalRate = 61m;
+        // El precio de venta equivale al costo multiplicado por 1.61.
+        private const decimal SaleMarkupFactor = 1.61m;
         private const decimal MaxAmount = 999999999.99m;
         private readonly IConfiguration _configuration;
         private readonly ILogger<FinanzasMovilesController> _logger;
@@ -107,7 +108,10 @@ SELECT TOP (30) Fecha,Tipo,Concepto,Monto,Responsable FROM (
             if (!UserId.HasValue) return Unauthorized(new { mensaje = "La sesión venció. Inicia sesión otra vez." });
             if (string.IsNullOrWhiteSpace(ConnectionString)) return StatusCode(503, new { mensaje = "Falta configurar SQL Server." });
             if (request.Fecha == DateTime.MinValue || request.Fecha > DateTime.Now.AddMinutes(2) || request.Ventas < 0 || request.Ventas > MaxAmount) return BadRequest(new { mensaje = "Revisa el total vendido y la fecha del cierre." });
-            var capital = Math.Round(request.Ventas * CapitalRate / 100m, 2, MidpointRounding.AwayFromZero);
+            var capitalExact = request.Ventas / SaleMarkupFactor;
+            var capitalEntero = decimal.Truncate(capitalExact);
+            // Solo se redondea hacia arriba si la fracción supera 0.50; el empate baja.
+            var capital = capitalEntero + (capitalExact - capitalEntero > 0.5m ? 1m : 0m);
             var personal = request.Ventas - capital;
             try
             {

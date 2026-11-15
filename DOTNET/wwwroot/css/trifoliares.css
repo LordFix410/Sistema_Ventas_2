@@ -1,0 +1,32 @@
+.trifold-tool{min-height:100vh;background:#edf3f7;color:#183449}
+.trifold-tool [hidden]{display:none!important}
+.trifold-wrap{width:min(100% - 24px,920px);margin:22px auto 44px;display:grid;gap:14px}
+.trifold-card{box-sizing:border-box;padding:20px;border:1px solid #d5e1e9;border-radius:14px;background:#fff;box-shadow:0 4px 16px #153b5510}
+.trifold-card h2{margin:0 0 14px;color:#173b55;font-size:1.12rem}
+.pdf-drop{display:grid;justify-items:center;gap:8px;padding:26px 16px;border:2px dashed #9cb9cb;border-radius:12px;background:#f7fbfd;color:#31566d;text-align:center;cursor:pointer}
+.pdf-drop:hover,.pdf-drop.drag-active{border-color:#176fa8;background:#eef8fe}
+.pdf-drop-icon{display:grid;place-items:center;width:52px;height:52px;border-radius:14px;background:#e7f3fa;color:#176fa8;font-size:16px;font-weight:900}
+.pdf-drop span:last-child{font-size:.88rem;color:#617b8d}
+.trifold-tool input[type=file]{display:none}
+.trifold-status{min-height:1.3em;margin:12px 0 0;color:#527084;font-size:.9rem;overflow-wrap:anywhere}
+.trifold-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end}
+.trifold-controls label{display:grid;gap:6px;color:#29485e;font-size:.86rem;font-weight:750}
+.trifold-controls select,.trifold-controls input{box-sizing:border-box;width:100%;min-height:44px;border:1px solid #bdcdd8;border-radius:8px;background:#fff;color:#173246;padding:9px 11px;font:inherit}
+.margin-input{display:flex;align-items:center;gap:8px}
+.margin-input input{max-width:130px}
+.margin-input span{color:#62798a;font-weight:600}
+.trifold-note{margin:0 0 14px;color:#61798a;font-size:.86rem;line-height:1.5}
+.primary-action,.print-action,.word-action,.download-action{display:inline-flex;align-items:center;justify-content:center;min-height:46px;border:0;border-radius:9px;background:#176fa8;color:#fff;padding:10px 16px;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}
+.primary-action:hover:not(:disabled),.print-action:hover:not(:disabled),.word-action:hover:not(:disabled),.download-action:hover{background:#105984}
+.primary-action:disabled,.print-action:disabled,.word-action:disabled{opacity:.5;cursor:not-allowed}
+.print-action{background:#18804b}
+.print-action:hover:not(:disabled){background:#12643a}
+.word-action{background:#3157a4}
+.word-action:hover:not(:disabled){background:#24427e}
+.result-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px}
+.result-heading h2{margin-bottom:5px}
+.result-heading .trifold-note{margin:0}
+.result-card iframe{display:block;width:100%;height:min(72vh,820px);border:1px solid #d5e1e9;border-radius:8px;background:#eef2f5}
+.print-note{margin:12px 0 0;padding:12px;border-radius:8px;background:#fff5dc;color:#705923;font-size:.84rem;line-height:1.5}
+.trifold-tool footer{padding:14px;text-align:center;color:#70808c;font-size:.78rem}
+@media(max-width:680px){.trifold-wrap{margin:12px auto 28px}.trifold-card{padding:15px}.trifold-controls{grid-template-columns:1fr}.result-heading{align-items:stretch;flex-direction:column}.result-heading .print-action,.result-heading .download-action,.result-heading .word-action{width:100%}.result-card iframe{height:62vh}}

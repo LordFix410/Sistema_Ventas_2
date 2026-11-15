@@ -21,7 +21,19 @@ namespace CapaPresentacion
         public frmDetalleVenta()
         {
             InitializeComponent();
+            Resize += (s, e) => AjustarDisenoAdaptable();
+            AjustarDisenoAdaptable();
             CapaPresentacion.Utilidades.ExperienciaUsuario.Aplicar(this, txtBusqueda, txtBusqueda);
+        }
+
+        private void AjustarDisenoAdaptable()
+        {
+            if (IsDisposed || dataGridView1 == null || label10 == null) return;
+            int margen = 18;
+            int x = Math.Max(margen, label10.Left);
+            int ancho = Math.Max(300, ClientSize.Width - x - margen);
+            int y = label10.Bottom + 20;
+            dataGridView1.SetBounds(x, y, ancho, Math.Max(140, ClientSize.Height - y - margen));
         }
 
         private void btnBuscar_Click(object sender, EventArgs e)

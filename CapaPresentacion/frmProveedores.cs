@@ -15,10 +15,61 @@ namespace CapaPresentacion
 {
     public partial class frmProveedores : Form
     {
+        private readonly Panel panelEdicion = new Panel();
         public frmProveedores()
         {
             InitializeComponent();
+            ConfigurarDisenoAdaptable();
+            Resize += (s, e) => AjustarDiseno();
+            AjustarDiseno();
             ExperienciaUsuario.Aplicar(this, txtDocumento, txtBusqueda);
+        }
+
+        private void ConfigurarDisenoAdaptable()
+        {
+            panelEdicion.Name = "panelEdicionProveedor";
+            panelEdicion.AutoScroll = true;
+            panelEdicion.BackColor = System.Drawing.Color.White;
+            panelEdicion.BorderStyle = BorderStyle.FixedSingle;
+            foreach (Control control in new Control[]
+            {
+                label9, label2, txtDocumento, label3, txtRazonSocial, label4,
+                txtCorreo, label6, txtTelefono, label8, cboEstado,
+                btnGuardar, btnCancelarUsuario, btnEliminar
+            })
+                panelEdicion.Controls.Add(control);
+            label1.Visible = false;
+            Controls.Add(panelEdicion);
+            panelEdicion.BringToFront();
+        }
+
+        private void AjustarDiseno()
+        {
+            if (IsDisposed || panelEdicion.IsDisposed) return;
+            const int margen = 12;
+            int anchoLateral = Math.Min(300, Math.Max(255, ClientSize.Width / 4));
+            panelEdicion.SetBounds(margen, margen, anchoLateral, Math.Max(180, ClientSize.Height - margen * 2));
+            int anchoCampo = Math.Max(180, panelEdicion.ClientSize.Width - 40);
+            int y = 14;
+            label9.SetBounds(14, y, anchoCampo, 24); y += 38;
+            label2.SetBounds(14, y, anchoCampo, 20); txtDocumento.SetBounds(14, y + 22, anchoCampo, 28); y += 58;
+            label3.SetBounds(14, y, anchoCampo, 20); txtRazonSocial.SetBounds(14, y + 22, anchoCampo, 28); y += 58;
+            label4.SetBounds(14, y, anchoCampo, 20); txtCorreo.SetBounds(14, y + 22, anchoCampo, 28); y += 58;
+            label6.SetBounds(14, y, anchoCampo, 20); txtTelefono.SetBounds(14, y + 22, anchoCampo, 28); y += 58;
+            label8.SetBounds(14, y, anchoCampo, 20); cboEstado.SetBounds(14, y + 22, anchoCampo, 28); y += 62;
+            btnGuardar.SetBounds(14, y, anchoCampo, 40);
+            btnCancelarUsuario.SetBounds(14, y + 46, anchoCampo, 40);
+            btnEliminar.SetBounds(14, y + 92, anchoCampo, 40);
+
+            int xContenido = panelEdicion.Right + margen;
+            int anchoContenido = Math.Max(300, ClientSize.Width - xContenido - margen);
+            label10.SetBounds(xContenido, margen, Math.Min(400, anchoContenido), 42);
+            label11.SetBounds(xContenido, 58, 86, 24);
+            cboBuscar.SetBounds(xContenido + 90, 54, Math.Min(190, Math.Max(130, anchoContenido / 4)), 28);
+            txtBusqueda.SetBounds(cboBuscar.Right + 10, 54, Math.Min(220, Math.Max(130, anchoContenido / 4)), 28);
+            btnBuscar.SetBounds(txtBusqueda.Right + 8, 48, 44, 39);
+            btnCancelar.SetBounds(btnBuscar.Right + 8, 48, 44, 39);
+            dgvData.SetBounds(xContenido, 100, anchoContenido, Math.Max(120, ClientSize.Height - 112));
         }
 
         private void frmProveedores_Load(object sender, EventArgs e)
@@ -50,7 +101,9 @@ namespace CapaPresentacion
                 item.Estado == true? "Activo":"Inactivo"
                 });
             }
-            dgvData.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            dgvData.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvData.Columns["btnSeleccionar"].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+            dgvData.Columns["btnSeleccionar"].Width = 38;
         }
 
         private void btnGuardar_Click(object sender, EventArgs e)

@@ -27,6 +27,7 @@ const photoEditorClose = document.getElementById('photoEditorClose');
 const photoEditorRemove = document.getElementById('photoEditorRemove');
 const photoStatus = document.getElementById('photoStatus');
 const sheets = document.getElementById('sheets');
+const sheetsScroll = document.getElementById('sheetsScroll');
 const sheetZoomStage = document.getElementById('sheetZoomStage');
 const sheetZoomRange = document.getElementById('sheetZoomRange');
 const sheetZoomValue = document.getElementById('sheetZoomValue');
@@ -814,6 +815,13 @@ function render() {
 }
 
 function renderSheets() {
+  const previousScrollLeft = sheetsScroll.scrollLeft;
+  const previousScrollTop = sheetsScroll.scrollTop;
+  const restorePreviewPosition = () => requestAnimationFrame(() => {
+    applySheetZoom();
+    sheetsScroll.scrollLeft = previousScrollLeft;
+    sheetsScroll.scrollTop = previousScrollTop;
+  });
   // El tamaño inline solo sirve para calcular el área desplazable del zoom;
   // se limpia antes de calcular el ajuste responsivo de la hoja.
   sheets.style.width = '';
@@ -825,7 +833,7 @@ function renderSheets() {
     layoutInfo.textContent = 'La hoja y las fotos aparecerán aquí.';
     layoutInfo.className = 'photo-layout-info muted';
     layoutInfo.hidden = false;
-    requestAnimationFrame(applySheetZoom);
+    restorePreviewPosition();
     return;
   }
   const config = settings();
@@ -836,7 +844,7 @@ function renderSheets() {
     layoutInfo.hidden = false;
     printButton.disabled = wordButton.disabled = true;
     enterScalePreviewButton.disabled = true;
-    requestAnimationFrame(applySheetZoom);
+    restorePreviewPosition();
     return;
   }
   printButton.disabled = wordButton.disabled = false;
@@ -1013,7 +1021,7 @@ function renderSheets() {
     sheets.append(shell);
   }
   renderPhotoEditor();
-  requestAnimationFrame(applySheetZoom);
+  restorePreviewPosition();
 }
 
 // El zoom solo amplía el espacio de trabajo. Las medidas físicas de cada hoja
@@ -1033,10 +1041,33 @@ function applySheetZoom() {
 }
 
 function setSheetZoom(value) {
-  sheetZoom = Math.max(50, Math.min(200, Math.round(Number(value) / 10) * 10));
+  sheetZoom = Math.max(50, Math.min(400, Math.round(Number(value) / 10) * 10));
   sheetZoomRange.value = String(sheetZoom);
   applySheetZoom();
 }
+
+// Ctrl + rueda amplía/reduce la hoja alrededor del puntero sin activar el zoom
+// del navegador. Shift + rueda mueve la vista horizontalmente.
+sheetsScroll.addEventListener('wheel', event => {
+  if (event.ctrlKey) {
+    event.preventDefault();
+    const rect = sheetsScroll.getBoundingClientRect();
+    const pointX = event.clientX - rect.left;
+    const pointY = event.clientY - rect.top;
+    const oldFactor = sheetZoom / 100;
+    const contentX = (sheetsScroll.scrollLeft + pointX) / oldFactor;
+    const contentY = (sheetsScroll.scrollTop + pointY) / oldFactor;
+    setSheetZoom(sheetZoom + (event.deltaY < 0 ? 10 : -10));
+    const newFactor = sheetZoom / 100;
+    sheetsScroll.scrollLeft = contentX * newFactor - pointX;
+    sheetsScroll.scrollTop = contentY * newFactor - pointY;
+    return;
+  }
+  if (event.shiftKey) {
+    event.preventDefault();
+    sheetsScroll.scrollLeft += event.deltaY || event.deltaX;
+  }
+}, {passive: false});
 
 document.getElementById('sheetZoomOut').addEventListener('click', () => setSheetZoom(sheetZoom - 10));
 document.getElementById('sheetZoomIn').addEventListener('click', () => setSheetZoom(sheetZoom + 10));

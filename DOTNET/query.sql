@@ -344,7 +344,8 @@ CREATE TABLE FIN_DEPOSITO(
 go
 
 -- Cierres web temporales mientras termina de cargarse el inventario.
--- El reparto 61/39 se registra como saldo asignado, sin crear ventas ni productos.
+-- El capital es ventas / 1.61 (costo base); la diferencia es ganancia personal.
+-- Se registra como saldo asignado, sin crear ventas ni productos.
 CREATE TABLE FIN_CIERRE_TEMPORAL(
     IdCierreTemporal int primary key identity(1,1),
     FechaCierre datetime2(0) not null,

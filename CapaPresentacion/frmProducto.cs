@@ -23,6 +23,8 @@ namespace CapaPresentacion
         private bool archivoImagenTemporal;
         private bool quitarImagen;
         private int rotacionFotoPendiente;
+        private readonly List<Panel> seccionesVisuales = new List<Panel>();
+        private readonly Dictionary<Control, Rectangle> layoutProductoBase = new Dictionary<Control, Rectangle>();
 
         public frmProducto() : this(string.Empty) { }
 
@@ -50,6 +52,9 @@ namespace CapaPresentacion
             dgvData.DefaultCellStyle.Font = new Font("Segoe UI", 10F);
             dgvData.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             MejorarTipografiaDetalle();
+            CapturarLayoutProductoBase();
+            Resize += (s, e) => AjustarDisenoAdaptable();
+            AjustarDisenoAdaptable();
         }
 
         private void MejorarTipografiaDetalle()
@@ -112,6 +117,89 @@ namespace CapaPresentacion
             dgvData.Width = Math.Max(700, ClientSize.Width - dgvData.Left - 18);
             dgvData.BackgroundColor = Color.White;
             dgvData.GridColor = Color.FromArgb(211, 222, 232);
+
+        }
+
+        private void CapturarLayoutProductoBase()
+        {
+            Control[] controles = { label9, label2, txtCodigo, label3, txtNombre, label4, txtDescripcion,
+                label5, cboCategoria, label18, txtCostoProducto, labelPorcentaje, txtPorcentaje, label19,
+                txtPrecioVentaProducto, picFotoProduc, btnElegir, btnQuitar, btnGirar, label17,
+                cboGrupoProveedor, label14, cboGrupoReposicion, label16, txtCantidadMinima,
+                label15, txtCantidadMaxima, label8, cboEstado, btnGuardar, btnCancelarUsuario, btnEliminar };
+            foreach (Control control in controles)
+                layoutProductoBase[control] = control.Bounds;
+            foreach (Panel seccion in seccionesVisuales)
+                layoutProductoBase[seccion] = seccion.Bounds;
+        }
+
+        private void AjustarDisenoAdaptable()
+        {
+            if (IsDisposed || dgvData == null || layoutProductoBase.Count == 0) return;
+            float escalaVertical = Math.Min(1f, Math.Max(0.78f, ClientSize.Height / 940f));
+            foreach (KeyValuePair<Control, Rectangle> elemento in layoutProductoBase)
+            {
+                Rectangle baseControl = elemento.Value;
+                int alto = Math.Max(elemento.Key is Button ? 32 : 16,
+                    (int)Math.Round(baseControl.Height * escalaVertical));
+                elemento.Key.SetBounds(baseControl.X, (int)Math.Round(baseControl.Y * escalaVertical),
+                    baseControl.Width, alto);
+            }
+
+            if (seccionesVisuales.Count >= 4)
+            {
+                Rectangle panelPrecio = seccionesVisuales[1].Bounds;
+                label18.Top = panelPrecio.Top + 18;
+                labelPorcentaje.Top = panelPrecio.Top + 18;
+                label19.Top = panelPrecio.Top + 18;
+                txtCostoProducto.Top = panelPrecio.Top + 36;
+                txtPorcentaje.Top = panelPrecio.Top + 36;
+                txtPrecioVentaProducto.Top = panelPrecio.Top + 36;
+
+                int topFoto = panelPrecio.Top + 82;
+                picFotoProduc.Top = topFoto;
+                int altoBotonFoto = Math.Max(32, Math.Min(40, btnElegir.Height));
+                int pasoFoto = altoBotonFoto + 8;
+                btnElegir.SetBounds(btnElegir.Left, topFoto, btnElegir.Width, altoBotonFoto);
+                btnQuitar.SetBounds(btnQuitar.Left, topFoto + pasoFoto, btnQuitar.Width, altoBotonFoto);
+                btnGirar.SetBounds(btnGirar.Left, topFoto + pasoFoto * 2, btnGirar.Width, altoBotonFoto);
+
+                Rectangle panelReposicion = seccionesVisuales[2].Bounds;
+                label17.SetBounds(label17.Left, panelReposicion.Top + 18, label17.Width, label17.Height);
+                cboGrupoProveedor.SetBounds(cboGrupoProveedor.Left, panelReposicion.Top + 37,
+                    cboGrupoProveedor.Width, cboGrupoProveedor.Height);
+                label14.SetBounds(label14.Left, panelReposicion.Top + 66, label14.Width, label14.Height);
+                cboGrupoReposicion.SetBounds(cboGrupoReposicion.Left, panelReposicion.Top + 85,
+                    cboGrupoReposicion.Width, cboGrupoReposicion.Height);
+                label16.SetBounds(label16.Left, panelReposicion.Top + 115, label16.Width, label16.Height);
+                label15.SetBounds(label15.Left, panelReposicion.Top + 115, label15.Width, label15.Height);
+                txtCantidadMinima.SetBounds(txtCantidadMinima.Left, panelReposicion.Top + 134,
+                    txtCantidadMinima.Width, txtCantidadMinima.Height);
+                txtCantidadMaxima.SetBounds(txtCantidadMaxima.Left, panelReposicion.Top + 134,
+                    txtCantidadMaxima.Width, txtCantidadMaxima.Height);
+
+                Rectangle panelEstado = seccionesVisuales[3].Bounds;
+                label8.SetBounds(label8.Left, panelEstado.Top + 20, label8.Width, label8.Height);
+                cboEstado.SetBounds(cboEstado.Left, panelEstado.Top + 40, cboEstado.Width, cboEstado.Height);
+                int altoAccion = Math.Max(32, Math.Min(40, (panelEstado.Height - 94) / 3));
+                int espacioAccion = 6;
+                int topAcciones = panelEstado.Bottom - 8 - (altoAccion * 3) - (espacioAccion * 2);
+                btnGuardar.SetBounds(btnGuardar.Left, topAcciones, btnGuardar.Width, altoAccion);
+                btnCancelarUsuario.SetBounds(btnCancelarUsuario.Left, topAcciones + altoAccion + espacioAccion,
+                    btnCancelarUsuario.Width, altoAccion);
+                btnEliminar.SetBounds(btnEliminar.Left, topAcciones + (altoAccion + espacioAccion) * 2,
+                    btnEliminar.Width, altoAccion);
+            }
+
+            int xContenido = 292;
+            int anchoContenido = Math.Max(700, ClientSize.Width - xContenido - 18);
+            label10.SetBounds(xContenido, 22, anchoContenido, 94);
+            label11.SetBounds(xContenido + 400, 38, 76, 16);
+            cboBuscar.SetBounds(label11.Right + 8, 34, 193, 24);
+            txtBusqueda.SetBounds(cboBuscar.Right + 20, 38, 167, 22);
+            btnBuscar.SetBounds(txtBusqueda.Right + 8, 28, 44, 39);
+            btnCancelar.SetBounds(btnBuscar.Right + 16, 28, 49, 39);
+            dgvData.SetBounds(xContenido, 135, anchoContenido, Math.Max(180, ClientSize.Height - 147));
         }
 
         private static void MoverVertical(IEnumerable<Control> controles, int desplazamiento)
@@ -144,6 +232,7 @@ namespace CapaPresentacion
                 Text = titulo.ToUpperInvariant()
             });
             Controls.Add(panel);
+            seccionesVisuales.Add(panel);
             panel.SendToBack();
         }
 
