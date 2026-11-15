@@ -11,22 +11,23 @@ namespace CapaPresentacion
         private readonly CN_Reposicion negocio = new CN_Reposicion();
         private int? idEdicion;
         private bool cargando;
+        private readonly Panel panelEdicion = new Panel();
+        private readonly Label etiquetaProveedores = new Label();
 
         public frmGruposProveedores()
         {
             InitializeComponent();
+            ConfigurarDisenoAdaptable();
             CapaPresentacion.Utilidades.ExperienciaUsuario.Aplicar(this, txtNombreGrupoProveedor, txtBusqueda);
-            dgvGruposProveedores.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            var etiquetaProveedores = new Label
-            {
-                Name = "lblProveedoresIntegrantes",
-                Text = "Proveedores integrantes:",
-                AutoSize = true,
-                Location = new System.Drawing.Point(52, 108),
-                BackColor = System.Drawing.Color.White
-            };
-            Controls.Add(etiquetaProveedores);
+            etiquetaProveedores.Name = "lblProveedoresIntegrantes";
+            etiquetaProveedores.Text = "Proveedores integrantes:";
+            etiquetaProveedores.AutoSize = true;
+            etiquetaProveedores.BackColor = System.Drawing.Color.White;
+            panelEdicion.Controls.Add(etiquetaProveedores);
+            Controls.Add(panelEdicion);
             etiquetaProveedores.BringToFront();
+            Resize += (s, e) => AjustarDiseno();
+            AjustarDiseno();
             Load += (s, e) =>
             {
                 cboEstado.Items.Clear(); cboEstado.Items.Add("Activo"); cboEstado.Items.Add("Inactivo"); cboEstado.SelectedIndex = 0;
@@ -34,6 +35,7 @@ namespace CapaPresentacion
                 {
                     PrepararProveedores();
                     Cargar();
+                    AjustarDiseno();
                     if (clbProveedores.Items.Count == 0)
                         Aviso("No hay proveedores activos para agregar a un perfil. Registra o activa proveedores primero en el formulario de Proveedores.", MessageBoxIcon.Information);
                 }
@@ -49,11 +51,59 @@ namespace CapaPresentacion
             cboBuscar.SelectedIndexChanged += (s, e) => Filtrar();
         }
 
+        private void ConfigurarDisenoAdaptable()
+        {
+            panelEdicion.Name = "panelEdicionProveedores";
+            panelEdicion.AutoScroll = true;
+            panelEdicion.BackColor = System.Drawing.Color.White;
+            panelEdicion.BorderStyle = BorderStyle.FixedSingle;
+            panelEdicion.Controls.Add(label9);
+            panelEdicion.Controls.Add(label2);
+            panelEdicion.Controls.Add(txtNombreGrupoProveedor);
+            panelEdicion.Controls.Add(etiquetaProveedores);
+            panelEdicion.Controls.Add(clbProveedores);
+            panelEdicion.Controls.Add(label8);
+            panelEdicion.Controls.Add(cboEstado);
+            panelEdicion.Controls.Add(btnGuardar);
+            panelEdicion.Controls.Add(btnCancelarUsuario);
+            panelEdicion.Controls.Add(btnEliminar);
+            label1.Visible = false;
+        }
+
+        private void AjustarDiseno()
+        {
+            if (IsDisposed || panelEdicion.IsDisposed) return;
+            int margen = 12;
+            int anchoLateral = Math.Min(300, Math.Max(255, ClientSize.Width / 4));
+            panelEdicion.SetBounds(margen, margen, anchoLateral, Math.Max(180, ClientSize.Height - margen * 2));
+
+            int anchoCampo = Math.Max(180, panelEdicion.ClientSize.Width - 40);
+            label9.SetBounds(14, 14, anchoCampo, 24);
+            label2.SetBounds(14, 48, anchoCampo, 20);
+            txtNombreGrupoProveedor.SetBounds(14, 70, anchoCampo, 28);
+            etiquetaProveedores.Location = new System.Drawing.Point(14, 110);
+            clbProveedores.SetBounds(14, 132, anchoCampo, Math.Max(100, Math.Min(260, panelEdicion.ClientSize.Height - 340)));
+            int y = clbProveedores.Bottom + 12;
+            label8.SetBounds(14, y, anchoCampo, 20);
+            cboEstado.SetBounds(14, y + 22, anchoCampo, 28);
+            btnGuardar.SetBounds(14, y + 60, anchoCampo, 40);
+            btnCancelarUsuario.SetBounds(14, y + 106, anchoCampo, 40);
+            btnEliminar.SetBounds(14, y + 152, anchoCampo, 40);
+
+            int xContenido = panelEdicion.Right + margen;
+            int anchoContenido = Math.Max(300, ClientSize.Width - xContenido - margen);
+            label10.SetBounds(xContenido, margen, anchoContenido, 58);
+            label11.SetBounds(xContenido + Math.Min(400, anchoContenido / 3), 76, 90, 24);
+            cboBuscar.SetBounds(label11.Right + 8, 72, Math.Min(190, Math.Max(120, anchoContenido / 4)), 28);
+            txtBusqueda.SetBounds(cboBuscar.Right + 10, 72, Math.Min(220, Math.Max(130, anchoContenido / 4)), 28);
+            dgvGruposProveedores.SetBounds(xContenido, 112, anchoContenido, Math.Max(120, ClientSize.Height - 124));
+        }
+
         private void PrepararProveedores()
         {
             DataTable proveedores = negocio.ListarProveedores();
             clbProveedores.DataSource = proveedores; clbProveedores.DisplayMember = "RazonSocial"; clbProveedores.ValueMember = "IdProveedor";
-            clbProveedores.Location = new System.Drawing.Point(52, 130); clbProveedores.Size = new System.Drawing.Size(210, 320);
+            clbProveedores.Location = new System.Drawing.Point(14, 132); clbProveedores.Size = new System.Drawing.Size(210, 220);
             clbProveedores.CheckOnClick = true; clbProveedores.Font = new System.Drawing.Font("Segoe UI", 9F);
             clbProveedores.HorizontalScrollbar = true; clbProveedores.IntegralHeight = false;
         }

@@ -39,6 +39,8 @@ namespace CapaPresentacion
         {
             _Usuario = oUsuario;
             InitializeComponent();
+            Resize += (s, e) => AjustarDisenoAdaptable();
+            AjustarDisenoAdaptable();
             ConfigurarTablaCompra();
             dataGridView1.CellFormatting += dataGridView1_CellFormatting;
             txtCodigoProducto.KeyDown += TxtCodigoProducto_KeyDown;
@@ -60,6 +62,61 @@ namespace CapaPresentacion
             ExperienciaUsuario.Aplicar(this, txtCodigoProducto, txtCodigoProducto, txtNuevoDocumento, txtRazonSocial);
             if (dataGridView1.Columns.Contains("Porcentaje"))
                 dataGridView1.Columns["Porcentaje"].DefaultCellStyle.Format = "P2";
+        }
+
+        private void AjustarDisenoAdaptable()
+        {
+            if (IsDisposed || dataGridView1 == null) return;
+            const int margen = 18;
+            const int espacio = 12;
+            int ancho = Math.Max(900, ClientSize.Width - margen * 2);
+            int alto = Math.Max(500, ClientSize.Height);
+
+            label10.SetBounds(0, 0, ClientSize.Width, 286);
+            label2.SetBounds(margen, 8, ancho, 42);
+
+            int anchoCompra = (ancho - espacio * 2) * 31 / 100;
+            int anchoProveedor = (ancho - espacio * 2) * 36 / 100;
+            int anchoBorrador = ancho - espacio * 2 - anchoCompra - anchoProveedor;
+            int yCabecera = 55;
+            groupBox1.SetBounds(margen, yCabecera, anchoCompra, 104);
+            groupBox2.SetBounds(margen + anchoCompra + espacio, yCabecera, anchoProveedor, 104);
+            groupBox4.SetBounds(margen + anchoCompra + espacio + anchoProveedor + espacio, yCabecera, anchoBorrador, 104);
+
+            int yProducto = 171;
+            groupBox3.SetBounds(margen, yProducto, ancho, 87);
+            int anchoBusqueda = 177;
+            int xBuscar = 7;
+            txtCodigoProducto.SetBounds(xBuscar, 47, anchoBusqueda, 22);
+            label7.SetBounds(xBuscar, 27, 145, 16);
+            btnBuscarProducto.SetBounds(xBuscar + anchoBusqueda + 10, 33, 44, 39);
+            int xProducto = btnBuscarProducto.Right + 14;
+            int anchoNombre = Math.Max(150, Math.Min(400, ancho - 1020));
+            txtProducto.SetBounds(xProducto, 47, anchoNombre, 22);
+            label6.SetBounds(xProducto, 26, anchoNombre, 16);
+            int xCantidad = txtProducto.Right + 18;
+            txtCantidad.SetBounds(xCantidad, 46, 93, 22);
+            label11.SetBounds(xCantidad, 25, 90, 16);
+            int xCosto = txtCantidad.Right + 18;
+            txtPrecioCompra.SetBounds(xCosto, 48, 101, 22);
+            label8.SetBounds(xCosto, 28, 115, 16);
+            int xMargen = txtPrecioCompra.Right + 18;
+            txtPorcentaje.SetBounds(xMargen, 46, 101, 22);
+            labelPorcentaje.SetBounds(xMargen, 25, 95, 16);
+            int xVenta = txtPorcentaje.Right + 18;
+            txtPrecioVenta.SetBounds(xVenta, 46, 101, 22);
+            label9.SetBounds(xVenta, 25, 100, 16);
+            btnAgregar.SetBounds(Math.Min(ancho - 112, xVenta + 125), 11, 100, 70);
+
+            int yTabla = Math.Max(yProducto + 103, label10.Height + 18);
+            int anchoResumen = 135;
+            int xTabla = margen;
+            int anchoTabla = Math.Max(400, ancho - anchoResumen - espacio);
+            dataGridView1.SetBounds(xTabla, yTabla, anchoTabla, Math.Max(150, alto - yTabla - margen));
+            int xResumen = xTabla + anchoTabla + espacio;
+            btnRegistrar.SetBounds(xResumen, yTabla + 4, anchoResumen, 79);
+            label12.SetBounds(xResumen, yTabla + 108, anchoResumen, 20);
+            txtTotalPagar.SetBounds(xResumen, yTabla + 132, anchoResumen, 26);
         }
 
         private void ConfigurarTablaCompra()

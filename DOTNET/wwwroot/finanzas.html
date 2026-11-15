@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="css/app.css?v=19">
   <link rel="stylesheet" href="css/finanzas.css?v=1">
   <script src="/js/pwa.js?v=1" defer></script>
-  <script src="js/finanzas.js?v=1" defer></script>
+  <script src="js/finanzas.js?v=3" defer></script>
 </head>
 <body class="finance-page">
   <nav class="site-nav"><a class="brand" href="index.html">Librería Digital</a><div class="nav-links"><a href="index.html">Inicio</a><a class="active" href="finanzas.html">Finanzas</a></div></nav>
@@ -47,7 +47,8 @@
           <label>Fecha y hora del cierre<input id="closingDate" name="fecha" type="datetime-local" required></label>
           <label>Total vendido desde el cierre anterior<input id="salesAmount" name="ventas" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></label>
           <p class="helper-text">Puedes guardar más de un cierre al día. En cada uno escribe solo lo vendido desde el cierre anterior.</p>
-          <div class="allocation-preview"><div><span>A capital · 61%</span><strong id="capitalPreview">Q 0.00</strong></div><div><span>A personal · 39%</span><strong id="personalPreview">Q 0.00</strong></div></div>
+          <p class="helper-text">El capital se calcula como el total vendido ÷ 1.61. La diferencia restante se asigna a ganancia personal.</p>
+          <div class="allocation-preview"><div><span>Capital · costo base</span><strong id="capitalPreview">Q 0.00</strong></div><div><span>Ganancia restante</span><strong id="personalPreview">Q 0.00</strong></div></div>
           <button id="saveClosing" class="button button-primary" type="submit">Guardar cierre</button>
         </form>
       </section>

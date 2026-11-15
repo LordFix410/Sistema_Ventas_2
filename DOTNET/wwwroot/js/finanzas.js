@@ -41,9 +41,12 @@
   }
   function updateAllocation() {
     const sales = Math.max(0, Number($('#salesAmount').value) || 0);
-    const capital = Math.round((sales * .61 + Number.EPSILON) * 100) / 100;
+    const exactCapital = sales / 1.61;
+    const wholeCapital = Math.floor(exactCapital);
+    // Solo se redondea hacia arriba si la fracción supera 0.50; el empate baja.
+    const capital = wholeCapital + (exactCapital - wholeCapital > 0.5 ? 1 : 0);
     $('#capitalPreview').textContent = currency.format(capital);
-    $('#personalPreview').textContent = currency.format(Math.round((sales - capital + Number.EPSILON) * 100) / 100);
+    $('#personalPreview').textContent = currency.format(sales - capital);
   }
   function setProgress(element, value, total) {
     const percent = total > 0 ? Math.max(0, Math.min(100, value * 100 / total)) : 0;

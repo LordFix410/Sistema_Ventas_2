@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d2f47">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Ajustar trifoliares · Librería Digital</title>
+  <link rel="icon" href="/favicon.ico?v=1" type="image/x-icon">
+  <link rel="apple-touch-icon" href="/favicon.png?v=1">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="css/app.css?v=19">
+  <link rel="stylesheet" href="css/trifoliares.css?v=2">
+  <script src="/js/pwa.js?v=1" defer></script>
+  <script src="js/file-transfer.js?v=1" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+  <script src="js/trifoliares.js?v=3" defer></script>
+</head>
+<body class="trifold-tool">
+  <nav class="site-nav">
+    <a class="brand" href="index.html">Librería Digital</a>
+    <div class="nav-links">
+      <a href="index.html">Inicio</a>
+      <a href="doble-cara.html">Doble cara</a>
+      <a class="active" href="trifoliares.html">Trifoliares</a>
+      <a href="fotos-escala.html">Tamaños de foto</a>
+    </div>
+  </nav>
+  <header class="page-heading">
+    <h1>Preparar trifoliar para doble cara</h1>
+    <p>Ajusta el PDF a Carta u Oficio con márgenes iguales en ambos lados de cada hoja.</p>
+  </header>
+
+  <main class="trifold-wrap">
+    <section class="trifold-card">
+      <h2>1. Selecciona el documento</h2>
+      <label id="pdfDrop" class="pdf-drop" for="pdfFile">
+        <span class="pdf-drop-icon" aria-hidden="true">PDF</span>
+        <strong>Elegir PDF</strong>
+        <span>o arrástralo aquí. El archivo se procesa en este navegador.</span>
+      </label>
+      <input id="pdfFile" type="file" accept="application/pdf,.pdf">
+      <p id="sourceStatus" class="trifold-status" role="status">Aún no has elegido un PDF.</p>
+    </section>
+
+    <section class="trifold-card">
+      <h2>2. Tamaño de salida</h2>
+      <div class="trifold-controls">
+        <label>Tamaño de hoja
+          <select id="paperSize">
+            <option value="oficio">Oficio · 215.9 × 329 mm</option>
+            <option value="carta">Carta · 215.9 × 279.4 mm</option>
+          </select>
+        </label>
+        <label>Orientación
+          <select id="paperOrientation">
+            <option value="auto">Según la primera página del PDF</option>
+            <option value="landscape">Horizontal</option>
+            <option value="portrait">Vertical</option>
+          </select>
+        </label>
+        <label class="margin-field">Margen igual en los cuatro lados
+          <span class="margin-input"><input id="pageMargin" type="number" min="0" max="3" step="0.1" value="0.5" inputmode="decimal"><span>cm</span></span>
+        </label>
+      </div>
+      <p class="trifold-note">El contenido se centra y se escala completo, sin recortarlo ni deformarlo. El margen elegido es el mínimo; si el PDF y el papel tienen proporciones distintas, el espacio adicional queda repartido por igual en lados opuestos.</p>
+      <button id="preparePdf" class="primary-action" type="button" disabled>Preparar PDF para imprimir</button>
+      <p id="processStatus" class="trifold-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="resultSection" class="trifold-card result-card" hidden>
+      <div class="result-heading">
+        <div><h2>3. PDF preparado</h2><p id="resultInfo" class="trifold-note"></p></div>
+        <button id="printPdf" class="print-action" type="button" disabled>Imprimir</button>
+        <a id="downloadPdf" class="download-action" download="trifoliar-ajustado.pdf">Descargar PDF</a>
+        <button id="downloadWord" class="word-action" type="button" disabled>Preparar para Word</button>
+      </div>
+      <iframe id="pdfPreview" title="Vista previa del PDF preparado"></iframe>
+      <p class="print-note">Prueba primero el PDF. Si el controlador lo escala mal, descarga el documento de Word y revisa la vista de impresión. En ambos casos selecciona el mismo tamaño de papel, 100 % o “Tamaño real” y doble cara. En horizontal elige voltear por el borde corto. La página no puede cambiar automáticamente las opciones propias del controlador.</p>
+    </section>
+  </main>
+  <footer>El PDF se procesa localmente en el navegador; no se carga al servidor.</footer>
+</body>
+</html>
