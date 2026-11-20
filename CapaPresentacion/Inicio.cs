@@ -34,6 +34,7 @@ namespace CapaPresentacion
             usuarioActual = ousuario;
             claveUsuarioActual = claveUsuario ?? string.Empty;
             InitializeComponent();
+            CapaPresentacion.Utilidades.IconoAplicacion.Aplicar(this);
             // Ubicamos cada herramienta en el módulo donde se administra su información.
             menuMantenedor.DropDownItems.Remove(reposicionToolStripMenuItem);
             btnProducto.DropDownItems.AddRange(new ToolStripItem[] { gruposProductoMenu, reportePedidosMenu });

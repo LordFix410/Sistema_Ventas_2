@@ -15,6 +15,7 @@ namespace CapaPresentacion.Modales
         public mdAcercade()
         {
             InitializeComponent();
+            CapaPresentacion.Utilidades.IconoAplicacion.Aplicar(this);
         }
 
         private void label2_Click(object sender, EventArgs e)

@@ -77,6 +77,7 @@ namespace CapaPresentacion
         public frmFinanzas(Usuario usuario)
         {
             usuarioActual = usuario;
+            CapaPresentacion.Utilidades.IconoAplicacion.Aplicar(this);
             InicializarInterfaz();
             cboTipoMovimiento_SelectedIndexChanged(cboTipoMovimiento, EventArgs.Empty);
             Load += frmFinanzas_Load;
@@ -804,6 +805,7 @@ namespace CapaPresentacion
 
             public DialogoResponsableDeposito()
             {
+                CapaPresentacion.Utilidades.IconoAplicacion.Aplicar(this);
                 Text = "Validar responsable del depósito";
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 StartPosition = FormStartPosition.CenterParent;

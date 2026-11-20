@@ -861,6 +861,7 @@ namespace CapaPresentacion
 
             public DialogoRegistrarCliente(string documento)
             {
+                CapaPresentacion.Utilidades.IconoAplicacion.Aplicar(this);
                 Text = "Registrar cliente";
                 Font = new System.Drawing.Font("Segoe UI", 9F);
                 BackColor = System.Drawing.Color.White;
@@ -945,6 +946,7 @@ namespace CapaPresentacion
 
             public DialogoConfirmarVendedor()
             {
+                CapaPresentacion.Utilidades.IconoAplicacion.Aplicar(this);
                 Text = "Confirmar vendedor";
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 StartPosition = FormStartPosition.CenterParent;
@@ -993,6 +995,7 @@ namespace CapaPresentacion
 
             public DialogoProductoTemporal()
             {
+                CapaPresentacion.Utilidades.IconoAplicacion.Aplicar(this);
                 Text = "Artículo temporal (F2)";
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 StartPosition = FormStartPosition.CenterParent;

@@ -15,6 +15,7 @@ namespace CapaPresentacion
         public frmAcercaDe()
         {
             InitializeComponent();
+            CapaPresentacion.Utilidades.IconoAplicacion.Aplicar(this);
         }
     }
 }

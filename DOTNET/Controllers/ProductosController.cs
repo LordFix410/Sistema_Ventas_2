@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using ImagenPDF.Infrastructure;
 
 namespace ImagenPDF.Controllers
 {
@@ -47,8 +48,8 @@ namespace ImagenPDF.Controllers
                 await using var connection = new SqlConnection(ConnectionString);
                 await connection.OpenAsync();
                 await using var command = new SqlCommand(@"SELECT TOP (2) IdUsuario, NombreCompleto
-                    FROM dbo.USUARIO WHERE Estado = 1 AND Clave = @clave ORDER BY IdUsuario", connection);
-                command.Parameters.Add("@clave", SqlDbType.VarChar, 50).Value = request.Clave;
+                    FROM dbo.USUARIO WHERE Estado = 1 AND UPPER(Clave) = UPPER(@clave) ORDER BY IdUsuario", connection);
+                command.Parameters.Add("@clave", SqlDbType.VarChar, 50).Value = request.Clave.ToUpperInvariant();
                 await using var reader = await command.ExecuteReaderAsync();
                 if (!await reader.ReadAsync()) return Unauthorized(new { mensaje = "Usuario o contraseña incorrectos." });
                 var userId = reader.GetInt32(0);
@@ -322,14 +323,13 @@ namespace ImagenPDF.Controllers
                     };
                     if (extension == null || !IsValidImage(imageBytes, extension))
                         return BadRequest(new { mensaje = "La foto debe ser una imagen JPG o PNG válida." });
-                    var imageRoot = _configuration["ProductImages:Path"];
-                    if (string.IsNullOrWhiteSpace(imageRoot)) imageRoot = Path.Combine(_environment.ContentRootPath, "imagenes");
-                    var folder = Path.Combine(imageRoot, "productos");
+                    var folder = ProductImageStorage.ProductsFolder(_configuration, _environment);
                     Directory.CreateDirectory(folder);
                     var fileName = Guid.NewGuid().ToString("N") + extension;
                     imageAbsolutePath = Path.Combine(folder, fileName);
                     imageRelativePath = "productos/" + fileName;
                     await System.IO.File.WriteAllBytesAsync(imageAbsolutePath, imageBytes);
+                    _logger.LogInformation("Foto de producto guardada en {ImagePath}.", imageAbsolutePath);
                 }
             }
             catch (FormatException)
@@ -340,6 +340,11 @@ namespace ImagenPDF.Controllers
             {
                 _logger.LogError(ex, "No se pudo guardar la foto del producto en el servidor.");
                 return StatusCode(503, new { mensaje = "No se pudo guardar la foto en la carpeta de imágenes del servidor." });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogError(ex, "El proceso web no tiene permiso para guardar la foto en {ImagePath}.", imageAbsolutePath);
+                return StatusCode(503, new { mensaje = "El servicio web no tiene permiso para guardar la foto en la carpeta de imágenes configurada." });
             }
 
             await using var command = new SqlCommand("dbo.sp_RegistrarProducto", connection) { CommandType = CommandType.StoredProcedure };
@@ -379,7 +384,10 @@ namespace ImagenPDF.Controllers
                 if (imageAbsolutePath != null && System.IO.File.Exists(imageAbsolutePath)) System.IO.File.Delete(imageAbsolutePath);
                 return Conflict(new { mensaje = Convert.ToString(message.Value) ?? "No se pudo registrar el producto." });
             }
-            return Ok(new { idProducto = productId, precioCompra = purchasePrice, precioVenta = salePrice, imagenRuta = imageRelativePath, mensaje = $"Producto creado · costo Q{purchasePrice:N2} · venta Q{salePrice:N2}. Existencia inicial: 0." });
+            var photoMessage = imageRelativePath == null
+                ? " No se adjuntó foto."
+                : $" Foto guardada en /imagenes/{imageRelativePath}.";
+            return Ok(new { idProducto = productId, precioCompra = purchasePrice, precioVenta = salePrice, imagenRuta = imageRelativePath, mensaje = $"Producto creado · costo Q{purchasePrice:N2} · venta Q{salePrice:N2}. Existencia inicial: 0.{photoMessage}" });
         }
 
         private static bool IsValidImage(byte[] bytes, string extension)
@@ -413,13 +421,20 @@ namespace ImagenPDF.Controllers
                 var folder = ProductImagesFolder();
                 Directory.CreateDirectory(folder);
                 var name = Guid.NewGuid().ToString("N") + extension;
-                await System.IO.File.WriteAllBytesAsync(Path.Combine(folder, name), bytes);
+                var imagePath = Path.Combine(folder, name);
+                await System.IO.File.WriteAllBytesAsync(imagePath, bytes);
+                _logger.LogInformation("Foto de producto recibida desde Windows Forms y guardada en {ImagePath}.", imagePath);
                 return Content("productos/" + name, "text/plain; charset=utf-8");
             }
             catch (IOException ex)
             {
                 _logger.LogError(ex, "No se pudo guardar la foto enviada desde Windows Forms.");
                 return StatusCode(503, new { mensaje = "El servidor no pudo guardar la foto en su carpeta de imágenes." });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogError(ex, "El proceso web no tiene permiso para guardar la foto enviada desde Windows Forms.");
+                return StatusCode(503, new { mensaje = "El servicio web no tiene permiso para guardar fotos en su carpeta de imágenes." });
             }
         }
 
@@ -442,17 +457,15 @@ namespace ImagenPDF.Controllers
 
         private string ProductImagesFolder()
         {
-            var root = _configuration["ProductImages:Path"];
-            if (string.IsNullOrWhiteSpace(root)) root = Path.Combine(_environment.ContentRootPath, "imagenes");
-            return Path.Combine(root, "productos");
+            return ProductImageStorage.ProductsFolder(_configuration, _environment);
         }
 
         private async Task<bool> ValidarClaveUsuario(string clave)
         {
             await using var connection = new SqlConnection(ConnectionString);
             await connection.OpenAsync();
-            await using var command = new SqlCommand("SELECT TOP (2) IdUsuario FROM dbo.USUARIO WHERE Estado=1 AND CONVERT(varbinary(100), Clave)=CONVERT(varbinary(100), @clave) ORDER BY IdUsuario", connection);
-            command.Parameters.Add("@clave", SqlDbType.VarChar, 50).Value = clave;
+            await using var command = new SqlCommand("SELECT TOP (2) IdUsuario FROM dbo.USUARIO WHERE Estado=1 AND UPPER(Clave)=UPPER(@clave) ORDER BY IdUsuario", connection);
+            command.Parameters.Add("@clave", SqlDbType.VarChar, 50).Value = clave.ToUpperInvariant();
             await using var reader = await command.ExecuteReaderAsync();
             if (!await reader.ReadAsync()) return false;
             return !await reader.ReadAsync();

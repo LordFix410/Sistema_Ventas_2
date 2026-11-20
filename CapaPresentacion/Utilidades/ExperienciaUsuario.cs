@@ -49,6 +49,8 @@ namespace CapaPresentacion.Utilidades
         {
             if (formulario == null) return;
 
+            IconoAplicacion.Aplicar(formulario);
+
             foreach (Control control in Controles(formulario))
             {
                 if (control is Label etiqueta)
@@ -94,6 +96,39 @@ namespace CapaPresentacion.Utilidades
                     EstilizarAccionesTabla(tabla);
                 }
             }
+        }
+
+        /// <summary>Normaliza a mayúsculas lo que se escribe, pega o asigna a los campos editables.</summary>
+        internal static void AplicarMayusculas(Form formulario)
+        {
+            if (formulario == null) return;
+
+            foreach (TextBoxBase campo in Controles(formulario).OfType<TextBoxBase>())
+            {
+                if (campo.ReadOnly) continue;
+
+                if (campo is TextBox texto)
+                    texto.CharacterCasing = CharacterCasing.Upper;
+
+                campo.TextChanged -= NormalizarMayusculas;
+                campo.TextChanged += NormalizarMayusculas;
+                NormalizarMayusculas(campo, EventArgs.Empty);
+            }
+        }
+
+        private static void NormalizarMayusculas(object sender, EventArgs e)
+        {
+            var campo = sender as TextBoxBase;
+            if (campo == null || campo.ReadOnly) return;
+
+            string textoMayusculas = campo.Text.ToUpperInvariant();
+            if (campo.Text == textoMayusculas) return;
+
+            int inicioSeleccion = campo.SelectionStart;
+            int largoSeleccion = campo.SelectionLength;
+            campo.Text = textoMayusculas;
+            campo.SelectionStart = Math.Min(inicioSeleccion, campo.TextLength);
+            campo.SelectionLength = Math.Min(largoSeleccion, campo.TextLength - campo.SelectionStart);
         }
 
         private static void EstilizarBoton(Button boton)

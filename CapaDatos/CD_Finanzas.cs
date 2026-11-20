@@ -147,12 +147,13 @@ FROM dbo.GASTO_PERSONAL_PERIODO p WITH(UPDLOCK,HOLDLOCK)
 LEFT JOIN dbo.PAGO_GASTO_PERSONAL pg ON pg.IdPeriodoGastoPersonal=p.IdPeriodoGastoPersonal
 WHERE p.IdPeriodoGastoPersonal=@id GROUP BY p.MontoProgramado;
 IF @saldo IS NULL OR @monto>@saldo THROW 51001,'El monto supera el saldo pendiente de este gasto personal.',1;
-INSERT dbo.PAGO_GASTO_PERSONAL(IdPeriodoGastoPersonal,IdUsuario,Monto,FechaPago,MedioPago,Referencia,Observaciones)
-VALUES(@id,@usuario,@monto,@fecha,@medio,@referencia,@concepto);";
+INSERT dbo.PAGO_GASTO_PERSONAL(IdPeriodoGastoPersonal,IdUsuario,Monto,FechaPago,MedioPago,Referencia,Observaciones,CuentaOrigen,PagadoDesdeCaja)
+VALUES(@id,@usuario,@monto,@fecha,@medio,@referencia,@concepto,'Personal',@pagadoDesdeCaja);";
                             using (SqlCommand cmd = new SqlCommand(sqlPersonal, cn, tx))
                             {
                                 cmd.Parameters.AddWithValue("@id", idRelacionado.Value);
                                 AgregarParametrosMovimiento(cmd, idUsuario, fecha, concepto, monto, medioPago, referencia);
+                                cmd.Parameters.Add("@pagadoDesdeCaja", SqlDbType.Bit).Value = string.Equals(medioPago?.Trim(), "Efectivo", StringComparison.OrdinalIgnoreCase);
                                 cmd.ExecuteNonQuery();
                             }
                         }
@@ -167,11 +168,12 @@ VALUES(@id,@usuario,@monto,@fecha,@medio,@referencia,@concepto);";
                                     validar.ExecuteNonQuery();
                                 }
                             }
-                            using (SqlCommand cmd = new SqlCommand(@"INSERT dbo.FIN_MOVIMIENTO(Tipo,IdCompra,IdUsuario,Fecha,Concepto,Monto,MedioPago,Referencia) VALUES(@tipo,@compra,@usuario,@fecha,@concepto,@monto,@medio,@referencia)", cn, tx))
+                            using (SqlCommand cmd = new SqlCommand(@"INSERT dbo.FIN_MOVIMIENTO(Tipo,IdCompra,IdUsuario,Fecha,Concepto,Monto,MedioPago,Referencia,CuentaOrigen,PagadoDesdeCaja) VALUES(@tipo,@compra,@usuario,@fecha,@concepto,@monto,@medio,@referencia,'Capital',@pagadoDesdeCaja)", cn, tx))
                             {
                                 cmd.Parameters.AddWithValue("@tipo", tipo == "Proveedor" ? "Proveedor" : "Empresa");
                                 cmd.Parameters.AddWithValue("@compra", idRelacionado.HasValue && tipo == "Proveedor" ? (object)idRelacionado.Value : DBNull.Value);
                                 AgregarParametrosMovimiento(cmd, idUsuario, fecha, concepto, monto, medioPago, referencia);
+                                cmd.Parameters.Add("@pagadoDesdeCaja", SqlDbType.Bit).Value = string.Equals(medioPago?.Trim(), "Efectivo", StringComparison.OrdinalIgnoreCase);
                                 cmd.ExecuteNonQuery();
                             }
                         }

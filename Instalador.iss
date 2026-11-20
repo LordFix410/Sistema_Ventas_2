@@ -1,5 +1,5 @@
 #define MyAppName "Sistema de Ventas"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.11.3"
 #define MyAppExeName "SistemaVentas.exe"
 
 [Setup]

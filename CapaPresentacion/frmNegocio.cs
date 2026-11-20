@@ -18,6 +18,7 @@ namespace CapaPresentacion
         public frmNegocio()
         {
             InitializeComponent();
+            CapaPresentacion.Utilidades.IconoAplicacion.Aplicar(this);
         }
 
         public Image ByteToImage(byte[] imageBytes)
