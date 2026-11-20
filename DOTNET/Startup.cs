@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using System.IO;
+using ImagenPDF.Infrastructure;
 
 namespace ImagenPDF
 {
@@ -35,9 +36,7 @@ namespace ImagenPDF
 
             app.UseDefaultFiles();
             app.UseStaticFiles();
-            var productImagesPath = configuration["ProductImages:Path"];
-            if (string.IsNullOrWhiteSpace(productImagesPath))
-                productImagesPath = Path.Combine(environment.ContentRootPath, "imagenes");
+            var productImagesPath = ProductImageStorage.Root(configuration, environment);
             Directory.CreateDirectory(productImagesPath);
             Directory.CreateDirectory(Path.Combine(productImagesPath, "productos"));
             app.UseStaticFiles(new StaticFileOptions

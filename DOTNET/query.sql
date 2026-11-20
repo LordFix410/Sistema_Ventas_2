@@ -274,11 +274,14 @@ CREATE TABLE PAGO_GASTO_PERSONAL(
     Monto decimal(10,2) not null,
     FechaPago datetime2(0) not null constraint DF_PAGO_GASTO_PERSONAL_FechaPago default (sysdatetime()),
     MedioPago varchar(20) not null constraint DF_PAGO_GASTO_PERSONAL_MedioPago default ('Efectivo'),
+    CuentaOrigen varchar(15) not null constraint DF_PAGO_GASTO_PERSONAL_CuentaOrigen default ('Personal'),
+    PagadoDesdeCaja bit not null constraint DF_PAGO_GASTO_PERSONAL_PagadoDesdeCaja default (0),
     Referencia varchar(100) null,
     Observaciones varchar(250) null,
     FechaRegistro datetime2(0) not null constraint DF_PAGO_GASTO_PERSONAL_FechaRegistro default (sysdatetime()),
     constraint CK_PAGO_GASTO_PERSONAL_Monto check (Monto > 0),
-    constraint CK_PAGO_GASTO_PERSONAL_MedioPago check (MedioPago in ('Efectivo', 'Transferencia', 'Tarjeta', 'Otro'))
+    constraint CK_PAGO_GASTO_PERSONAL_MedioPago check (MedioPago in ('Efectivo', 'Transferencia', 'Tarjeta', 'Otro')),
+    constraint CK_PAGO_GASTO_PERSONAL_CuentaOrigen check (CuentaOrigen in ('Capital','Personal'))
 )
 go
 
@@ -324,10 +327,28 @@ CREATE TABLE FIN_MOVIMIENTO(
     Concepto varchar(150) not null,
     Monto decimal(12,2) not null,
     MedioPago varchar(20) not null constraint DF_FIN_MOVIMIENTO_Medio default('Efectivo'),
+    CuentaOrigen varchar(15) not null constraint DF_FIN_MOVIMIENTO_CuentaOrigen default('Capital'),
+    PagadoDesdeCaja bit not null constraint DF_FIN_MOVIMIENTO_PagadoDesdeCaja default(0),
+    FechaRegistro datetime2(0) not null constraint DF_FIN_MOVIMIENTO_FechaRegistro default(sysdatetime()),
     Referencia varchar(100) null,
     CONSTRAINT CK_FIN_MOVIMIENTO_Tipo CHECK(Tipo in ('Empresa','Proveedor')),
     CONSTRAINT CK_FIN_MOVIMIENTO_Monto CHECK(Monto > 0),
-    CONSTRAINT CK_FIN_MOVIMIENTO_Medio CHECK(MedioPago in ('Efectivo','Transferencia','Tarjeta','Otro'))
+    CONSTRAINT CK_FIN_MOVIMIENTO_Medio CHECK(MedioPago in ('Efectivo','Transferencia','Tarjeta','Otro')),
+    CONSTRAINT CK_FIN_MOVIMIENTO_CuentaOrigen CHECK(CuentaOrigen in ('Capital','Personal'))
+)
+go
+
+-- Ajustes manuales de conciliación: no alteran las ventas ni el reparto 1.61.
+CREATE TABLE FIN_AJUSTE_CUENTA_TEMPORAL(
+    IdAjuste bigint primary key identity(1,1),
+    Clave varchar(80) not null unique,
+    Cuenta varchar(15) not null,
+    Monto decimal(12,2) not null,
+    Concepto varchar(250) not null,
+    Fecha datetime2(0) not null constraint DF_FIN_AJUSTE_CUENTA_TEMPORAL_Fecha default(sysdatetime()),
+    IdUsuario int null references USUARIO(IdUsuario),
+    constraint CK_FIN_AJUSTE_CUENTA_TEMPORAL_Cuenta check(Cuenta in ('Capital','Personal')),
+    constraint CK_FIN_AJUSTE_CUENTA_TEMPORAL_Monto check(Monto <> 0)
 )
 go
 
@@ -352,10 +373,16 @@ CREATE TABLE FIN_CIERRE_TEMPORAL(
     Ventas decimal(12,2) not null,
     CapitalAsignado decimal(12,2) not null,
     PersonalAsignado decimal(12,2) not null,
+    EfectivoInicial decimal(12,2) null,
+    EfectivoContado decimal(12,2) null,
+    SalidasCaja decimal(12,2) null,
     IdUsuario int null references USUARIO(IdUsuario),
     FechaRegistro datetime2(0) not null constraint DF_FIN_CIERRE_TEMPORAL_FechaRegistro default(sysdatetime()),
-    constraint CK_FIN_CIERRE_TEMPORAL_Montos check(Ventas >= 0 AND CapitalAsignado >= 0 AND PersonalAsignado >= 0 AND CapitalAsignado + PersonalAsignado = Ventas)
+    constraint CK_FIN_CIERRE_TEMPORAL_Montos check(Ventas >= 0 AND CapitalAsignado >= 0 AND PersonalAsignado >= 0 AND CapitalAsignado + PersonalAsignado = Ventas),
+    constraint CK_FIN_CIERRE_TEMPORAL_Caja check((EfectivoInicial is null AND EfectivoContado is null AND SalidasCaja is null) OR (EfectivoInicial is not null AND EfectivoContado is not null AND SalidasCaja is not null AND EfectivoInicial >= 0 AND EfectivoContado >= 0 AND SalidasCaja >= 0 AND Ventas = EfectivoContado + SalidasCaja - EfectivoInicial))
 )
+go
+CREATE INDEX IX_FIN_CIERRE_TEMPORAL_Fecha ON FIN_CIERRE_TEMPORAL(FechaCierre)
 go
 
 -- Depósitos reales con comprobante y usuario de la sesión web autenticada.

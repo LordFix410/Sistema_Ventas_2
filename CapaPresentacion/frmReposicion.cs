@@ -45,6 +45,7 @@ namespace CapaPresentacion
 
         public frmReposicion()
         {
+            CapaPresentacion.Utilidades.IconoAplicacion.Aplicar(this);
             Text = "Reposición y cotizaciones";
             BackColor = fondo;
             Font = new Font("Segoe UI", 9F);

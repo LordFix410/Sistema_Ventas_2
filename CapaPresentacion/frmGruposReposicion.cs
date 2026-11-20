@@ -14,6 +14,7 @@ namespace CapaPresentacion
         public frmGruposReposicion()
         {
             InitializeComponent();
+            CapaPresentacion.Utilidades.IconoAplicacion.Aplicar(this);
             Load += (s, e) => { cboEstado.Items.Clear(); cboEstado.Items.Add("Activo"); cboEstado.Items.Add("Inactivo"); cboEstado.SelectedIndex = 0; Cargar(); };
             btnGuardarGrupo.Click += (s, e) => Guardar();
             btnCancelarGrupo.Click += (s, e) => Limpiar();

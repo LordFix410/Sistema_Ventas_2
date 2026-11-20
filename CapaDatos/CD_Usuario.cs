@@ -20,9 +20,9 @@ namespace CapaDatos
             using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
             using (SqlCommand cmd = new SqlCommand(
                 "SELECT IdUsuario, NombreCompleto FROM USUARIO WHERE Estado = 1 " +
-                "AND CONVERT(varbinary(100), Clave) = CONVERT(varbinary(100), @Clave)", conexion))
+                "AND UPPER(Clave) = UPPER(@Clave)", conexion))
             {
-                cmd.Parameters.Add("@Clave", SqlDbType.VarChar, 50).Value = clave;
+                cmd.Parameters.Add("@Clave", SqlDbType.VarChar, 50).Value = (clave ?? string.Empty).ToUpperInvariant();
                 conexion.Open();
                 using (SqlDataReader dr = cmd.ExecuteReader())
                 {

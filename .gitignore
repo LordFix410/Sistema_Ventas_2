@@ -28,6 +28,10 @@ CapaPresentacion/conexion.txt
 # Token privado usado para publicar la URL del túnel de Cloudflare.
 DOTNET/cloudflare-token.txt
 **/cloudflare-token*
+**/cloudflared-token*
+**/.cloudflared/
+# Paquete local del proyecto; contiene archivos ignorados, incluido el token.
+DOTNET.rar
 **/cloudflare-url.txt
 **/cloudflare-output.txt
 **/cloudflare-error.txt

@@ -11,12 +11,12 @@
   <link rel="apple-touch-icon" href="/favicon.png?v=1">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="css/app.css?v=19">
-  <link rel="stylesheet" href="css/finanzas.css?v=1">
+  <link rel="stylesheet" href="css/finanzas.css?v=2">
   <script src="/js/pwa.js?v=1" defer></script>
-  <script src="js/finanzas.js?v=3" defer></script>
+  <script src="js/finanzas.js?v=5" defer></script>
 </head>
 <body class="finance-page">
-  <nav class="site-nav"><a class="brand" href="index.html">Librería Digital</a><div class="nav-links"><a href="index.html">Inicio</a><a class="active" href="finanzas.html">Finanzas</a></div></nav>
+  <nav class="site-nav"><a class="brand" href="index.html">Librería Digital</a><div class="nav-links"><a href="index.html">Inicio</a><a href="dashboard.html">Dashboard</a><a class="active" href="finanzas.html">Finanzas</a></div></nav>
   <main class="finance-wrap">
     <section id="loginPanel" class="finance-card login-panel">
       <p class="eyebrow">ACCESO PROTEGIDO</p>
@@ -31,8 +31,8 @@
       <p id="pageMessage" class="form-message" role="status"></p>
 
       <section class="account-grid" aria-label="Saldos acumulados">
-        <article class="account-card capital-card"><div class="account-title"><span class="account-icon">▣</span><h2>Capital</h2></div><strong id="capitalBalance" class="account-amount">Q 0.00</strong><p>Depositado <b id="capitalDeposited">Q 0.00</b></p><div class="account-track"><span id="capitalProgress"></span></div><small id="capitalHint">Saldo acumulado después de salidas de empresa</small></article>
-        <article class="account-card personal-card"><div class="account-title"><span class="account-icon">◉</span><h2>Personal</h2></div><strong id="personalBalance" class="account-amount">Q 0.00</strong><p>Depositado <b id="personalDeposited">Q 0.00</b></p><div class="account-track"><span id="personalProgress"></span></div><small id="personalProgressText">Avance de obligaciones personales del mes</small></article>
+        <article class="account-card capital-card"><div class="account-title"><span class="account-icon">▣</span><h2>Capital</h2></div><strong id="capitalBalance" class="account-amount">Q 0.00</strong><p>Depositado <b id="capitalDeposited">Q 0.00</b></p><div class="account-track"><span id="capitalProgress"></span></div><small id="capitalHint">0%</small></article>
+        <article class="account-card personal-card"><div class="account-title"><span class="account-icon">◉</span><h2>Ganancia</h2></div><strong id="personalBalance" class="account-amount">Q 0.00</strong><p>Depositado <b id="personalDeposited">Q 0.00</b></p><div class="account-track"><span id="personalProgress"></span></div><small id="personalProgressText">0%</small></article>
       </section>
 
       <section class="finance-card obligation-card">
@@ -44,11 +44,11 @@
       <section class="finance-card close-card">
         <div class="section-heading"><div><p class="step-tag">01</p><h2>Cierre del día</h2></div><span class="quiet-tag">No requiere inventario</span></div>
         <form id="closingForm" class="finance-form">
-          <label>Fecha y hora del cierre<input id="closingDate" name="fecha" type="datetime-local" required></label>
-          <label>Total vendido desde el cierre anterior<input id="salesAmount" name="ventas" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></label>
-          <p class="helper-text">Puedes guardar más de un cierre al día. En cada uno escribe solo lo vendido desde el cierre anterior.</p>
-          <p class="helper-text">El capital se calcula como el total vendido ÷ 1.61. La diferencia restante se asigna a ganancia personal.</p>
-          <div class="allocation-preview"><div><span>Capital · costo base</span><strong id="capitalPreview">Q 0.00</strong></div><div><span>Ganancia restante</span><strong id="personalPreview">Q 0.00</strong></div></div>
+          <label>Efectivo con que inicia la caja<input id="openingCash" name="efectivoInicial" type="number" min="0" step="0.01" inputmode="decimal" value="50.00" required></label>
+          <label>Efectivo contado al cierre<input id="closingCash" name="efectivoContado" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></label>
+          <label>Salidas pagadas desde caja desde el cierre anterior<input id="cashOutflows" name="salidasCaja" type="number" readonly value="0.00"></label>
+          <p id="cashOutflowsNote" class="helper-text">Los depósitos se registran por separado y no se vuelven a sumar al cierre.</p>
+          <div class="allocation-preview"><div class="allocation-initial"><span>Efectivo inicial</span><strong id="openingCashPreview">Q 50.00</strong></div><div class="allocation-sales"><span>Total vendido</span><strong id="netSalesPreview">Q 0.00</strong></div><div class="allocation-capital"><span>Capital</span><strong id="capitalPreview">Q 0.00</strong></div><div class="allocation-gain"><span>Ganancia</span><strong id="personalPreview">Q 0.00</strong></div></div>
           <button id="saveClosing" class="button button-primary" type="submit">Guardar cierre</button>
         </form>
       </section>
@@ -69,6 +69,8 @@
         <div class="section-heading"><div><p class="step-tag">03</p><h2>Registrar salida</h2></div></div>
         <form id="expenseForm" class="finance-form">
           <label>Tipo de salida<select id="expenseType" name="tipo"><option value="Personal">Gasto personal</option><option value="Empresa">Gasto de empresa</option></select></label>
+          <label>¿De qué cuenta salió el dinero?<select id="expenseAccount" name="cuentaOrigen"><option value="Capital">Capital</option><option value="Personal">Ganancia personal</option></select></label>
+          <label class="checkbox-label"><input id="paidFromCash" name="pagadoDesdeCaja" type="checkbox" checked><span>Se pagó con efectivo de la caja</span></label>
           <label id="personalCategoryField">¿Qué gasto personal se pagó?<select id="personalCategory" name="idPeriodoGastoPersonal" required><option value="">Selecciona un gasto pendiente</option></select></label>
           <label>Monto<input name="monto" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required></label>
           <label id="expenseConceptField" hidden>Concepto<input name="concepto" maxlength="150" placeholder="Ej. compra de bolsas"></label>
@@ -78,8 +80,22 @@
         </form>
       </section>
 
+      <section class="finance-card outflow-summary-card">
+        <div class="section-heading"><div><p class="eyebrow">SALIDAS REGISTRADAS</p><h2>Este mes</h2></div></div>
+        <div class="obligation-summary"><div><small>De capital</small><strong id="monthCapitalOutflows">Q 0.00</strong></div><div><small>De ganancia</small><strong id="monthPersonalOutflows">Q 0.00</strong></div><div><small>Total</small><strong id="monthTotalOutflows">Q 0.00</strong></div></div>
+      </section>
+
       <section class="finance-card movements-card">
         <div class="section-heading"><div><p class="eyebrow">AUDITORÍA</p><h2>Actividad reciente</h2></div><button id="refreshButton" class="button button-quiet" type="button">Actualizar</button></div>
+        <form id="closingAuditForm" class="audit-filter-form">
+          <label>Desde<input id="auditFrom" type="date"></label>
+          <label>Hasta<input id="auditTo" type="date"></label>
+          <button class="button button-quiet" type="submit">Buscar cierres</button>
+        </form>
+        <p id="auditMessage" class="audit-message" role="status">Últimos 10 cierres.</p>
+        <div id="emptyClosings" class="empty-state" hidden>No hay cierres en ese período.</div>
+        <div id="closingAuditList" class="closing-audit-list" aria-live="polite"></div>
+        <h3 class="activity-subheading">Otros movimientos recientes</h3>
         <div id="emptyMovements" class="empty-state" hidden>Aún no hay movimientos registrados.</div>
         <div id="movementList" class="movement-list" aria-live="polite"></div>
       </section>

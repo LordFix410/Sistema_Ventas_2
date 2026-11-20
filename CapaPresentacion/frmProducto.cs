@@ -64,7 +64,21 @@ namespace CapaPresentacion
                 control.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
 
             foreach (Control control in new Control[] { label18, labelPorcentaje, label19 })
-                control.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            {
+                control.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                control.AutoSize = false;
+            }
+            label18.Text = "Costo:";
+            labelPorcentaje.Text = "Margen %:";
+            label19.Text = "Precio:";
+
+            foreach (Control control in new Control[] { label16, label15 })
+            {
+                control.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                control.AutoSize = false;
+            }
+            label16.Text = "Mínimo:";
+            label15.Text = "Máximo:";
 
             foreach (Control control in new Control[] { txtCodigo, txtNombre, txtDescripcion,
                 cboCategoria, cboGrupoProveedor, cboGrupoReposicion, txtCantidadMinima,
@@ -82,6 +96,9 @@ namespace CapaPresentacion
 
             foreach (Button boton in new Button[] { btnElegir, btnQuitar, btnGirar, btnGuardar, btnCancelarUsuario, btnEliminar })
                 boton.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnElegir.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            btnQuitar.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            btnGirar.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
         }
 
         private void ConfigurarSeccionesVisuales()
@@ -94,7 +111,7 @@ namespace CapaPresentacion
             MoverVertical(new Control[] { label8, cboEstado }, 59);
             MoverVertical(new Control[] { btnGuardar, btnCancelarUsuario, btnEliminar }, 52);
 
-            AgregarSeccionVisual("Datos básicos", new Rectangle(12, 40, 250, 234),
+            AgregarSeccionVisual("Datos básicos", new Rectangle(12, 10, 250, 234),
                 Color.FromArgb(238, 246, 252), Color.FromArgb(43, 105, 157));
             AgregarSeccionVisual("Precio e imagen", new Rectangle(12, 277, 250, 247),
                 Color.FromArgb(238, 248, 241), Color.FromArgb(36, 130, 76));
@@ -104,8 +121,6 @@ namespace CapaPresentacion
                 Color.FromArgb(244, 246, 248), Color.FromArgb(75, 91, 108));
             label1.SendToBack();
 
-            label9.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            label9.ForeColor = Color.FromArgb(35, 75, 108);
             label10.BackColor = Color.FromArgb(224, 237, 247);
             label10.ForeColor = Color.FromArgb(35, 75, 108);
             label10.BorderStyle = BorderStyle.FixedSingle;
@@ -122,7 +137,7 @@ namespace CapaPresentacion
 
         private void CapturarLayoutProductoBase()
         {
-            Control[] controles = { label9, label2, txtCodigo, label3, txtNombre, label4, txtDescripcion,
+            Control[] controles = { label2, txtCodigo, label3, txtNombre, label4, txtDescripcion,
                 label5, cboCategoria, label18, txtCostoProducto, labelPorcentaje, txtPorcentaje, label19,
                 txtPrecioVentaProducto, picFotoProduc, btnElegir, btnQuitar, btnGirar, label17,
                 cboGrupoProveedor, label14, cboGrupoReposicion, label16, txtCantidadMinima,
@@ -136,7 +151,7 @@ namespace CapaPresentacion
         private void AjustarDisenoAdaptable()
         {
             if (IsDisposed || dgvData == null || layoutProductoBase.Count == 0) return;
-            float escalaVertical = Math.Min(1f, Math.Max(0.78f, ClientSize.Height / 940f));
+            float escalaVertical = Math.Min(1f, Math.Max(0.78f, ClientSize.Height / 970f));
             foreach (KeyValuePair<Control, Rectangle> elemento in layoutProductoBase)
             {
                 Rectangle baseControl = elemento.Value;
@@ -148,46 +163,110 @@ namespace CapaPresentacion
 
             if (seccionesVisuales.Count >= 4)
             {
-                Rectangle panelPrecio = seccionesVisuales[1].Bounds;
-                label18.Top = panelPrecio.Top + 18;
-                labelPorcentaje.Top = panelPrecio.Top + 18;
-                label19.Top = panelPrecio.Top + 18;
-                txtCostoProducto.Top = panelPrecio.Top + 36;
-                txtPorcentaje.Top = panelPrecio.Top + 36;
-                txtPrecioVentaProducto.Top = panelPrecio.Top + 36;
+                // Recupera el espacio que antes quedaba entre bloques y lo usa para
+                // dar aire entre etiquetas y campos dentro de Datos básicos y Reposición.
+                seccionesVisuales[0].Height += 12;
+                seccionesVisuales[2].Height += 12;
+                seccionesVisuales[0].Height = Math.Max(seccionesVisuales[0].Height, 205);
+                seccionesVisuales[2].Height = Math.Max(seccionesVisuales[2].Height, 160);
+                seccionesVisuales[3].Height = Math.Max(170, seccionesVisuales[3].Height);
+                const int separacionEntreSecciones = 0;
+                for (int i = 1; i < seccionesVisuales.Count; i++)
+                {
+                    Panel anterior = seccionesVisuales[i - 1];
+                    Panel actual = seccionesVisuales[i];
+                    actual.Top = anterior.Bottom + separacionEntreSecciones;
+                }
 
-                int topFoto = panelPrecio.Top + 82;
-                picFotoProduc.Top = topFoto;
-                int altoBotonFoto = Math.Max(32, Math.Min(40, btnElegir.Height));
-                int pasoFoto = altoBotonFoto + 8;
-                btnElegir.SetBounds(btnElegir.Left, topFoto, btnElegir.Width, altoBotonFoto);
-                btnQuitar.SetBounds(btnQuitar.Left, topFoto + pasoFoto, btnQuitar.Width, altoBotonFoto);
-                btnGirar.SetBounds(btnGirar.Left, topFoto + pasoFoto * 2, btnGirar.Width, altoBotonFoto);
+                label1.Width = seccionesVisuales.Max(p => p.Right) + 12;
+
+                Rectangle panelBasico = seccionesVisuales[0].Bounds;
+                int xCampoBasico = panelBasico.Left + 12;
+                int anchoCampoBasico = panelBasico.Width - 24;
+                int yEtiquetaBasica = panelBasico.Top + 22;
+                int pasoFilaBasica = 45;
+                int separacionEtiquetaCampo = 3;
+                int altoCampoBasico = 22;
+                label2.SetBounds(xCampoBasico, yEtiquetaBasica, anchoCampoBasico, label2.Height);
+                txtCodigo.SetBounds(xCampoBasico, yEtiquetaBasica + label2.Height + separacionEtiquetaCampo,
+                    anchoCampoBasico, altoCampoBasico);
+                label3.SetBounds(xCampoBasico, yEtiquetaBasica + pasoFilaBasica, anchoCampoBasico, label3.Height);
+                txtNombre.SetBounds(xCampoBasico, label3.Bottom + separacionEtiquetaCampo, anchoCampoBasico, altoCampoBasico);
+                label4.SetBounds(xCampoBasico, yEtiquetaBasica + pasoFilaBasica * 2, anchoCampoBasico, label4.Height);
+                txtDescripcion.SetBounds(xCampoBasico, label4.Bottom + separacionEtiquetaCampo, anchoCampoBasico, altoCampoBasico);
+                label5.SetBounds(xCampoBasico, yEtiquetaBasica + pasoFilaBasica * 3+6, anchoCampoBasico, label5.Height);
+                cboCategoria.SetBounds(xCampoBasico, label5.Bottom + separacionEtiquetaCampo,
+                    anchoCampoBasico, Math.Max(22, cboCategoria.Height));
+
+                Rectangle panelPrecio = seccionesVisuales[1].Bounds;
+                int xColumnaPrecio = panelPrecio.Left + 12;
+                int yEtiquetaPrecio = panelPrecio.Top + 24;
+                int yCampoPrecio = yEtiquetaPrecio + label18.Height + 6;
+                const int anchoPrecioLateral = 65;
+                const int anchoPrecioCentro = 73;
+                const int separacionColumnasPrecio = 9;
+                int xMargen = xColumnaPrecio + anchoPrecioLateral + separacionColumnasPrecio;
+                int xPrecioVenta = xMargen + anchoPrecioCentro + separacionColumnasPrecio;
+                label18.SetBounds(xColumnaPrecio, yEtiquetaPrecio, anchoPrecioLateral, label18.Height);
+                labelPorcentaje.SetBounds(xMargen, yEtiquetaPrecio, anchoPrecioCentro, labelPorcentaje.Height);
+                label19.SetBounds(xPrecioVenta, yEtiquetaPrecio, anchoPrecioLateral, label19.Height);
+                label18.TextAlign = ContentAlignment.MiddleCenter;
+                labelPorcentaje.TextAlign = ContentAlignment.MiddleCenter;
+                label19.TextAlign = ContentAlignment.MiddleCenter;
+                txtCostoProducto.SetBounds(label18.Left, yCampoPrecio, anchoPrecioLateral, altoCampoBasico);
+                txtPorcentaje.SetBounds(labelPorcentaje.Left, yCampoPrecio, anchoPrecioCentro, altoCampoBasico);
+                txtPrecioVentaProducto.SetBounds(label19.Left, yCampoPrecio, anchoPrecioLateral, altoCampoBasico);
+
+                int topFoto = panelPrecio.Top + 80;
+                int anchoBotonFoto = 78;
+                int xBotonFoto = panelPrecio.Right - 12 - anchoBotonFoto;
+                int anchoVistaFoto = xBotonFoto - (panelPrecio.Left + 12) - 8;
+                int altoVistaFoto = Math.Max(100, panelPrecio.Bottom - topFoto - 8);
+                picFotoProduc.SetBounds(panelPrecio.Left + 12, topFoto, anchoVistaFoto, altoVistaFoto);
+                int altoBotonFoto = 32;
+                int pasoFoto = altoBotonFoto + 4;
+                btnElegir.SetBounds(xBotonFoto, topFoto, anchoBotonFoto, altoBotonFoto);
+                btnQuitar.SetBounds(xBotonFoto, topFoto + pasoFoto, anchoBotonFoto, altoBotonFoto);
+                btnGirar.SetBounds(xBotonFoto, topFoto + pasoFoto * 2, anchoBotonFoto, altoBotonFoto);
 
                 Rectangle panelReposicion = seccionesVisuales[2].Bounds;
-                label17.SetBounds(label17.Left, panelReposicion.Top + 18, label17.Width, label17.Height);
-                cboGrupoProveedor.SetBounds(cboGrupoProveedor.Left, panelReposicion.Top + 37,
-                    cboGrupoProveedor.Width, cboGrupoProveedor.Height);
-                label14.SetBounds(label14.Left, panelReposicion.Top + 66, label14.Width, label14.Height);
-                cboGrupoReposicion.SetBounds(cboGrupoReposicion.Left, panelReposicion.Top + 85,
-                    cboGrupoReposicion.Width, cboGrupoReposicion.Height);
-                label16.SetBounds(label16.Left, panelReposicion.Top + 115, label16.Width, label16.Height);
-                label15.SetBounds(label15.Left, panelReposicion.Top + 115, label15.Width, label15.Height);
-                txtCantidadMinima.SetBounds(txtCantidadMinima.Left, panelReposicion.Top + 134,
-                    txtCantidadMinima.Width, txtCantidadMinima.Height);
-                txtCantidadMaxima.SetBounds(txtCantidadMaxima.Left, panelReposicion.Top + 134,
-                    txtCantidadMaxima.Width, txtCantidadMaxima.Height);
+                int xComboReposicion = panelReposicion.Left + 12;
+                int anchoComboReposicion = panelReposicion.Width - 24;
+                label17.SetBounds(xComboReposicion, panelReposicion.Top + 23, anchoComboReposicion, label17.Height);
+                cboGrupoProveedor.SetBounds(xComboReposicion, panelReposicion.Top + 43,
+                    anchoComboReposicion, Math.Max(22, cboGrupoProveedor.Height));
+                label14.SetBounds(xComboReposicion, panelReposicion.Top + 71, anchoComboReposicion, label14.Height);
+                cboGrupoReposicion.SetBounds(xComboReposicion, panelReposicion.Top + 91,
+                    anchoComboReposicion, Math.Max(22, cboGrupoReposicion.Height));
+                int anchoLimite = Math.Min(56, (panelReposicion.Width - 56) / 2);
+                int espacioLimite = 24;
+                int xLimites = panelReposicion.Left + (panelReposicion.Width - (anchoLimite * 2 + espacioLimite)) / 2;
+                int yEtiquetaLimites = panelReposicion.Top + 119;
+                int yCamposLimites = yEtiquetaLimites + 20;
+                label16.SetBounds(xLimites - 4, yEtiquetaLimites, anchoLimite + 8, label16.Height);
+                label15.SetBounds(xLimites + anchoLimite + espacioLimite - 4, yEtiquetaLimites,
+                    anchoLimite + 8, label15.Height);
+                label16.TextAlign = ContentAlignment.MiddleCenter;
+                label15.TextAlign = ContentAlignment.MiddleCenter;
+                txtCantidadMinima.SetBounds(xLimites, yCamposLimites, anchoLimite,
+                    Math.Min(20, txtCantidadMinima.Height));
+                txtCantidadMaxima.SetBounds(xLimites + anchoLimite + espacioLimite, yCamposLimites,
+                    anchoLimite, Math.Min(20, txtCantidadMaxima.Height));
 
                 Rectangle panelEstado = seccionesVisuales[3].Bounds;
-                label8.SetBounds(label8.Left, panelEstado.Top + 20, label8.Width, label8.Height);
-                cboEstado.SetBounds(cboEstado.Left, panelEstado.Top + 40, cboEstado.Width, cboEstado.Height);
-                int altoAccion = Math.Max(32, Math.Min(40, (panelEstado.Height - 94) / 3));
-                int espacioAccion = 6;
-                int topAcciones = panelEstado.Bottom - 8 - (altoAccion * 3) - (espacioAccion * 2);
-                btnGuardar.SetBounds(btnGuardar.Left, topAcciones, btnGuardar.Width, altoAccion);
-                btnCancelarUsuario.SetBounds(btnCancelarUsuario.Left, topAcciones + altoAccion + espacioAccion,
+                label8.SetBounds(label8.Left, panelEstado.Top + 23, label8.Width, label8.Height);
+                int anchoEstado = Math.Min(panelEstado.Width - 36, 210);
+                int xEstado = panelEstado.Left + (panelEstado.Width - anchoEstado) / 2;
+                cboEstado.SetBounds(xEstado, panelEstado.Top + 43, anchoEstado, cboEstado.Height);
+                int altoAccion = 29;
+                int espacioAccion = 2;
+                int topAcciones = Math.Max(cboEstado.Bottom + 6,
+                    panelEstado.Bottom - 5 - (altoAccion * 3) - (espacioAccion * 2));
+                int xAcciones = panelEstado.Left + (panelEstado.Width - btnGuardar.Width) / 2;
+                btnGuardar.SetBounds(xAcciones, topAcciones, btnGuardar.Width, altoAccion);
+                btnCancelarUsuario.SetBounds(xAcciones, topAcciones + altoAccion + espacioAccion,
                     btnCancelarUsuario.Width, altoAccion);
-                btnEliminar.SetBounds(btnEliminar.Left, topAcciones + (altoAccion + espacioAccion) * 2,
+                btnEliminar.SetBounds(xAcciones, topAcciones + (altoAccion + espacioAccion) * 2,
                     btnEliminar.Width, altoAccion);
             }
 
@@ -195,6 +274,11 @@ namespace CapaPresentacion
             int anchoContenido = Math.Max(700, ClientSize.Width - xContenido - 18);
             label10.SetBounds(xContenido, 22, anchoContenido, 94);
             label11.SetBounds(xContenido + 400, 38, 76, 16);
+            int anchoBloqueTitulo = label11.Left - label10.Left;
+            iconButton1.SetBounds(label10.Left + Math.Min(40, Math.Max(0, anchoBloqueTitulo - iconButton1.Width)),
+                label10.Bottom - iconButton1.Height - 4, iconButton1.Width, iconButton1.Height);
+            iconButton1.TextAlign = ContentAlignment.MiddleCenter;
+            iconButton1.Padding = new Padding(6, 0, 6, 0);
             cboBuscar.SetBounds(label11.Right + 8, 34, 193, 24);
             txtBusqueda.SetBounds(cboBuscar.Right + 20, 38, 167, 22);
             btnBuscar.SetBounds(txtBusqueda.Right + 8, 28, 44, 39);
@@ -334,6 +418,7 @@ namespace CapaPresentacion
             using (var ventana = new Form())
             using (var cuadro = new PictureBox())
             {
+                IconoAplicacion.Aplicar(ventana);
                 ventana.Text = "Vista previa · " + txtNombre.Text;
                 ventana.StartPosition = FormStartPosition.CenterParent;
                 ventana.Size = new Size(640, 600);
@@ -1108,6 +1193,11 @@ namespace CapaPresentacion
                 }
 
             }
+        }
+
+        private void label5_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

@@ -60,7 +60,7 @@ namespace CapaPresentacion.Utilidades
             {
                 archivo.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
                 contenido.Add(archivo, "file", "foto.jpg");
-                contenido.Add(new StringContent(claveUsuario ?? string.Empty, Encoding.UTF8), "clave");
+                contenido.Add(new StringContent((claveUsuario ?? string.Empty).ToUpperInvariant(), Encoding.UTF8), "clave");
                 using (var respuesta = ClienteHttp.PostAsync(new Uri(UrlApi, "api/productos/imagenes"), contenido).GetAwaiter().GetResult())
                 {
                     string respuestaTexto = respuesta.Content.ReadAsStringAsync().GetAwaiter().GetResult();
@@ -170,6 +170,7 @@ namespace CapaPresentacion.Utilidades
                 using (var ventana = new Form())
                 using (var cuadro = new PictureBox())
                 {
+                    IconoAplicacion.Aplicar(ventana);
                     ventana.Text = titulo ?? "Fotografía del producto";
                     ventana.StartPosition = FormStartPosition.CenterParent;
                     ventana.Size = new Size(640, 600);
@@ -219,7 +220,7 @@ namespace CapaPresentacion.Utilidades
         public static void Eliminar(string rutaRelativa, string claveUsuario)
         {
             if (!RutaValida(rutaRelativa)) return;
-            string url = "api/productos/imagenes?ruta=" + Uri.EscapeDataString(rutaRelativa) + "&clave=" + Uri.EscapeDataString(claveUsuario ?? string.Empty);
+            string url = "api/productos/imagenes?ruta=" + Uri.EscapeDataString(rutaRelativa) + "&clave=" + Uri.EscapeDataString((claveUsuario ?? string.Empty).ToUpperInvariant());
             using (var respuesta = ClienteHttp.DeleteAsync(new Uri(UrlApi, url)).GetAwaiter().GetResult())
             {
                 if (!respuesta.IsSuccessStatusCode && respuesta.StatusCode != System.Net.HttpStatusCode.NotFound)

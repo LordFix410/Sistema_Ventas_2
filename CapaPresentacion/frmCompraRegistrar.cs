@@ -660,6 +660,7 @@ namespace CapaPresentacion
             using (var aceptar = new Button())
             using (var cancelar = new Button())
             {
+                CapaPresentacion.Utilidades.IconoAplicacion.Aplicar(dialogo);
                 dialogo.Text = "Confirmar total de factura";
                 dialogo.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialogo.StartPosition = FormStartPosition.CenterParent;
@@ -724,6 +725,7 @@ namespace CapaPresentacion
             using (var aceptar = new Button())
             using (var cancelar = new Button())
             {
+                CapaPresentacion.Utilidades.IconoAplicacion.Aplicar(dialogo);
                 dialogo.Text = "Importe fuera del inventario";
                 dialogo.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialogo.StartPosition = FormStartPosition.CenterParent;

@@ -61,7 +61,6 @@
             this.PORCENTAJE = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.EstadoValor = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Estado = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.label9 = new System.Windows.Forms.Label();
             this.cboEstado = new System.Windows.Forms.ComboBox();
             this.label8 = new System.Windows.Forms.Label();
             this.cboCategoria = new System.Windows.Forms.ComboBox();
@@ -483,25 +482,14 @@
             this.Estado.ReadOnly = true;
             this.Estado.Width = 125;
             // 
-            // label9
-            // 
-            this.label9.AutoSize = true;
-            this.label9.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label9.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label9.Location = new System.Drawing.Point(28, 17);
-            this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(156, 20);
-            this.label9.TabIndex = 49;
-            this.label9.Text = "Detalle Producto:";
-            // 
             // cboEstado
             // 
             this.cboEstado.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboEstado.FormattingEnabled = true;
-            this.cboEstado.Location = new System.Drawing.Point(36, 691);
+            this.cboEstado.Location = new System.Drawing.Point(36, 690);
             this.cboEstado.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.cboEstado.Name = "cboEstado";
-            this.cboEstado.Size = new System.Drawing.Size(174, 24);
+            this.cboEstado.Size = new System.Drawing.Size(175, 24);
             this.cboEstado.TabIndex = 45;
             // 
             // label8
@@ -533,6 +521,7 @@
             this.label5.Size = new System.Drawing.Size(69, 16);
             this.label5.TabIndex = 42;
             this.label5.Text = "Categoria:";
+            this.label5.Click += new System.EventHandler(this.label5_Click);
             // 
             // label7
             // 
@@ -679,10 +668,10 @@
             // 
             // txtCantidadMaxima
             // 
-            this.txtCantidadMaxima.Location = new System.Drawing.Point(130, 642);
+            this.txtCantidadMaxima.Location = new System.Drawing.Point(131, 642);
             this.txtCantidadMaxima.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.txtCantidadMaxima.Name = "txtCantidadMaxima";
-            this.txtCantidadMaxima.Size = new System.Drawing.Size(54, 22);
+            this.txtCantidadMaxima.Size = new System.Drawing.Size(55, 22);
             this.txtCantidadMaxima.TabIndex = 67;
             // 
             // txtCantidadMinima
@@ -727,7 +716,7 @@
             // 
             this.label17.AutoSize = true;
             this.label17.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.label17.Location = new System.Drawing.Point(33, 515);
+            this.label17.Location = new System.Drawing.Point(33, 514);
             this.label17.Name = "label17";
             this.label17.Size = new System.Drawing.Size(113, 16);
             this.label17.TabIndex = 68;
@@ -771,7 +760,8 @@
             // 
             // picFotoProduc
             // 
-            this.picFotoProduc.Location = new System.Drawing.Point(22, 334);
+            this.picFotoProduc.Location = new System.Drawing.Point(21, 334);
+            this.picFotoProduc.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.picFotoProduc.Name = "picFotoProduc";
             this.picFotoProduc.Size = new System.Drawing.Size(127, 151);
             this.picFotoProduc.TabIndex = 74;
@@ -780,6 +770,7 @@
             // btnElegir
             // 
             this.btnElegir.Location = new System.Drawing.Point(159, 334);
+            this.btnElegir.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnElegir.Name = "btnElegir";
             this.btnElegir.Size = new System.Drawing.Size(87, 32);
             this.btnElegir.TabIndex = 75;
@@ -789,6 +780,7 @@
             // btnQuitar
             // 
             this.btnQuitar.Location = new System.Drawing.Point(159, 391);
+            this.btnQuitar.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnQuitar.Name = "btnQuitar";
             this.btnQuitar.Size = new System.Drawing.Size(87, 32);
             this.btnQuitar.TabIndex = 76;
@@ -798,6 +790,7 @@
             // btnGirar
             // 
             this.btnGirar.Location = new System.Drawing.Point(159, 453);
+            this.btnGirar.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnGirar.Name = "btnGirar";
             this.btnGirar.Size = new System.Drawing.Size(87, 32);
             this.btnGirar.TabIndex = 77;
@@ -809,7 +802,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.Highlight;
-            this.ClientSize = new System.Drawing.Size(1924, 940);
+            this.ClientSize = new System.Drawing.Size(1604, 940);
             this.Controls.Add(this.btnQuitar);
             this.Controls.Add(this.btnGirar);
             this.Controls.Add(this.btnElegir);
@@ -841,7 +834,6 @@
             this.Controls.Add(this.btnGuardar);
             this.Controls.Add(this.label12);
             this.Controls.Add(this.dgvData);
-            this.Controls.Add(this.label9);
             this.Controls.Add(this.cboEstado);
             this.Controls.Add(this.txtPorcentaje);
             this.Controls.Add(this.labelPorcentaje);
@@ -857,7 +849,7 @@
             this.Controls.Add(this.label3);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
-            this.Margin = new System.Windows.Forms.Padding(4);
+            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.Name = "frmProducto";
             this.Text = "frmProducto";
             this.TransparencyKey = System.Drawing.Color.Transparent;
@@ -885,7 +877,6 @@
         private FontAwesome.Sharp.IconButton btnGuardar;
         private System.Windows.Forms.Label label12;
         private System.Windows.Forms.DataGridView dgvData;
-        private System.Windows.Forms.Label label9;
         private System.Windows.Forms.ComboBox cboEstado;
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.ComboBox cboCategoria;

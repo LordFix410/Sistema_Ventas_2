@@ -27,6 +27,7 @@ namespace CapaNegocio
         public int Registrar(Usuario obj, out string Mensaje)
         {
             Mensaje = string.Empty;
+            NormalizarMayusculas(obj);
             if(obj.NombreCompleto == "") Mensaje += "Es necesario el nombre del usuario\n";
             
             if(obj.Documento =="") Mensaje += "Es necesario el documento\n";
@@ -39,6 +40,7 @@ namespace CapaNegocio
         public bool Editar(Usuario obj, out string Mensaje)
         {
             Mensaje = string.Empty;
+            NormalizarMayusculas(obj);
             if (obj.NombreCompleto == "") Mensaje += "Es necesario el nombre del usuario\n";
 
             if (obj.Documento == "") Mensaje += "Es necesario el documento\n";
@@ -55,6 +57,15 @@ namespace CapaNegocio
 
             if (Mensaje != string.Empty) return false;
             return objcd_usuario.Eliminar(obj, out Mensaje);
+        }
+
+        private static void NormalizarMayusculas(Usuario usuario)
+        {
+            if (usuario == null) return;
+            usuario.Documento = (usuario.Documento ?? string.Empty).ToUpperInvariant();
+            usuario.NombreCompleto = (usuario.NombreCompleto ?? string.Empty).ToUpperInvariant();
+            usuario.Correo = (usuario.Correo ?? string.Empty).ToUpperInvariant();
+            usuario.Clave = (usuario.Clave ?? string.Empty).ToUpperInvariant();
         }
     }
 }

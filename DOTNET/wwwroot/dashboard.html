@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d2f47">
+  <title>Dashboard · Librería Digital</title>
+  <link rel="icon" href="/favicon.ico?v=1" type="image/x-icon">
+  <link rel="apple-touch-icon" href="/favicon.png?v=1">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="css/app.css?v=18">
+  <link rel="stylesheet" href="css/finanzas.css?v=1">
+  <link rel="stylesheet" href="css/dashboard.css?v=2">
+  <script src="/js/pwa.js?v=1" defer></script>
+  <script src="js/dashboard.js?v=2" defer></script>
+</head>
+<body class="finance-page dashboard-page">
+  <nav class="site-nav">
+    <a class="brand" href="index.html">Librería Digital</a>
+    <div class="nav-links"><a href="index.html">Inicio</a><a class="active" href="dashboard.html">Dashboard</a><a href="finanzas.html">Finanzas</a></div>
+  </nav>
+  <main class="finance-wrap">
+    <section id="loginPanel" class="finance-card login-panel">
+      <p class="eyebrow">RESUMEN EJECUTIVO</p>
+      <h1>Dashboard de cuentas</h1>
+      <p class="muted">Inicia sesión para consultar ventas, distribución y saldos acumulados.</p>
+      <form id="loginForm" class="finance-form"><label>Contraseña<input name="clave" type="password" autocomplete="current-password" required></label><button class="button button-primary" type="submit">Entrar</button></form>
+      <p id="loginMessage" class="form-message" role="status"></p>
+    </section>
+
+    <section id="dashboardApp" hidden>
+      <header class="finance-heading">
+        <div><p class="eyebrow">VISTA DE SOLO LECTURA</p><h1>Resumen ejecutivo</h1><p id="monthLabel" class="muted"></p></div>
+        <div class="signed-in"><span id="responsibleName"></span><button id="logoutButton" class="button button-quiet" type="button">Salir</button></div>
+      </header>
+      <p id="pageMessage" class="form-message" role="status"></p>
+
+      <section class="dashboard-sales finance-card" aria-label="Ventas y distribución del mes">
+        <p class="eyebrow">VENTAS ACUMULADAS DEL MES</p>
+        <strong id="monthSales" class="dashboard-sales-total">Q 0.00</strong>
+        <div class="dashboard-split">
+          <article class="split-card capital-split"><div><h2>Capital</h2><b id="capitalPercent">0%</b></div><strong id="monthCapital">Q 0.00</strong><div class="dashboard-track"><span id="capitalBar"></span></div></article>
+          <article class="split-card personal-split"><div><h2>Ganancia personal</h2><b id="personalPercent">0%</b></div><strong id="monthPersonal">Q 0.00</strong><div class="dashboard-track"><span id="personalBar"></span></div></article>
+        </div>
+        <p class="dashboard-note">La distribución refleja los valores asignados en los cierres registrados este mes.</p>
+      </section>
+
+      <section class="dashboard-accounts" aria-label="Saldos acumulados">
+        <article class="account-card capital-card"><div class="account-title"><span class="account-icon">▣</span><h2>Capital disponible</h2></div><strong id="capitalBalance" class="account-amount">Q 0.00</strong><p>Depositado <b id="capitalDeposited">Q 0.00</b></p><div class="account-track"><span id="capitalProgress"></span></div><small id="capitalHint">Avance de depósitos respecto al capital generado</small></article>
+        <article class="account-card personal-card"><div class="account-title"><span class="account-icon">◉</span><h2>Ganancia disponible</h2></div><strong id="personalBalance" class="account-amount">Q 0.00</strong><p>Depositado <b id="personalDeposited">Q 0.00</b></p><div class="account-track"><span id="personalProgress"></span></div><small>Saldo acumulado después de salidas personales</small></article>
+      </section>
+
+      <section class="finance-card dashboard-outflows" aria-label="Salidas registradas del mes">
+        <div class="section-heading"><div><p class="eyebrow">SALIDAS REGISTRADAS</p><h2>Salidas del mes</h2></div></div>
+        <div class="obligation-summary"><div><small>De capital</small><strong id="monthCapitalOutflows">Q 0.00</strong></div><div><small>De ganancia</small><strong id="monthPersonalOutflows">Q 0.00</strong></div><div><small>Total</small><strong id="monthTotalOutflows">Q 0.00</strong></div></div>
+      </section>
+
+      <section class="finance-card dashboard-obligations">
+        <div class="section-heading"><div><p class="eyebrow">COMPROMISOS DEL MES</p><h2>Gastos personales</h2></div><span id="monthChip" class="month-chip"></span></div>
+        <div class="obligation-summary"><div><small>Total previsto</small><strong id="obligationTotal">Q 0.00</strong></div><div><small>Pagado</small><strong id="obligationPaid">Q 0.00</strong></div><div><small>Pendiente</small><strong id="obligationPending">Q 0.00</strong></div></div>
+        <p class="next-due">Próximo vencimiento: <b id="nextExpense">Sin pendientes</b></p>
+      </section>
+      <div class="dashboard-footer"><span>Datos actualizados al momento de la consulta.</span><button id="refreshButton" class="button button-quiet" type="button">Actualizar resumen</button></div>
+    </section>
+  </main>
+  <script src="js/file-transfer.js" defer></script>
+</body>
+</html>
