@@ -57,9 +57,9 @@ namespace CapaDatos
                     using (SqlCommand comando = new SqlCommand("sp_RegistrarProducto", conexion, transaccion))
                     {
                         comando.CommandType = CommandType.StoredProcedure;
-                        comando.Parameters.Add("Codigo", SqlDbType.VarChar, 20).Value = obj.Codigo;
-                        comando.Parameters.Add("Nombre", SqlDbType.VarChar, 30).Value = obj.Nombre;
-                        comando.Parameters.Add("Descripcion", SqlDbType.VarChar, 30).Value = obj.Descripcion;
+                        comando.Parameters.Add("Codigo", SqlDbType.VarChar, 50).Value = (obj.Codigo ?? string.Empty).ToUpperInvariant();
+                        comando.Parameters.Add("Nombre", SqlDbType.VarChar, 500).Value = (obj.Nombre ?? string.Empty).ToUpperInvariant();
+                        comando.Parameters.Add("Descripcion", SqlDbType.VarChar, 500).Value = (obj.Descripcion ?? string.Empty).ToUpperInvariant();
                         comando.Parameters.Add("IdCategoria", SqlDbType.Int).Value = idCategoria;
                         AgregarParametroPorcentaje(comando, obj.Porcentaje);
                         AgregarParametroPrecio(comando, "PrecioCompra", 0m);
@@ -372,9 +372,9 @@ namespace CapaDatos
                 {
                     SqlCommand cmd = new SqlCommand("sp_RegistrarProducto", oconexion);
                     //cmd.Parameters.AddWithValue("IdProducto", obj.IdProducto);
-                    cmd.Parameters.AddWithValue("Codigo", obj.Codigo);
-                    cmd.Parameters.AddWithValue("Nombre", obj.Nombre);
-                    cmd.Parameters.AddWithValue("Descripcion", obj.Descripcion);
+                    cmd.Parameters.Add("Codigo", SqlDbType.VarChar, 50).Value = (obj.Codigo ?? string.Empty).ToUpperInvariant();
+                    cmd.Parameters.Add("Nombre", SqlDbType.VarChar, 500).Value = (obj.Nombre ?? string.Empty).ToUpperInvariant();
+                    cmd.Parameters.Add("Descripcion", SqlDbType.VarChar, 500).Value = (obj.Descripcion ?? string.Empty).ToUpperInvariant();
                     cmd.Parameters.AddWithValue("IdCategoria", obj.oCategoria.IdCategoria);
                     AgregarParametroPorcentaje(cmd, obj.Porcentaje);
                     AgregarParametroPrecio(cmd, "PrecioCompra", obj.PrecioCompra);
@@ -414,9 +414,9 @@ namespace CapaDatos
                 {
                     SqlCommand cmd = new SqlCommand("sp_ModificarProducto", oconexion);
                     cmd.Parameters.AddWithValue("IdProducto", obj.IdProducto);
-                    cmd.Parameters.AddWithValue("Codigo", obj.Codigo);
-                    cmd.Parameters.AddWithValue("Nombre", obj.Nombre);
-                    cmd.Parameters.AddWithValue("Descripcion", obj.Descripcion);
+                    cmd.Parameters.Add("Codigo", SqlDbType.VarChar, 50).Value = (obj.Codigo ?? string.Empty).ToUpperInvariant();
+                    cmd.Parameters.Add("Nombre", SqlDbType.VarChar, 500).Value = (obj.Nombre ?? string.Empty).ToUpperInvariant();
+                    cmd.Parameters.Add("Descripcion", SqlDbType.VarChar, 500).Value = (obj.Descripcion ?? string.Empty).ToUpperInvariant();
                     cmd.Parameters.AddWithValue("IdCategoria", obj.oCategoria.IdCategoria);
                     AgregarParametroPorcentaje(cmd, obj.Porcentaje);
                     AgregarParametroPrecio(cmd, "PrecioCompra", obj.PrecioCompra);

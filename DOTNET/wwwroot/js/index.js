@@ -21,9 +21,12 @@ function setMessage(card, message) {
   status.textContent = message;
 }
 async function sendFiles(card, files) {
-  const accepted = [...files].filter(file => file.type.startsWith('image/') || /\.(zip|rar)$/i.test(file.name) || (card.dataset.tool === 'trifoliares' && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name))));
+  const pdfTool = ['trifoliares', 'unir-escaneos'].includes(card.dataset.tool);
+  const accepted = [...files].filter(file => pdfTool
+    ? file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+    : file.type.startsWith('image/') || /\.(zip|rar)$/i.test(file.name));
   if (!accepted.length) {
-    setMessage(card, card.dataset.tool === 'trifoliares' ? 'Soltá un documento PDF.' : 'Soltá imágenes, ZIP o RAR.');
+    setMessage(card, pdfTool ? 'Soltá un documento PDF.' : 'Soltá imágenes, ZIP o RAR.');
     return;
   }
   setMessage(card, 'Cargando archivos…');

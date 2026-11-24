@@ -141,6 +141,29 @@
   $('#replenishmentGroup').addEventListener('change', event => { const useGroup = !!event.target.value; $('#individualLimits').hidden = useGroup; $('#individualLimits').querySelectorAll('input').forEach(input => { input.disabled = useGroup; if (useGroup) input.value = ''; }); });
   const purchaseInput = $('#precioCompra'), saleInput = $('#precioVenta'), percentInput = $('#porcentaje');
   const productForm = $('#productForm');
+  const nameInput = $('#nombre');
+  const descriptionInput = $('textarea[name="descripcion"]', productForm);
+  const nameCount = $('#nameCount');
+  const descriptionCount = $('#descriptionCount');
+  const updateProductTextCounts = () => {
+    nameCount.textContent = `${nameInput.value.length}/500`;
+    descriptionCount.textContent = `${descriptionInput.value.length}/500`;
+  };
+  for (const field of [$('#codigo'), $('#nombre')]) field.addEventListener('input', () => {
+    const start = field.selectionStart, end = field.selectionEnd, upper = field.value.toLocaleUpperCase('es-GT');
+    if (upper !== field.value) { field.value = upper; field.setSelectionRange(Math.min(start, upper.length), Math.min(end, upper.length)); }
+  });
+  descriptionInput.addEventListener('input', () => {
+    const start = descriptionInput.selectionStart, end = descriptionInput.selectionEnd;
+    const upper = descriptionInput.value.toLocaleUpperCase('es-GT');
+    if (upper !== descriptionInput.value) {
+      descriptionInput.value = upper;
+      descriptionInput.setSelectionRange(Math.min(start, upper.length), Math.min(end, upper.length));
+    }
+    updateProductTextCounts();
+  });
+  nameInput.addEventListener('input', updateProductTextCounts);
+  updateProductTextCounts();
   const productPhoto = $('#productPhoto');
   const productPhotoPreview = $('#productPhotoPreview');
   const productPhotoControls = $('#productPhotoControls');
@@ -182,7 +205,7 @@
   let pendingPriceField = null;
 
   function productFormHasData() {
-    return !!($('#codigo').value.trim() || $('#nombre').value.trim() || $('input[name="descripcion"]', productForm).value.trim() ||
+    return !!($('#codigo').value.trim() || $('#nombre').value.trim() || descriptionInput.value.trim() ||
       $('#categoria').value || $('#supplierGroup').value || $('#replenishmentGroup').value ||
       (Number(purchaseInput.value) || 0) > 0 || (Number(saleInput.value) || 0) > 0 ||
       (Number(percentInput.value) || 0) !== 61 || minimumInput.value !== '' || maximumInput.value !== '');
@@ -207,9 +230,12 @@
         if (item.type === 'checkbox') element.checked = !!item.checked;
         else if (element.tagName !== 'SELECT' || [...element.options].some(option => option.value === item.value)) element.value = item.value;
       }
+      for (const field of [$('#codigo'), $('#nombre')]) field.value = field.value.toLocaleUpperCase('es-GT');
       autoPurchaseCost = typeof draft.costoAutomatico === 'boolean' ? draft.costoAutomatico : (Number(purchaseInput.value) || 0) <= 0;
       $('#replenishmentGroup').dispatchEvent(new Event('change'));
       refreshPriceHint();
+      descriptionInput.value = descriptionInput.value.toLocaleUpperCase('es-GT');
+      updateProductTextCounts();
       message($('#productMessage'), 'Borrador del producto recuperado. Puedes continuar donde lo dejaste.', true);
     } catch { sessionStorage.removeItem(productDraftKey); }
   }
@@ -548,8 +574,8 @@
   // Enter funciona como "Siguiente" en teclado físico y en teclados móviles.
   const enterNext = new Map([
     [$('#codigo'), $('#nombre')],
-    [$('#nombre'), $('input[name="descripcion"]', productForm)],
-    [$('input[name="descripcion"]', productForm), $('#categoria')],
+    [$('#nombre'), descriptionInput],
+    [descriptionInput, $('#categoria')],
     [$('#categoria'), $('#supplierGroup')],
     [$('#supplierGroup'), saleInput],
     [saleInput, $('#replenishmentGroup')],
@@ -633,7 +659,7 @@
     });
   }
   refreshPriceHint();
-  productForm.addEventListener('reset', () => setTimeout(() => { autoPurchaseCost = true; pendingPriceField = null; message($('#productMessage'), ''); refreshPriceHint(); }, 0));
+  productForm.addEventListener('reset', () => setTimeout(() => { autoPurchaseCost = true; pendingPriceField = null; updateProductTextCounts(); message($('#productMessage'), ''); refreshPriceHint(); }, 0));
   productForm.addEventListener('submit', async event => {
     event.preventDefault(); message($('#productMessage'), ''); const form = event.currentTarget, data = new FormData(form), button = form.querySelector('[type=submit]');
     if (productPhotoProcessingActive) {

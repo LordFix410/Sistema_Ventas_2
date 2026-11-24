@@ -26,44 +26,17 @@
     if (signedIn) $('#responsibleName').textContent = name;
     else $('#loginForm').reset();
   }
-  function progress(element, amount, total) {
-    const percent = total > 0 ? Math.max(0, Math.min(100, amount * 100 / total)) : 0;
-    element.style.width = `${percent}%`;
-    return Math.round(percent);
-  }
   function render(data) {
-    const monthDate = new Date(`${data.mes}-01T12:00:00`);
-    $('#monthLabel').textContent = monthDate.toLocaleDateString('es-GT', {month: 'long', year: 'numeric'});
-    $('#monthChip').textContent = monthDate.toLocaleDateString('es-GT', {month: 'long'});
+    $('#monthLabel').textContent = new Date(`${data.mes}-01T12:00:00`).toLocaleDateString('es-GT', {month: 'long', year: 'numeric'});
     $('#monthSales').textContent = currency.format(data.ventasMesTotal);
-    $('#monthCapital').textContent = currency.format(data.capitalGeneradoMes);
-    $('#monthPersonal').textContent = currency.format(data.asignadoPersonalMes);
-    const sales = Number(data.ventasMesTotal) || 0;
-    const capitalPercent = sales > 0 ? Math.round((Number(data.capitalGeneradoMes) || 0) * 100 / sales) : 0;
-    const personalPercent = sales > 0 ? Math.round((Number(data.asignadoPersonalMes) || 0) * 100 / sales) : 0;
-    $('#capitalPercent').textContent = `${capitalPercent}%`;
-    $('#personalPercent').textContent = `${personalPercent}%`;
-    progress($('#capitalBar'), capitalPercent, 100);
-    progress($('#personalBar'), personalPercent, 100);
-
     $('#capitalBalance').textContent = currency.format(data.capital);
     $('#personalBalance').textContent = currency.format(data.personal);
     $('#capitalDeposited').textContent = currency.format(data.depositadoCapital);
     $('#personalDeposited').textContent = currency.format(data.depositadoPersonal);
-    const capitalDepositPct = progress($('#capitalProgress'), data.depositadoCapital, data.capitalGeneradoTotal);
-    const personalDepositPct = progress($('#personalProgress'), data.depositadoPersonal, data.personalGeneradoTotal);
-    $('#capitalHint').textContent = `${capitalDepositPct}%`;
-    $('#personalProgress').closest('.account-card').querySelector('small').textContent = `${personalDepositPct}%`;
-
-    $('#obligationTotal').textContent = currency.format(data.obligacionesMes);
-    $('#obligationPaid').textContent = currency.format(data.pagadoPersonal);
-    $('#obligationPending').textContent = currency.format(Math.max(0, data.obligacionesMes - data.pagadoPersonal));
+    $('#capitalCashTotal').textContent = currency.format(data.capitalDepositosMasCaja);
+    $('#personalCashTotal').textContent = currency.format(data.gananciaDepositosMasCaja);
     $('#monthCapitalOutflows').textContent = currency.format(data.salidasCapitalMes || 0);
     $('#monthPersonalOutflows').textContent = currency.format(data.salidasPersonalMes || 0);
-    $('#monthTotalOutflows').textContent = currency.format((Number(data.salidasCapitalMes) || 0) + (Number(data.salidasPersonalMes) || 0));
-    $('#nextExpense').textContent = data.proximoGasto === 'Sin pendientes'
-      ? data.proximoGasto
-      : `${data.proximoGasto}${data.fechaProximoGasto ? ` · ${data.fechaProximoGasto}` : ''}`;
   }
   async function loadSummary() {
     message(pageMessage, 'Actualizando resumen…');

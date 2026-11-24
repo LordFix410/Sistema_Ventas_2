@@ -77,8 +77,8 @@ go
 create table PRODUCTO(
 IdProducto int primary key identity,
 Codigo varchar(50),
-Nombre varchar(50),
-Descripcion varchar(50),
+Nombre varchar(500),
+Descripcion varchar(500),
 IdCategoria int references CATEGORIA(IdCategoria),
 IdGrupoReposicion int NULL,
 CantidadMinima int NULL,
@@ -532,9 +532,9 @@ GO
 
 -- PROCEDIMIENTOS PARA PRODUCTO
 create PROC sp_RegistrarProducto(
-@Codigo varchar(20),
-@Nombre varchar(30),
-@Descripcion varchar(30),
+@Codigo varchar(50),
+@Nombre varchar(500),
+@Descripcion varchar(500),
 @IdCategoria int,
 @Estado bit,
 @Resultado int output,
@@ -554,9 +554,9 @@ GO
 
 create procedure sp_ModificarProducto(
 @IdProducto int,
-@Codigo varchar(20),
-@Nombre varchar(30),
-@Descripcion varchar(30),
+@Codigo varchar(50),
+@Nombre varchar(500),
+@Descripcion varchar(500),
 @IdCategoria int,
 @Estado bit,
 @Resultado bit output,
@@ -990,9 +990,9 @@ GO
 IF OBJECT_ID('dbo.sp_RegistrarProducto', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_RegistrarProducto;
 GO
 CREATE PROCEDURE dbo.sp_RegistrarProducto
-    @Codigo varchar(20),
-    @Nombre varchar(30),
-    @Descripcion varchar(30),
+    @Codigo varchar(50),
+    @Nombre varchar(500),
+    @Descripcion varchar(500),
     @IdCategoria int,
     @Porcentaje decimal(9,4),
     @PrecioCompra decimal(10,2),
@@ -1041,9 +1041,9 @@ IF OBJECT_ID('dbo.sp_ModificarProducto', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_
 GO
 CREATE PROCEDURE dbo.sp_ModificarProducto
     @IdProducto int,
-    @Codigo varchar(20),
-    @Nombre varchar(30),
-    @Descripcion varchar(30),
+    @Codigo varchar(50),
+    @Nombre varchar(500),
+    @Descripcion varchar(500),
     @IdCategoria int,
     @Porcentaje decimal(9,4),
     @PrecioCompra decimal(10,2),

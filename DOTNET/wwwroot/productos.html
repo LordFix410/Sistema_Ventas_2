@@ -12,9 +12,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="stylesheet" href="css/app.css?v=21">
-  <link rel="stylesheet" href="css/productos.css?v=15">
+  <link rel="stylesheet" href="css/productos.css?v=16">
   <script src="/js/pwa.js?v=1" defer></script>
-  <script src="js/productos.js?v=17" defer></script>
+  <script src="js/productos.js?v=18" defer></script>
 </head>
 <body class="products-page">
   <nav class="site-nav">
@@ -63,9 +63,9 @@
           </section>
           <button id="scanButton" class="button button-primary scan-launch" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg> 2. Escanear código de barras</button>
           <div class="field-grid">
-            <label class="span-2">Código de barras *<input id="codigo" name="codigo" maxlength="20" required autocomplete="off"></label>
-            <label>Nombre *<input id="nombre" name="nombre" maxlength="30" required></label>
-            <label>Descripción<input name="descripcion" maxlength="30"></label>
+            <label class="span-2">Código de barras *<input id="codigo" name="codigo" maxlength="50" required autocomplete="off"></label>
+            <label class="span-2 description-field">Nombre *<textarea id="nombre" name="nombre" maxlength="500" rows="2" required aria-describedby="nameCount"></textarea><small id="nameCount" class="character-count">0/500</small></label>
+            <label class="span-2 description-field">Descripción<textarea name="descripcion" maxlength="500" rows="2" aria-describedby="descriptionCount"></textarea><small id="descriptionCount" class="character-count">0/500</small></label>
             <label>Categoría *<div class="input-action"><select id="categoria" name="idCategoria" required></select><button id="addCategoryButton" class="button button-add" type="button" aria-label="Crear categoría" title="Crear categoría">＋</button></div></label>
             <label>Grupo de proveedores<select id="supplierGroup" name="idGrupoProveedor"><option value="">Sin grupo</option></select></label>
           </div>

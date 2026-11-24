@@ -79,8 +79,8 @@ go
 create table PRODUCTO(
 IdProducto int primary key identity,
 Codigo varchar(50),
-Nombre varchar(50),
-Descripcion varchar(50),
+Nombre varchar(500),
+Descripcion varchar(500),
 IdCategoria int references CATEGORIA(IdCategoria),
 IdGrupoReposicion int NULL,
 CantidadMinima int NULL,
@@ -396,9 +396,32 @@ CREATE TABLE FIN_DEPOSITO_TEMPORAL(
     Comprobante varchar(100) not null,
     IdUsuario int null references USUARIO(IdUsuario),
     FechaRegistro datetime2(0) not null constraint DF_FIN_DEPOSITO_TEMPORAL_FechaRegistro default(sysdatetime()),
+    Anulado bit not null constraint DF_FIN_DEPOSITO_TEMPORAL_Anulado default(0),
     constraint CK_FIN_DEPOSITO_TEMPORAL_Cuenta check(Cuenta in ('Capital','Personal')),
     constraint CK_FIN_DEPOSITO_TEMPORAL_Monto check(Monto > 0)
 )
+go
+CREATE TABLE FIN_DEPOSITO_TEMPORAL_AUDITORIA(
+    IdAuditoria int primary key identity(1,1),
+    IdDepositoTemporal int not null references FIN_DEPOSITO_TEMPORAL(IdDepositoTemporal),
+    Accion varchar(15) not null,
+    CuentaAnterior varchar(15) not null,
+    MontoAnterior decimal(12,2) not null,
+    FechaAnterior date not null,
+    ComprobanteAnterior varchar(100) not null,
+    CuentaNueva varchar(15) not null,
+    MontoNuevo decimal(12,2) not null,
+    FechaNueva date not null,
+    ComprobanteNuevo varchar(100) not null,
+    Motivo varchar(250) not null,
+    IdUsuario int null references USUARIO(IdUsuario),
+    FechaRegistro datetime2(0) not null constraint DF_FIN_DEPOSITO_TEMPORAL_AUDITORIA_FechaRegistro default(sysdatetime()),
+    constraint CK_FIN_DEPOSITO_TEMPORAL_AUDITORIA_Accion check(Accion in ('Correccion','Anulacion')),
+    constraint CK_FIN_DEPOSITO_TEMPORAL_AUDITORIA_Montos check(MontoAnterior > 0 AND MontoNuevo > 0),
+    constraint CK_FIN_DEPOSITO_TEMPORAL_AUDITORIA_Cuentas check(CuentaAnterior in ('Capital','Personal') AND CuentaNueva in ('Capital','Personal'))
+)
+go
+CREATE INDEX IX_FIN_DEPOSITO_TEMPORAL_AUDITORIA_Deposito ON FIN_DEPOSITO_TEMPORAL_AUDITORIA(IdDepositoTemporal,FechaRegistro)
 go
 CREATE INDEX IX_FIN_DEPOSITO_TEMPORAL_CuentaFecha ON FIN_DEPOSITO_TEMPORAL(Cuenta,Fecha)
 go
@@ -592,9 +615,9 @@ GO
 
 -- PROCEDIMIENTOS PARA PRODUCTO
 create PROC sp_RegistrarProducto(
-@Codigo varchar(20),
-@Nombre varchar(30),
-@Descripcion varchar(30),
+@Codigo varchar(50),
+@Nombre varchar(500),
+@Descripcion varchar(500),
 @IdCategoria int,
 @Estado bit,
 @Resultado int output,
@@ -614,9 +637,9 @@ GO
 
 create procedure sp_ModificarProducto(
 @IdProducto int,
-@Codigo varchar(20),
-@Nombre varchar(30),
-@Descripcion varchar(30),
+@Codigo varchar(50),
+@Nombre varchar(500),
+@Descripcion varchar(500),
 @IdCategoria int,
 @Estado bit,
 @Resultado bit output,
@@ -1050,9 +1073,9 @@ GO
 IF OBJECT_ID('dbo.sp_RegistrarProducto', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_RegistrarProducto;
 GO
 CREATE PROCEDURE dbo.sp_RegistrarProducto
-    @Codigo varchar(20),
-    @Nombre varchar(30),
-    @Descripcion varchar(30),
+    @Codigo varchar(50),
+    @Nombre varchar(500),
+    @Descripcion varchar(500),
     @IdCategoria int,
     @Porcentaje decimal(9,4),
     @PrecioCompra decimal(10,2),
@@ -1101,9 +1124,9 @@ IF OBJECT_ID('dbo.sp_ModificarProducto', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_
 GO
 CREATE PROCEDURE dbo.sp_ModificarProducto
     @IdProducto int,
-    @Codigo varchar(20),
-    @Nombre varchar(30),
-    @Descripcion varchar(30),
+    @Codigo varchar(50),
+    @Nombre varchar(500),
+    @Descripcion varchar(500),
     @IdCategoria int,
     @Porcentaje decimal(9,4),
     @PrecioCompra decimal(10,2),
@@ -1528,3 +1551,109 @@ GO
 GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::[dbo] TO [ventas_app2];
 GRANT EXECUTE ON SCHEMA::[dbo] TO [ventas_app2];
 GO
+
+
+-- Módulos separados de cierre, depósitos bancarios y salidas
+/*
+  Registra depósitos de varios cierres en un banco, transferencias entre bancos
+  y la ubicación bancaria de salidas. Ejecutar una vez en DBSISTEMA_VENTA.
+  No migra movimientos históricos porque no guardan el banco físico ni la
+  relación con un cierre; captura el saldo inicial al crear cada banco.
+*/
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+
+IF OBJECT_ID(N'dbo.FIN_CIERRE_TEMPORAL', N'U') IS NULL
+    THROW 51301, 'No existe dbo.FIN_CIERRE_TEMPORAL. Ejecuta primero las migraciones de Finanzas temporales.', 1;
+IF OBJECT_ID(N'dbo.FIN_MOVIMIENTO', N'U') IS NULL OR OBJECT_ID(N'dbo.PAGO_GASTO_PERSONAL', N'U') IS NULL
+    THROW 51302, 'Faltan las tablas de salidas de Finanzas.', 1;
+
+IF OBJECT_ID(N'dbo.FIN_BANCO_TEMPORAL', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.FIN_BANCO_TEMPORAL(
+        IdBanco int IDENTITY(1,1) NOT NULL CONSTRAINT PK_FIN_BANCO_TEMPORAL PRIMARY KEY,
+        Nombre varchar(80) NOT NULL,
+        SaldoInicial decimal(12,2) NOT NULL CONSTRAINT DF_FIN_BANCO_TEMPORAL_SaldoInicial DEFAULT(0),
+        SaldoCapitalInicial decimal(12,2) NOT NULL CONSTRAINT DF_FIN_BANCO_TEMPORAL_SaldoCapitalInicial DEFAULT(0),
+        SaldoGananciaInicial decimal(12,2) NOT NULL CONSTRAINT DF_FIN_BANCO_TEMPORAL_SaldoGananciaInicial DEFAULT(0),
+        Activo bit NOT NULL CONSTRAINT DF_FIN_BANCO_TEMPORAL_Activo DEFAULT(1),
+        IdUsuario int NULL CONSTRAINT FK_FIN_BANCO_TEMPORAL_USUARIO REFERENCES dbo.USUARIO(IdUsuario),
+        FechaRegistro datetime2(0) NOT NULL CONSTRAINT DF_FIN_BANCO_TEMPORAL_FechaRegistro DEFAULT(sysdatetime()),
+        CONSTRAINT UQ_FIN_BANCO_TEMPORAL_Nombre UNIQUE(Nombre),
+        CONSTRAINT CK_FIN_BANCO_TEMPORAL_Saldo CHECK(SaldoInicial>=0 AND SaldoCapitalInicial>=0 AND SaldoGananciaInicial>=0 AND SaldoInicial=SaldoCapitalInicial+SaldoGananciaInicial)
+    );
+END;
+
+IF COL_LENGTH(N'dbo.FIN_BANCO_TEMPORAL', N'SaldoCapitalInicial') IS NULL
+    ALTER TABLE dbo.FIN_BANCO_TEMPORAL ADD SaldoCapitalInicial decimal(12,2) NOT NULL CONSTRAINT DF_FIN_BANCO_TEMPORAL_SaldoCapitalInicial DEFAULT(0) WITH VALUES;
+IF COL_LENGTH(N'dbo.FIN_BANCO_TEMPORAL', N'SaldoGananciaInicial') IS NULL
+    ALTER TABLE dbo.FIN_BANCO_TEMPORAL ADD SaldoGananciaInicial decimal(12,2) NOT NULL CONSTRAINT DF_FIN_BANCO_TEMPORAL_SaldoGananciaInicial DEFAULT(0) WITH VALUES;
+
+IF OBJECT_ID(N'dbo.FIN_DEPOSITO_LOTE', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.FIN_DEPOSITO_LOTE(
+        IdLote int IDENTITY(1,1) NOT NULL CONSTRAINT PK_FIN_DEPOSITO_LOTE PRIMARY KEY,
+        IdBanco int NOT NULL CONSTRAINT FK_FIN_DEPOSITO_LOTE_BANCO REFERENCES dbo.FIN_BANCO_TEMPORAL(IdBanco),
+        MontoTotal decimal(12,2) NOT NULL,
+        Fecha date NOT NULL,
+        Comprobante varchar(100) NOT NULL,
+        IdUsuario int NULL CONSTRAINT FK_FIN_DEPOSITO_LOTE_USUARIO REFERENCES dbo.USUARIO(IdUsuario),
+        FechaRegistro datetime2(0) NOT NULL CONSTRAINT DF_FIN_DEPOSITO_LOTE_FechaRegistro DEFAULT(sysdatetime()),
+        Anulado bit NOT NULL CONSTRAINT DF_FIN_DEPOSITO_LOTE_Anulado DEFAULT(0),
+        MotivoAnulacion varchar(250) NULL,
+        UsuarioAnulacion int NULL CONSTRAINT FK_FIN_DEPOSITO_LOTE_UsuarioAnulacion REFERENCES dbo.USUARIO(IdUsuario),
+        FechaAnulacion datetime2(0) NULL,
+        CONSTRAINT CK_FIN_DEPOSITO_LOTE_Monto CHECK(MontoTotal>0)
+    );
+END;
+
+IF OBJECT_ID(N'dbo.FIN_DEPOSITO_LOTE_CIERRE', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.FIN_DEPOSITO_LOTE_CIERRE(
+        IdLote int NOT NULL CONSTRAINT FK_FIN_DEPOSITO_LOTE_CIERRE_LOTE REFERENCES dbo.FIN_DEPOSITO_LOTE(IdLote),
+        IdCierreTemporal int NOT NULL CONSTRAINT FK_FIN_DEPOSITO_LOTE_CIERRE_CIERRE REFERENCES dbo.FIN_CIERRE_TEMPORAL(IdCierreTemporal),
+        Ventas decimal(12,2) NOT NULL,
+        Capital decimal(12,2) NOT NULL,
+        Ganancia decimal(12,2) NOT NULL,
+        CONSTRAINT PK_FIN_DEPOSITO_LOTE_CIERRE PRIMARY KEY(IdLote,IdCierreTemporal),
+        CONSTRAINT CK_FIN_DEPOSITO_LOTE_CIERRE_Montos CHECK(Ventas>=0 AND Capital>=0 AND Ganancia>=0 AND Capital+Ganancia=Ventas)
+    );
+    CREATE INDEX IX_FIN_DEPOSITO_LOTE_CIERRE_Cierre ON dbo.FIN_DEPOSITO_LOTE_CIERRE(IdCierreTemporal,IdLote);
+END;
+
+IF OBJECT_ID(N'dbo.FIN_TRANSFERENCIA_BANCARIA', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.FIN_TRANSFERENCIA_BANCARIA(
+        IdTransferencia int IDENTITY(1,1) NOT NULL CONSTRAINT PK_FIN_TRANSFERENCIA_BANCARIA PRIMARY KEY,
+        IdBancoOrigen int NOT NULL CONSTRAINT FK_FIN_TRANSFERENCIA_BANCARIA_Origen REFERENCES dbo.FIN_BANCO_TEMPORAL(IdBanco),
+        IdBancoDestino int NOT NULL CONSTRAINT FK_FIN_TRANSFERENCIA_BANCARIA_Destino REFERENCES dbo.FIN_BANCO_TEMPORAL(IdBanco),
+        Fondo varchar(15) NOT NULL,
+        Monto decimal(12,2) NOT NULL,
+        Fecha date NOT NULL,
+        Comprobante varchar(100) NOT NULL,
+        IdUsuario int NULL CONSTRAINT FK_FIN_TRANSFERENCIA_BANCARIA_USUARIO REFERENCES dbo.USUARIO(IdUsuario),
+        FechaRegistro datetime2(0) NOT NULL CONSTRAINT DF_FIN_TRANSFERENCIA_BANCARIA_FechaRegistro DEFAULT(sysdatetime()),
+        CONSTRAINT CK_FIN_TRANSFERENCIA_BANCARIA_Fondo CHECK(Fondo IN ('Capital','Personal')),
+        CONSTRAINT CK_FIN_TRANSFERENCIA_BANCARIA_Monto CHECK(Monto>0),
+        CONSTRAINT CK_FIN_TRANSFERENCIA_BANCARIA_Bancos CHECK(IdBancoOrigen<>IdBancoDestino)
+    );
+    CREATE INDEX IX_FIN_TRANSFERENCIA_BANCARIA_OrigenFecha ON dbo.FIN_TRANSFERENCIA_BANCARIA(IdBancoOrigen,Fecha);
+    CREATE INDEX IX_FIN_TRANSFERENCIA_BANCARIA_DestinoFecha ON dbo.FIN_TRANSFERENCIA_BANCARIA(IdBancoDestino,Fecha);
+END;
+
+IF COL_LENGTH(N'dbo.FIN_MOVIMIENTO', N'IdBanco') IS NULL
+    ALTER TABLE dbo.FIN_MOVIMIENTO ADD IdBanco int NULL CONSTRAINT FK_FIN_MOVIMIENTO_BANCO_TEMPORAL REFERENCES dbo.FIN_BANCO_TEMPORAL(IdBanco);
+IF COL_LENGTH(N'dbo.FIN_MOVIMIENTO', N'Anulado') IS NULL
+    ALTER TABLE dbo.FIN_MOVIMIENTO ADD Anulado bit NOT NULL CONSTRAINT DF_FIN_MOVIMIENTO_Anulado DEFAULT(0) WITH VALUES;
+IF COL_LENGTH(N'dbo.PAGO_GASTO_PERSONAL', N'IdBanco') IS NULL
+    ALTER TABLE dbo.PAGO_GASTO_PERSONAL ADD IdBanco int NULL CONSTRAINT FK_PAGO_GASTO_PERSONAL_BANCO_TEMPORAL REFERENCES dbo.FIN_BANCO_TEMPORAL(IdBanco);
+IF COL_LENGTH(N'dbo.PAGO_GASTO_PERSONAL', N'Anulado') IS NULL
+    ALTER TABLE dbo.PAGO_GASTO_PERSONAL ADD Anulado bit NOT NULL CONSTRAINT DF_PAGO_GASTO_PERSONAL_Anulado DEFAULT(0) WITH VALUES;
+
+IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.FIN_MOVIMIENTO') AND name=N'IX_FIN_MOVIMIENTO_Banco')
+    CREATE INDEX IX_FIN_MOVIMIENTO_Banco ON dbo.FIN_MOVIMIENTO(IdBanco,Anulado,Fecha);
+IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.PAGO_GASTO_PERSONAL') AND name=N'IX_PAGO_GASTO_PERSONAL_Banco')
+    CREATE INDEX IX_PAGO_GASTO_PERSONAL_Banco ON dbo.PAGO_GASTO_PERSONAL(IdBanco,Anulado,FechaPago);
+
+COMMIT TRANSACTION;
+SELECT N'Migración aplicada: cierres, depósitos por lote, transferencias y salidas bancarias.' AS Resultado;

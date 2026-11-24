@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d2f47">
+  <title>Unir escaneos · Librería Digital</title>
+  <link rel="icon" href="/favicon.ico?v=1" type="image/x-icon">
+  <link rel="apple-touch-icon" href="/favicon.png?v=1">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="css/app.css?v=19">
+  <link rel="stylesheet" href="css/unir-escaneos.css?v=7">
+  <script src="/js/pwa.js?v=1" defer></script>
+  <script src="js/file-transfer.js?v=1" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+  <script src="js/unir-escaneos.js?v=7" defer></script>
+</head>
+<body class="stitch-tool">
+  <nav class="site-nav">
+    <a class="brand" href="index.html">Librería Digital</a>
+    <div class="nav-links"><a href="index.html">Inicio</a><a class="active" href="unir-escaneos.html">Unir escaneos</a></div>
+  </nav>
+  <header class="page-heading">
+    <h1>Unir escaneos grandes</h1>
+    <p>Selecciona, une y exporta tus escaneos en tamaño Oficio.</p>
+  </header>
+
+  <main class="stitch-wrap">
+    <section class="stitch-card">
+      <div class="step-title"><span>1</span><div><h2>Abre el PDF y selecciona las capturas</h2><p>Todas quedan seleccionadas. Elige el destino de cada una y gírala si hace falta. Los grupos se separan en secciones de 4, 2 y 2.</p></div></div>
+      <label id="pdfDrop" class="stitch-drop" for="pdfFile"><strong>Elegir PDF</strong><span>o arrástralo aquí</span></label>
+      <input id="pdfFile" type="file" accept="application/pdf,.pdf">
+      <p id="sourceStatus" class="stitch-status" role="status">Selecciona un PDF con las imágenes escaneadas.</p>
+      <div id="pageList" class="page-list" aria-label="Páginas del PDF"></div>
+      <div class="step-actions"><button id="loadSelected" type="button" disabled>Preparar capturas seleccionadas</button></div>
+    </section>
+
+    <div hidden aria-hidden="true">
+      <section id="cropSection"><div id="cropStatus"></div><canvas id="cropCanvas"></canvas><select id="captureSelect"></select><select id="zoneSelect"></select><select id="orientationSelect"></select><select id="layoutMode"><option value="corners"></option></select><input id="cropWidth" type="range"><output id="cropWidthValue"></output><input id="cropHeight" type="range"><output id="cropHeightValue"></output><button id="autoStitch" type="button"></button><button id="rotateCapture" type="button"></button><button id="resetCrop" type="button"></button><button id="applyCrop" type="button"></button></section>
+      <label id="composePageLabel"><select id="composePage"></select></label>
+      <label id="resultPageLabel"><select id="resultPage"></select></label>
+      <button id="resetFinalCrop" type="button"></button>
+    </div>
+
+    <section id="composeSection" class="stitch-card" hidden>
+      <div class="step-title"><span>2</span><div><h2>Une y acomoda</h2><p>Elige una sección y una captura. La claridad se empareja automáticamente; arrastra para ajustar la unión.</p></div></div>
+      <div class="compose-controls">
+        <label class="range-label">Tamaño de la captura<input id="layerScale" type="range" min="0.25" max="2" step="0.01" value="1"><output id="layerScaleValue">100%</output></label>
+        <label class="range-label">Zoom del editor<input id="composeZoom" type="range" min="1" max="4" step="0.1" value="1"><output id="composeZoomValue">100%</output></label>
+        <label class="range-label">Brillo de captura<input id="layerBrightness" type="range" min="70" max="130" step="1" value="100"><output id="layerBrightnessValue">100%</output></label>
+        <button id="uniteZones" class="green" type="button">Unir zonas</button>
+        <button id="fullscreenCompose" type="button" aria-pressed="false">Editar a pantalla completa</button>
+      </div>
+      <p id="composeStatus" class="hint">Selecciona una pieza y arrástrala o usa las flechas para moverla. Ctrl+rueda o pellizca el touchpad para acercar hasta 400%; Ctrl+Z deshace el último cambio.</p>
+      <div class="capture-navigation"><strong>Secciones</strong><div id="composePageNav" class="layer-list"></div></div>
+      <div class="capture-navigation"><strong>Capturas de esta sección</strong><div id="layerList" class="layer-list"></div></div>
+      <div class="compose-viewport"><canvas id="composeCanvas" tabindex="0" aria-label="Lienzo para acomodar y unir las capturas"></canvas></div>
+      <select id="layerSelect" hidden aria-hidden="true"></select>
+    </section>
+
+    <section id="exportSection" class="stitch-card" hidden>
+      <div class="step-title"><span>3</span><div><h2>Revisa el recorte y exporta</h2><p>Ajusta las cuatro esquinas del marco. Haz clic fuera del recuadro para ocultar los tiradores y revisar la imagen limpia.</p></div></div>
+      <div class="final-preview"><canvas id="finalCanvas" aria-label="Vista final con selección de recorte"></canvas></div>
+      <div class="export-controls">
+        <div class="capture-navigation"><strong>Secciones</strong><div id="resultPageNav" class="layer-list"></div></div>
+        <button id="downloadPng" type="button">Descargar PNG</button>
+        <button id="downloadWord" class="green" type="button">Exportar a Word sin márgenes</button>
+      </div>
+      <p id="exportStatus" class="stitch-status" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+  <footer>Salida en Oficio · 21.6 × 32.9 cm. Descarga las imágenes PNG o el documento Word.</footer>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#0d2f47">
+  <title>Salidas · Librería Digital</title><link rel="icon" href="/favicon.ico?v=1" type="image/x-icon"><link rel="apple-touch-icon" href="/favicon.png?v=1">
+  <link rel="stylesheet" href="css/app.css?v=18"><link rel="stylesheet" href="css/finanzas.css?v=4"><script src="/js/pwa.js?v=1" defer></script><script src="js/salidas.js?v=1" defer></script>
+</head>
+<body class="finance-page">
+  <nav class="site-nav"><a class="brand" href="index.html">Librería Digital</a><div class="nav-links"><a href="index.html">Inicio</a><a href="dashboard.html">Dashboard</a><a href="finanzas.html">Cierres</a><a href="depositos.html">Depósitos</a><a class="active" href="salidas.html">Salidas</a></div></nav>
+  <main class="finance-wrap">
+    <section id="loginPanel" class="finance-card login-panel"><p class="eyebrow">ACCESO PROTEGIDO</p><h1>Registrar salidas</h1><p class="muted">Registra el fondo afectado y el lugar real de donde salió el dinero.</p><form id="loginForm" class="finance-form"><label>Contraseña<input name="clave" type="password" autocomplete="current-password" required></label><button class="button button-primary" type="submit">Entrar</button></form><p id="loginMessage" class="form-message" role="status"></p></section>
+    <section id="moduleApp" hidden>
+      <header class="finance-heading"><div><p class="eyebrow">MÓDULO DE SALIDAS</p><h1>Registrar salida</h1><p class="muted">Cargos del banco, pagos personales y gastos de empresa.</p></div><div class="signed-in"><span id="responsibleName"></span><button id="logoutButton" class="button button-quiet" type="button">Salir</button></div></header><p id="pageMessage" class="form-message" role="status"></p>
+      <section class="finance-card expense-card"><form id="expenseForm" class="finance-form form-grid">
+        <label>¿Qué se pagó?<select id="expenseType" name="tipo"><option value="Empresa">Gasto de empresa o cargo bancario</option><option value="Personal">Gasto personal</option></select></label>
+        <label>Fondo que debe asumirlo<select id="expenseAccount" name="cuentaOrigen"><option value="Capital">Capital</option><option value="Ganancia">Ganancia</option></select></label>
+        <fieldset class="account-picker"><legend>¿De dónde salió el dinero?</legend><label><input type="radio" name="origen" value="Caja" checked><span>Efectivo de caja</span></label><label><input type="radio" name="origen" value="Banco"><span>Cuenta bancaria</span></label></fieldset>
+        <label id="bankField" hidden>Banco que pagó<select id="bankSelect" name="idBanco"></select></label>
+        <label id="personalCategoryField" hidden>Gasto personal<select id="personalCategory" name="idPeriodoGastoPersonal" disabled><option value="">Cargando gastos…</option></select></label>
+        <label>Concepto<input id="conceptInput" name="concepto" maxlength="150" placeholder="Ej. mantenimiento de cuenta" required></label>
+        <label>Monto<input name="monto" type="number" min="0.01" step="0.01" inputmode="decimal" required></label>
+        <label>Fecha<input id="expenseDate" name="fecha" type="date" required></label>
+        <label>Comprobante o referencia<input name="comprobante" maxlength="100" placeholder="Número de recibo o referencia bancaria"></label>
+        <p id="expenseHelp" class="helper-text form-span">La salida reduce el fondo elegido y, si fue bancaria, el saldo del banco seleccionado.</p>
+        <button id="saveExpense" class="button button-primary form-span" type="submit">Registrar salida</button>
+      </form></section>
+      <section class="finance-card"><div class="section-heading"><div><p class="eyebrow">AUDITORÍA</p><h2>Salidas recientes</h2></div><button id="refreshButton" class="button button-quiet" type="button">Actualizar</button></div><div id="movementList" class="closing-audit-list"></div></section>
+    </section>
+  </main><script src="js/file-transfer.js" defer></script>
+</body></html>

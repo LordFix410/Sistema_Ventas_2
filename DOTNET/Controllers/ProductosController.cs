@@ -273,8 +273,11 @@ namespace ImagenPDF.Controllers
         {
             if (!IsSignedIn) return Unauthorized();
             if (string.IsNullOrWhiteSpace(ConnectionString)) return DatabaseNotConfigured();
-            if (string.IsNullOrWhiteSpace(request.Codigo) || request.Codigo.Trim().Length > 20 || string.IsNullOrWhiteSpace(request.Nombre) || request.Nombre.Trim().Length > 30 || (request.Descripcion?.Length ?? 0) > 30)
-                return BadRequest(new { mensaje = "Código (máximo 20), nombre (máximo 30) y descripción (máximo 30) son requeridos." });
+            var codigo = request.Codigo?.Trim().ToUpperInvariant() ?? string.Empty;
+            var nombre = request.Nombre?.Trim().ToUpperInvariant() ?? string.Empty;
+            var descripcion = string.IsNullOrWhiteSpace(request.Descripcion) ? null : request.Descripcion.Trim().ToUpperInvariant();
+            if (string.IsNullOrWhiteSpace(codigo) || codigo.Length > 50 || string.IsNullOrWhiteSpace(nombre) || nombre.Length > 500 || (descripcion?.Length ?? 0) > 500)
+                return BadRequest(new { mensaje = "El código admite hasta 50 caracteres; nombre y descripción admiten hasta 500." });
             if (request.PrecioCompra < 0 || request.Porcentaje < 0 || request.Porcentaje > 100000)
                 return BadRequest(new { mensaje = "El costo y el porcentaje deben ser valores válidos y no negativos." });
             var purchasePrice = request.PrecioCompra;
@@ -348,9 +351,9 @@ namespace ImagenPDF.Controllers
             }
 
             await using var command = new SqlCommand("dbo.sp_RegistrarProducto", connection) { CommandType = CommandType.StoredProcedure };
-            command.Parameters.Add("@Codigo", SqlDbType.VarChar, 20).Value = request.Codigo.Trim();
-            command.Parameters.Add("@Nombre", SqlDbType.VarChar, 30).Value = request.Nombre.Trim();
-            command.Parameters.Add("@Descripcion", SqlDbType.VarChar, 30).Value = (object?)request.Descripcion?.Trim() ?? DBNull.Value;
+            command.Parameters.Add("@Codigo", SqlDbType.VarChar, 50).Value = codigo;
+            command.Parameters.Add("@Nombre", SqlDbType.VarChar, 500).Value = nombre;
+            command.Parameters.Add("@Descripcion", SqlDbType.VarChar, 500).Value = (object?)descripcion ?? DBNull.Value;
             command.Parameters.Add("@IdCategoria", SqlDbType.Int).Value = request.IdCategoria;
             var margin = command.Parameters.Add("@Porcentaje", SqlDbType.Decimal); margin.Precision = 9; margin.Scale = 4; margin.Value = request.Porcentaje / 100m;
             var cost = command.Parameters.Add("@PrecioCompra", SqlDbType.Decimal); cost.Precision = 10; cost.Scale = 2; cost.Value = purchasePrice;

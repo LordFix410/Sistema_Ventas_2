@@ -59,6 +59,13 @@ namespace CapaPresentacion
 
         private void MejorarTipografiaDetalle()
         {
+            txtCodigo.MaxLength = 50;
+            txtNombre.MaxLength = 500;
+            txtDescripcion.MaxLength = 500;
+            txtCodigo.CharacterCasing = CharacterCasing.Upper;
+            txtNombre.CharacterCasing = CharacterCasing.Upper;
+            txtDescripcion.CharacterCasing = CharacterCasing.Upper;
+
             foreach (Control control in new Control[] { label2, label3, label4, label5, label8,
                 label14, label15, label16, label17 })
                 control.Font = new Font("Segoe UI", 10F, FontStyle.Bold);

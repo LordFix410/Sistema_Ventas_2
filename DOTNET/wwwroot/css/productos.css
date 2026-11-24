@@ -73,3 +73,5 @@
 .products-page .scanner-hint{position:absolute;right:8px;bottom:9px;left:8px;color:#fff;text-align:center;font-size:.82rem;font-weight:750;text-shadow:0 1px 4px #000b;pointer-events:none}
 .products-page .scan-candidates{position:relative;z-index:1;margin-top:8px}
 @media(max-width:380px){.products-page .site-nav{gap:4px;padding-right:8px;padding-left:8px}.products-page .site-nav .brand{font-size:14px}.products-page .site-nav .nav-links a{padding:7px 6px;font-size:.76rem}.products-page .nav-logout{min-width:34px;min-height:34px}}
+.product-panel textarea{box-sizing:border-box;width:100%;min-width:0;min-height:68px;resize:vertical;line-height:1.4;overflow-wrap:anywhere;border:1px solid #becddb;border-radius:9px;padding:9px 11px;font:inherit;color:#1c3040;background:#fff}.field-grid>label{min-width:0}.character-count{justify-self:end;color:#6a7f90;font-size:.75rem;font-weight:600}.description-field{align-content:start}
+.product-panel textarea:focus{outline:3px solid #88c8f44c;border-color:#3284bd}
