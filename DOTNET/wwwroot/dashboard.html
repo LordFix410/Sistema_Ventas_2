@@ -9,15 +9,15 @@
   <link rel="apple-touch-icon" href="/favicon.png?v=1">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="css/app.css?v=18">
-  <link rel="stylesheet" href="css/finanzas.css?v=3">
-  <link rel="stylesheet" href="css/dashboard.css?v=4">
+  <link rel="stylesheet" href="css/finanzas.css?v=8">
+  <link rel="stylesheet" href="css/dashboard.css?v=6">
   <script src="/js/pwa.js?v=1" defer></script>
-  <script src="js/dashboard.js?v=3" defer></script>
+  <script src="js/dashboard.js?v=5" defer></script>
 </head>
 <body class="finance-page dashboard-page">
   <nav class="site-nav">
     <a class="brand" href="index.html">Librería Digital</a>
-    <div class="nav-links"><a href="index.html">Inicio</a><a class="active" href="dashboard.html">Dashboard</a><a href="finanzas.html">Cierres</a><a href="depositos.html">Depósitos</a><a href="salidas.html">Salidas</a></div>
+    <div class="nav-links"><a href="index.html">Inicio</a><a class="active" href="dashboard.html">Dashboard</a><a href="finanzas.html">Cierres</a><a href="depositos.html">Depósitos</a><a href="salidas.html">Salidas</a><a href="conciliacion.html">Conciliación</a></div>
   </nav>
   <main class="finance-wrap">
     <section id="loginPanel" class="finance-card login-panel">
@@ -35,26 +35,46 @@
       </header>
       <p id="pageMessage" class="form-message" role="status"></p>
 
-      <section class="dashboard-sales finance-card" aria-label="Ventas del mes">
-        <p class="eyebrow">VENTAS ACUMULADAS DEL MES</p>
-        <strong id="monthSales" class="dashboard-sales-total">Q 0.00</strong>
+      <section class="dashboard-total-grid" aria-label="Totales para conciliación bancaria">
+        <article class="finance-card dashboard-total-card bank-total-card">
+          <p class="eyebrow">TOTAL EN BANCOS</p>
+          <strong id="bankTotal">Q 0.00</strong>
+          <small>Suma de los saldos de las cuentas bancarias</small>
+        </article>
+        <article class="finance-card dashboard-total-card combined-total-card">
+          <p class="eyebrow">BANCOS + EFECTIVO</p>
+          <strong id="bankAndCashTotal">Q 0.00</strong>
+          <small>Incluye Q250 fijos en caja y cierres aún no depositados</small>
+        </article>
+      </section>
+
+      <section class="dashboard-pending-highlight finance-card" aria-label="Cierres pendientes de depósito">
+        <div><p class="eyebrow">CIERRES AÚN SIN DEPOSITAR</p><strong id="pendingDepositTotal">Q 0.00</strong></div>
+        <span>Capital <b id="pendingDepositCapital">Q 0.00</b></span>
+        <span>Ganancia <b id="pendingDepositGain">Q 0.00</b></span>
       </section>
 
       <section class="dashboard-accounts six-account-grid" aria-label="Resumen de capital y ganancia">
         <section class="dashboard-account-row capital-row" aria-label="Capital">
           <h2>Capital</h2><div class="account-row-cards">
             <article class="account-card capital-card"><div class="account-title"><span class="account-icon">▣</span><h3>Disponible</h3></div><strong id="capitalBalance" class="account-amount">Q 0.00</strong></article>
-            <article class="account-card capital-card"><div class="account-title"><span class="account-icon">▣</span><h3>Depositado</h3></div><strong id="capitalDeposited" class="account-amount">Q 0.00</strong></article>
-            <article class="account-card capital-card"><div class="account-title"><span class="account-icon">▣</span><h3>Depositado + Q150 en caja</h3></div><strong id="capitalCashTotal" class="account-amount">Q 0.00</strong></article>
+            <article class="account-card capital-card"><div class="account-title"><span class="account-icon">▣</span><h3>En bancos</h3></div><strong id="capitalDeposited" class="account-amount">Q 0.00</strong></article>
+            <article class="account-card capital-card"><div class="account-title"><span class="account-icon">▣</span><h3>Total real: bancos + caja</h3></div><strong id="capitalCashTotal" class="account-amount">Q 0.00</strong></article>
           </div>
         </section>
         <section class="dashboard-account-row gain-row" aria-label="Ganancia">
           <h2>Ganancia</h2><div class="account-row-cards">
             <article class="account-card personal-card"><div class="account-title"><span class="account-icon">◉</span><h3>Disponible</h3></div><strong id="personalBalance" class="account-amount">Q 0.00</strong></article>
-            <article class="account-card personal-card"><div class="account-title"><span class="account-icon">◉</span><h3>Depositada</h3></div><strong id="personalDeposited" class="account-amount">Q 0.00</strong></article>
-            <article class="account-card personal-card"><div class="account-title"><span class="account-icon">◉</span><h3>Depositada + Q100 en caja</h3></div><strong id="personalCashTotal" class="account-amount">Q 0.00</strong></article>
+            <article class="account-card personal-card"><div class="account-title"><span class="account-icon">◉</span><h3>En bancos</h3></div><strong id="personalDeposited" class="account-amount">Q 0.00</strong></article>
+            <article class="account-card personal-card"><div class="account-title"><span class="account-icon">◉</span><h3>Total real: bancos + caja</h3></div><strong id="personalCashTotal" class="account-amount">Q 0.00</strong></article>
           </div>
         </section>
+      </section>
+
+      <section class="finance-card dashboard-bank-card" aria-label="Saldos reales calculados en bancos">
+        <div class="section-heading"><div><p class="eyebrow">SALDOS SEGÚN MOVIMIENTOS</p><h2>Bancos y depósitos pendientes</h2></div><a class="button button-quiet" href="conciliacion.html">Conciliar</a></div>
+        <div id="bankBalanceList" class="bank-balance-list"></div>
+        <div class="dashboard-cash-summary"><strong>Efectivo calculado en caja</strong><span>Capital <b id="cashCapitalActual">Q 0.00</b></span><span>Ganancia <b id="cashGainActual">Q 0.00</b></span></div>
       </section>
 
       <section class="finance-card dashboard-outflows" aria-label="Salidas registradas del mes">

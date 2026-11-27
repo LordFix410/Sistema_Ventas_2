@@ -342,7 +342,7 @@ CREATE TABLE FIN_MOVIMIENTO(
 )
 go
 
--- Ajustes manuales de conciliación: no alteran las ventas ni el reparto 1.61.
+-- Ajustes manuales históricos: no alteran las ventas ni el reparto porcentual.
 CREATE TABLE FIN_AJUSTE_CUENTA_TEMPORAL(
     IdAjuste bigint primary key identity(1,1),
     Clave varchar(80) not null unique,
@@ -369,7 +369,7 @@ CREATE TABLE FIN_DEPOSITO(
 go
 
 -- Cierres web temporales mientras termina de cargarse el inventario.
--- El capital es ventas / 1.61 (costo base); la diferencia es ganancia personal.
+-- El cierre web distribuye ventas 61% Capital y 39% Ganancia en la aplicación.
 -- Se registra como saldo asignado, sin crear ventas ni productos.
 CREATE TABLE FIN_CIERRE_TEMPORAL(
     IdCierreTemporal int primary key identity(1,1),
@@ -1659,6 +1659,65 @@ IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.PAGO_GAS
 
 COMMIT TRANSACTION;
 SELECT N'Migración aplicada: cierres, depósitos por lote, transferencias y salidas bancarias.' AS Resultado;
+
+/* Web finance: split cash exits per close, net deposits and audited reconciliations. */
+IF COL_LENGTH(N'dbo.FIN_CIERRE_TEMPORAL',N'SalidasCapitalCaja') IS NULL
+    ALTER TABLE dbo.FIN_CIERRE_TEMPORAL ADD SalidasCapitalCaja decimal(12,2) NOT NULL CONSTRAINT DF_FIN_CIERRE_TEMPORAL_SalidasCapitalCaja DEFAULT(0) WITH VALUES;
+IF COL_LENGTH(N'dbo.FIN_CIERRE_TEMPORAL',N'SalidasGananciaCaja') IS NULL
+    ALTER TABLE dbo.FIN_CIERRE_TEMPORAL ADD SalidasGananciaCaja decimal(12,2) NOT NULL CONSTRAINT DF_FIN_CIERRE_TEMPORAL_SalidasGananciaCaja DEFAULT(0) WITH VALUES;
+IF COL_LENGTH(N'dbo.FIN_CIERRE_TEMPORAL',N'Conciliado') IS NULL
+    ALTER TABLE dbo.FIN_CIERRE_TEMPORAL ADD Conciliado bit NOT NULL CONSTRAINT DF_FIN_CIERRE_TEMPORAL_Conciliado DEFAULT(0) WITH VALUES;
+EXEC sys.sp_executesql N'
+;WITH TodosLosCierres AS (
+    SELECT c.IdCierreTemporal,c.FechaCierre,
+           ISNULL(LAG(c.FechaCierre) OVER(ORDER BY c.FechaCierre,c.IdCierreTemporal),CONVERT(datetime2(0),CONVERT(date,c.FechaCierre))) FechaAnterior
+    FROM dbo.FIN_CIERRE_TEMPORAL c
+), Cierres AS (
+    SELECT * FROM TodosLosCierres
+    WHERE EXISTS(SELECT 1 FROM dbo.FIN_CIERRE_TEMPORAL c WHERE c.IdCierreTemporal=TodosLosCierres.IdCierreTemporal AND c.SalidasCaja>0 AND c.SalidasCapitalCaja=0 AND c.SalidasGananciaCaja=0)
+), Desglose AS (
+    SELECT c.IdCierreTemporal,
+      CAST(ISNULL((SELECT SUM(m.Monto) FROM dbo.FIN_MOVIMIENTO m WHERE m.PagadoDesdeCaja=1 AND m.OrigenEfectivo=''Caja'' AND m.Anulado=0 AND m.CuentaOrigen<>''Personal'' AND m.FechaRegistro>c.FechaAnterior AND m.FechaRegistro<=c.FechaCierre),0) AS decimal(12,2)) Capital,
+      CAST(ISNULL((SELECT SUM(m.Monto) FROM dbo.FIN_MOVIMIENTO m WHERE m.PagadoDesdeCaja=1 AND m.OrigenEfectivo=''Caja'' AND m.Anulado=0 AND m.CuentaOrigen=''Personal'' AND m.FechaRegistro>c.FechaAnterior AND m.FechaRegistro<=c.FechaCierre),0)
+          +ISNULL((SELECT SUM(p.Monto) FROM dbo.PAGO_GASTO_PERSONAL p WHERE p.PagadoDesdeCaja=1 AND p.OrigenEfectivo=''Caja'' AND p.Anulado=0 AND p.FechaRegistro>c.FechaAnterior AND p.FechaRegistro<=c.FechaCierre),0) AS decimal(12,2)) Ganancia
+    FROM Cierres c
+)
+UPDATE c SET SalidasCapitalCaja=d.Capital,SalidasGananciaCaja=d.Ganancia
+FROM dbo.FIN_CIERRE_TEMPORAL c JOIN Desglose d ON d.IdCierreTemporal=c.IdCierreTemporal;';
+IF COL_LENGTH(N'dbo.FIN_DEPOSITO_LOTE_CIERRE',N'CapitalDepositado') IS NULL
+    ALTER TABLE dbo.FIN_DEPOSITO_LOTE_CIERRE ADD CapitalDepositado decimal(12,2) NOT NULL CONSTRAINT DF_FIN_DEPOSITO_LOTE_CIERRE_CapitalDepositado DEFAULT(0) WITH VALUES;
+IF COL_LENGTH(N'dbo.FIN_DEPOSITO_LOTE_CIERRE',N'GananciaDepositada') IS NULL
+    ALTER TABLE dbo.FIN_DEPOSITO_LOTE_CIERRE ADD GananciaDepositada decimal(12,2) NOT NULL CONSTRAINT DF_FIN_DEPOSITO_LOTE_CIERRE_GananciaDepositada DEFAULT(0) WITH VALUES;
+/* Old lots retain their recorded bank amounts; new lots store net amounts. */
+EXEC(N'UPDATE dbo.FIN_DEPOSITO_LOTE_CIERRE SET CapitalDepositado=Capital,GananciaDepositada=Ganancia WHERE CapitalDepositado=0 AND GananciaDepositada=0 AND (Capital<>0 OR Ganancia<>0)');
+
+IF OBJECT_ID(N'dbo.FIN_CONCILIACION',N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.FIN_CONCILIACION(
+        IdConciliacion int IDENTITY(1,1) NOT NULL CONSTRAINT PK_FIN_CONCILIACION PRIMARY KEY,
+        Fecha date NOT NULL,
+        Motivo varchar(250) NOT NULL,
+        IdUsuario int NULL CONSTRAINT FK_FIN_CONCILIACION_USUARIO REFERENCES dbo.USUARIO(IdUsuario),
+        FechaRegistro datetime2(0) NOT NULL CONSTRAINT DF_FIN_CONCILIACION_FechaRegistro DEFAULT(sysdatetime())
+    );
+END;
+IF OBJECT_ID(N'dbo.FIN_CONCILIACION_DETALLE',N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.FIN_CONCILIACION_DETALLE(
+        IdDetalle int IDENTITY(1,1) NOT NULL CONSTRAINT PK_FIN_CONCILIACION_DETALLE PRIMARY KEY,
+        IdConciliacion int NOT NULL CONSTRAINT FK_FIN_CONCILIACION_DETALLE_CAB REFERENCES dbo.FIN_CONCILIACION(IdConciliacion),
+        IdBanco int NULL CONSTRAINT FK_FIN_CONCILIACION_DETALLE_BANCO REFERENCES dbo.FIN_BANCO_TEMPORAL(IdBanco),
+        Fondo varchar(12) NOT NULL,
+        SaldoEsperado decimal(12,2) NOT NULL,
+        SaldoReal decimal(12,2) NOT NULL,
+        Ajuste decimal(12,2) NOT NULL,
+        CONSTRAINT CK_FIN_CONCILIACION_DETALLE_Fondo CHECK(Fondo IN ('Capital','Ganancia')),
+        CONSTRAINT CK_FIN_CONCILIACION_DETALLE_Ajuste CHECK(Ajuste=SaldoReal-SaldoEsperado)
+    );
+    CREATE UNIQUE INDEX UX_FIN_CONCILIACION_DETALLE_Banco ON dbo.FIN_CONCILIACION_DETALLE(IdConciliacion,IdBanco,Fondo) WHERE IdBanco IS NOT NULL;
+    CREATE UNIQUE INDEX UX_FIN_CONCILIACION_DETALLE_Caja ON dbo.FIN_CONCILIACION_DETALLE(IdConciliacion,Fondo) WHERE IdBanco IS NULL;
+END;
+GO
 
 -- Origen exacto del efectivo usado en una salida.
 IF COL_LENGTH(N'dbo.FIN_MOVIMIENTO', N'OrigenEfectivo') IS NULL EXEC(N'ALTER TABLE dbo.FIN_MOVIMIENTO ADD OrigenEfectivo varchar(20) NULL;');

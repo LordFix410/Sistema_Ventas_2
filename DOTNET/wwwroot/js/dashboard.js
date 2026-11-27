@@ -28,7 +28,17 @@
   }
   function render(data) {
     $('#monthLabel').textContent = new Date(`${data.mes}-01T12:00:00`).toLocaleDateString('es-GT', {month: 'long', year: 'numeric'});
-    $('#monthSales').textContent = currency.format(data.ventasMesTotal);
+    const banks = data.bancos || [];
+    const bankTotal = banks.reduce((sum, bank) => sum + Number(bank.capital || 0) + Number(bank.ganancia || 0), 0);
+    const cashCapital = Number(data.capitalDepositosMasCaja || 0) - Number(data.depositadoCapital || 0);
+    const cashGain = Number(data.gananciaDepositosMasCaja || 0) - Number(data.depositadoPersonal || 0);
+    const pendingCapital = Number(data.pendienteDepositoCapital || 0);
+    const pendingGain = Number(data.pendienteDepositoGanancia || 0);
+    $('#bankTotal').textContent = currency.format(bankTotal);
+    $('#bankAndCashTotal').textContent = currency.format(bankTotal + cashCapital + cashGain);
+    $('#pendingDepositCapital').textContent = currency.format(pendingCapital);
+    $('#pendingDepositGain').textContent = currency.format(pendingGain);
+    $('#pendingDepositTotal').textContent = currency.format(pendingCapital + pendingGain);
     $('#capitalBalance').textContent = currency.format(data.capital);
     $('#personalBalance').textContent = currency.format(data.personal);
     $('#capitalDeposited').textContent = currency.format(data.depositadoCapital);
@@ -37,6 +47,11 @@
     $('#personalCashTotal').textContent = currency.format(data.gananciaDepositosMasCaja);
     $('#monthCapitalOutflows').textContent = currency.format(data.salidasCapitalMes || 0);
     $('#monthPersonalOutflows').textContent = currency.format(data.salidasPersonalMes || 0);
+    const bankList=$('#bankBalanceList');bankList.replaceChildren();
+    if(!banks.length){const empty=document.createElement('p');empty.className='empty-state';empty.textContent='Todavía no hay bancos registrados.';bankList.append(empty);}
+    for(const bank of banks){const row=document.createElement('article');row.className='bank-balance-item';const name=document.createElement('strong');name.textContent=bank.nombre;const total=document.createElement('strong');total.textContent=currency.format(Number(bank.capital)+Number(bank.ganancia));const split=document.createElement('small');split.textContent=`Capital ${currency.format(bank.capital)} · Ganancia ${currency.format(bank.ganancia)}`;row.append(name,total,split);bankList.append(row);}
+    $('#cashCapitalActual').textContent=currency.format(cashCapital);
+    $('#cashGainActual').textContent=currency.format(cashGain);
   }
   async function loadSummary() {
     message(pageMessage, 'Actualizando resumen…');

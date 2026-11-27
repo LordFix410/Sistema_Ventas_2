@@ -3,21 +3,28 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#0d2f47">
   <title>Cierres · Librería Digital</title><link rel="icon" href="/favicon.ico?v=1" type="image/x-icon"><link rel="apple-touch-icon" href="/favicon.png?v=1">
-  <link rel="stylesheet" href="css/app.css?v=18"><link rel="stylesheet" href="css/finanzas.css?v=4"><script src="/js/pwa.js?v=1" defer></script><script src="js/finanzas.js?v=8" defer></script>
+  <link rel="stylesheet" href="css/app.css?v=18"><link rel="stylesheet" href="css/finanzas.css?v=10"><script src="/js/pwa.js?v=1" defer></script><script src="js/finanzas.js?v=12" defer></script>
 </head>
 <body class="finance-page">
-  <nav class="site-nav"><a class="brand" href="index.html">Librería Digital</a><div class="nav-links"><a href="index.html">Inicio</a><a href="dashboard.html">Dashboard</a><a class="active" href="finanzas.html">Cierres</a><a href="depositos.html">Depósitos</a><a href="salidas.html">Salidas</a></div></nav>
+  <nav class="site-nav"><a class="brand" href="index.html">Librería Digital</a><div class="nav-links"><a href="index.html">Inicio</a><a href="dashboard.html">Dashboard</a><a class="active" href="finanzas.html">Cierres</a><a href="depositos.html">Depósitos</a><a href="salidas.html">Salidas</a><a href="conciliacion.html">Conciliación</a></div></nav>
   <main class="finance-wrap">
     <section id="loginPanel" class="finance-card login-panel"><p class="eyebrow">ACCESO PROTEGIDO</p><h1>Cierre temporal</h1><p class="muted">Inicia sesión para registrar y consultar cierres diarios.</p><form id="loginForm" class="finance-form"><label>Contraseña<input name="clave" type="password" autocomplete="current-password" required></label><button class="button button-primary" type="submit">Entrar</button></form><p id="loginMessage" class="form-message" role="status"></p></section>
     <section id="financeApp" hidden>
       <header class="finance-heading"><div><p class="eyebrow">MÓDULO DE CIERRES</p><h1>Cierre del día</h1><p id="monthLabel" class="muted"></p></div><div class="signed-in"><span id="responsibleName"></span><button id="logoutButton" class="button button-quiet" type="button">Salir</button></div></header><p id="pageMessage" class="form-message" role="status"></p>
-      <section class="finance-card close-card"><p class="muted">Cuenta el efectivo al final del día. Las salidas pagadas desde caja se suman automáticamente; los depósitos y las transferencias se registran en sus propios módulos.</p>
+      <section class="finance-card close-card"><p class="muted">Primero revisa los pagos pendientes. Después cuenta por separado Capital, Ganancia y el efectivo de ventas.</p>
         <form id="closingForm" class="finance-form">
-          <label>Efectivo fijo al iniciar el día (Q150 Capital + Q100 Ganancia)<input id="openingCash" name="efectivoInicial" type="number" min="0" step="0.01" inputmode="decimal" value="250.00" required></label>
-          <label>Efectivo total contado al cierre (incluye los fondos físicos)<input id="closingCash" name="efectivoContado" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></label>
-          <label>Pagos en efectivo desde el cierre anterior<input id="cashOutflows" name="salidasEfectivo" type="number" readonly value="0.00"></label>
-          <p id="reserveCashNote" class="helper-text form-span" hidden></p>
-          <div class="allocation-preview"><div class="allocation-initial"><span>Efectivo inicial</span><strong id="openingCashPreview">Q 50.00</strong></div><div class="allocation-sales"><span>Total vendido</span><strong id="netSalesPreview">Q 0.00</strong></div><div class="allocation-capital"><span>Capital</span><strong id="capitalPreview">Q 0.00</strong></div><div class="allocation-gain"><span>Ganancia</span><strong id="personalPreview">Q 0.00</strong></div></div>
+          <section class="cash-outflow-section form-span"><h2>Salidas pendientes desde el cierre anterior</h2><p class="muted">Deja marcada cada salida que aún debes ajustar. Desmarca solo las que ya resolviste.</p><div id="cashOutflowDetails" class="cash-outflow-details" aria-live="polite"></div></section>
+          <div class="closing-cash-counts form-span">
+            <label>Capital contado (base Q150)<input id="capitalCashCount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="150.00" required></label>
+            <label>Ganancia contada (base Q100)<input id="gainCashCount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="100.00" required></label>
+            <label>Efectivo de ventas contado<input id="salesCashCount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></label>
+          </div>
+          <section class="fixed-reserve-summary form-span"><h2>Efectivo de referencia después de estas salidas</h2><div class="fixed-reserve-grid"><article><span>Capital</span><strong id="capitalReserveRemaining">Q 150.00</strong><small id="capitalReserveDetail">Base fija Q150</small></article><article><span>Ganancia</span><strong id="gainReserveRemaining">Q 100.00</strong><small id="gainReserveDetail">Base fija Q100</small></article></div></section>
+          <input id="openingCash" name="efectivoInicial" type="hidden" value="250.00">
+          <input id="closingCash" name="efectivoContado" type="hidden" value="0">
+          <input id="cashOutflows" name="salidasEfectivo" type="hidden" value="0">
+          <p id="reserveCashNote" class="helper-text form-span"></p>
+          <div class="allocation-preview"><div class="allocation-sales"><span>Ventas calculadas</span><strong id="netSalesPreview">Q 0.00</strong></div><div class="allocation-capital"><span>Capital</span><strong id="capitalPreview">Q 0.00</strong></div><div class="allocation-gain"><span>Ganancia</span><strong id="personalPreview">Q 0.00</strong></div></div>
           <button id="saveClosing" class="button button-primary" type="submit">Guardar cierre</button>
         </form>
       </section>

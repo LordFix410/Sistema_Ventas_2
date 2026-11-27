@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#0d2f47">
   <title>Salidas · Librería Digital</title><link rel="icon" href="/favicon.ico?v=1" type="image/x-icon"><link rel="apple-touch-icon" href="/favicon.png?v=1">
-  <link rel="stylesheet" href="css/app.css?v=18"><link rel="stylesheet" href="css/finanzas.css?v=5"><link rel="stylesheet" href="css/salidas.css?v=1"><script src="/js/pwa.js?v=1" defer></script><script src="js/salidas.js?v=2" defer></script>
+  <link rel="stylesheet" href="css/app.css?v=18"><link rel="stylesheet" href="css/finanzas.css?v=5"><link rel="stylesheet" href="css/salidas.css?v=1"><script src="/js/pwa.js?v=1" defer></script><script src="js/salidas.js?v=4" defer></script>
 </head>
 <body class="finance-page">
-  <nav class="site-nav"><a class="brand" href="index.html">Librería Digital</a><div class="nav-links"><a href="index.html">Inicio</a><a href="dashboard.html">Dashboard</a><a href="finanzas.html">Cierres</a><a href="depositos.html">Depósitos</a><a class="active" href="salidas.html">Salidas</a></div></nav>
+  <nav class="site-nav"><a class="brand" href="index.html">Librería Digital</a><div class="nav-links"><a href="index.html">Inicio</a><a href="dashboard.html">Dashboard</a><a href="finanzas.html">Cierres</a><a href="depositos.html">Depósitos</a><a class="active" href="salidas.html">Salidas</a><a href="conciliacion.html">Conciliación</a></div></nav>
   <main class="finance-wrap">
     <section id="loginPanel" class="finance-card login-panel"><p class="eyebrow">ACCESO PROTEGIDO</p><h1>Registrar salidas</h1><p class="muted">Registra el fondo afectado y el lugar real de donde salió el dinero.</p><form id="loginForm" class="finance-form"><label>Contraseña<input name="clave" type="password" autocomplete="current-password" required></label><button class="button button-primary" type="submit">Entrar</button></form><p id="loginMessage" class="form-message" role="status"></p></section>
     <section id="moduleApp" hidden>
@@ -25,7 +25,7 @@
         </div></fieldset>
         <label id="receiptField" hidden>Comprobante o referencia<input id="receiptInput" name="comprobante" maxlength="100" placeholder="Número de boleta o referencia bancaria"></label>
         <label>Fecha<input id="expenseDate" name="fecha" type="date" required></label>
-        <p id="expenseHelp" class="helper-text expense-help">La salida de Caja se toma en cuenta en el cierre y queda señalada para reponer.</p>
+        <p id="expenseHelp" class="helper-text expense-help">La salida de Caja de ventas se suma para reconstruir las ventas y queda descontada del fondo del gasto.</p>
         <button id="saveExpense" class="button button-primary" type="submit">Revisar salida</button>
       </form></section>
       <section class="finance-card"><div class="section-heading"><div><p class="eyebrow">AUDITORÍA</p><h2>Últimas salidas</h2></div><button id="refreshButton" class="button button-quiet" type="button">Actualizar</button></div><div id="movementList" class="closing-audit-list"></div></section>

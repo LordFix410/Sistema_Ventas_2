@@ -39,31 +39,36 @@ SELECT b.IdBanco,b.Nombre,b.SaldoInicial,b.SaldoCapitalInicial,b.SaldoGananciaIn
  -ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoOrigen=b.IdBanco),0)
  +ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoDestino=b.IdBanco),0)
  -ISNULL((SELECT SUM(m.Monto) FROM dbo.FIN_MOVIMIENTO m WHERE m.IdBanco=b.IdBanco AND m.Anulado=0),0)
- -ISNULL((SELECT SUM(p.Monto) FROM dbo.PAGO_GASTO_PERSONAL p WHERE p.IdBanco=b.IdBanco AND p.Anulado=0),0) Saldo
+ -ISNULL((SELECT SUM(p.Monto) FROM dbo.PAGO_GASTO_PERSONAL p WHERE p.IdBanco=b.IdBanco AND p.Anulado=0),0)
+ +ISNULL((SELECT SUM(d.Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE d WHERE d.IdBanco=b.IdBanco),0) Saldo
 FROM dbo.FIN_BANCO_TEMPORAL b WHERE b.Activo=1 ORDER BY b.Nombre;", connection))
                 await using (var reader = await command.ExecuteReaderAsync())
                     while (await reader.ReadAsync()) response.Bancos.Add(new BankItem { Id = reader.GetInt32(0), Nombre = reader.GetString(1), SaldoInicial = reader.GetDecimal(2), SaldoCapitalInicial = reader.GetDecimal(3), SaldoGananciaInicial = reader.GetDecimal(4), Saldo = reader.GetDecimal(5) });
 
                 await using (var command = new SqlCommand(@"
-SELECT c.IdCierreTemporal,c.FechaCierre,c.Ventas,c.CapitalAsignado,c.PersonalAsignado,u.NombreCompleto
+SELECT c.IdCierreTemporal,c.FechaCierre,c.Ventas,c.CapitalAsignado,c.PersonalAsignado,u.NombreCompleto,
+       c.CapitalAsignado-c.SalidasCapitalCaja,c.PersonalAsignado-c.SalidasGananciaCaja,c.SalidasCapitalCaja,c.SalidasGananciaCaja
 FROM dbo.FIN_CIERRE_TEMPORAL c LEFT JOIN dbo.USUARIO u ON u.IdUsuario=c.IdUsuario
-WHERE NOT EXISTS(SELECT 1 FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE x.IdCierreTemporal=c.IdCierreTemporal AND l.Anulado=0)
+WHERE c.Conciliado=0
+ AND NOT EXISTS(SELECT 1 FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE x.IdCierreTemporal=c.IdCierreTemporal AND l.Anulado=0)
 ORDER BY c.FechaCierre,c.IdCierreTemporal;", connection))
                 await using (var reader = await command.ExecuteReaderAsync())
-                    while (await reader.ReadAsync()) response.Cierres.Add(new ClosingItem { Id = reader.GetInt32(0), Fecha = reader.GetDateTime(1).ToString("dd/MM/yyyy HH:mm"), Ventas = reader.GetDecimal(2), Capital = reader.GetDecimal(3), Ganancia = reader.GetDecimal(4), Responsable = reader.IsDBNull(5) ? "" : reader.GetString(5) });
+                    while (await reader.ReadAsync()) response.Cierres.Add(new ClosingItem { Id = reader.GetInt32(0), Fecha = reader.GetDateTime(1).ToString("dd/MM/yyyy HH:mm"), Ventas = reader.GetDecimal(2), Capital = reader.GetDecimal(3), Ganancia = reader.GetDecimal(4), Responsable = reader.IsDBNull(5) ? "" : reader.GetString(5), CapitalNeto = reader.GetDecimal(6), GananciaNeta = reader.GetDecimal(7), SalidasCapital = reader.GetDecimal(8), SalidasGanancia = reader.GetDecimal(9) });
 
                 await using (var command = new SqlCommand(@"
 SELECT b.IdBanco,b.Nombre,
- b.SaldoGananciaInicial+ISNULL((SELECT SUM(x.Ganancia) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
+ b.SaldoGananciaInicial+ISNULL((SELECT SUM(x.GananciaDepositada) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
  -ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoOrigen=b.IdBanco AND t.Fondo='Ganancia'),0)
  +ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoDestino=b.IdBanco AND t.Fondo='Ganancia'),0)
  -ISNULL((SELECT SUM(m.Monto) FROM dbo.FIN_MOVIMIENTO m WHERE m.IdBanco=b.IdBanco AND m.Anulado=0 AND m.CuentaOrigen='Personal'),0)
- -ISNULL((SELECT SUM(p.Monto) FROM dbo.PAGO_GASTO_PERSONAL p WHERE p.IdBanco=b.IdBanco AND p.Anulado=0 AND p.CuentaOrigen='Personal'),0) PendienteGanancia,
- b.SaldoCapitalInicial+ISNULL((SELECT SUM(x.Capital) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
+ -ISNULL((SELECT SUM(p.Monto) FROM dbo.PAGO_GASTO_PERSONAL p WHERE p.IdBanco=b.IdBanco AND p.Anulado=0 AND p.CuentaOrigen='Personal'),0)
+ +ISNULL((SELECT SUM(d.Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE d WHERE d.IdBanco=b.IdBanco AND d.Fondo='Ganancia'),0) PendienteGanancia,
+ b.SaldoCapitalInicial+ISNULL((SELECT SUM(x.CapitalDepositado) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
  -ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoOrigen=b.IdBanco AND t.Fondo='Capital'),0)
  +ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoDestino=b.IdBanco AND t.Fondo='Capital'),0)
  -ISNULL((SELECT SUM(m.Monto) FROM dbo.FIN_MOVIMIENTO m WHERE m.IdBanco=b.IdBanco AND m.Anulado=0 AND m.CuentaOrigen='Capital'),0)
- -ISNULL((SELECT SUM(p.Monto) FROM dbo.PAGO_GASTO_PERSONAL p WHERE p.IdBanco=b.IdBanco AND p.Anulado=0 AND p.CuentaOrigen='Capital'),0) PendienteCapital
+ -ISNULL((SELECT SUM(p.Monto) FROM dbo.PAGO_GASTO_PERSONAL p WHERE p.IdBanco=b.IdBanco AND p.Anulado=0 AND p.CuentaOrigen='Capital'),0)
+ +ISNULL((SELECT SUM(d.Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE d WHERE d.IdBanco=b.IdBanco AND d.Fondo='Capital'),0) PendienteCapital
 FROM dbo.FIN_BANCO_TEMPORAL b WHERE b.Activo=1 ORDER BY b.Nombre;", connection))
                 await using (var reader = await command.ExecuteReaderAsync())
                     while (await reader.ReadAsync()) response.FondosBanco.Add(new BankFundItem { IdBanco = reader.GetInt32(0), Banco = reader.GetString(1), Ganancia = reader.GetDecimal(2), Capital = reader.GetDecimal(3) });
@@ -97,17 +102,19 @@ WHERE g.Activo=1 ORDER BY g.Nombre;", connection))
                 await using (var command = new SqlCommand(@"
 SELECT b.IdBanco,b.Nombre,f.Cuenta,
  CAST(CASE WHEN f.Cuenta='Capital' THEN b.SaldoCapitalInicial
-   +ISNULL((SELECT SUM(x.Capital) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
+   +ISNULL((SELECT SUM(x.CapitalDepositado) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
    -ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoOrigen=b.IdBanco AND t.Fondo='Capital'),0)
    +ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoDestino=b.IdBanco AND t.Fondo='Capital'),0)
    -ISNULL((SELECT SUM(m.Monto) FROM dbo.FIN_MOVIMIENTO m WHERE m.IdBanco=b.IdBanco AND m.Anulado=0 AND m.CuentaOrigen='Capital'),0)
    -ISNULL((SELECT SUM(p.Monto) FROM dbo.PAGO_GASTO_PERSONAL p WHERE p.IdBanco=b.IdBanco AND p.Anulado=0 AND p.CuentaOrigen='Capital'),0)
+   +ISNULL((SELECT SUM(d.Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE d WHERE d.IdBanco=b.IdBanco AND d.Fondo='Capital'),0)
  ELSE b.SaldoGananciaInicial
-   +ISNULL((SELECT SUM(x.Ganancia) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
+   +ISNULL((SELECT SUM(x.GananciaDepositada) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
    -ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoOrigen=b.IdBanco AND t.Fondo='Ganancia'),0)
    +ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoDestino=b.IdBanco AND t.Fondo='Ganancia'),0)
    -ISNULL((SELECT SUM(m.Monto) FROM dbo.FIN_MOVIMIENTO m WHERE m.IdBanco=b.IdBanco AND m.Anulado=0 AND m.CuentaOrigen='Personal'),0)
    -ISNULL((SELECT SUM(p.Monto) FROM dbo.PAGO_GASTO_PERSONAL p WHERE p.IdBanco=b.IdBanco AND p.Anulado=0 AND p.CuentaOrigen='Personal'),0)
+   +ISNULL((SELECT SUM(d.Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE d WHERE d.IdBanco=b.IdBanco AND d.Fondo='Ganancia'),0)
  END AS decimal(12,2)) Disponible
 FROM dbo.FIN_BANCO_TEMPORAL b
 CROSS APPLY (VALUES(CASE WHEN UPPER(b.Nombre) LIKE '%BANRURAL%' THEN 'Capital' ELSE 'Ganancia' END)) f(Cuenta)
@@ -156,25 +163,30 @@ ORDER BY CASE WHEN f.Cuenta='Ganancia' THEN 0 ELSE 1 END;", connection))
                     await using (var verify = new SqlCommand($@"
 IF NOT EXISTS(SELECT 1 FROM dbo.FIN_BANCO_TEMPORAL WITH(UPDLOCK,HOLDLOCK) WHERE IdBanco=@banco AND Activo=1) THROW 51041,'No se encontró el banco seleccionado.',1;
 IF (SELECT COUNT(*) FROM dbo.FIN_CIERRE_TEMPORAL WITH(UPDLOCK,HOLDLOCK) WHERE IdCierreTemporal IN ({ids})) <> @cantidad THROW 51042,'Uno o más cierres ya no están disponibles.',1;
+IF EXISTS(SELECT 1 FROM dbo.FIN_CIERRE_TEMPORAL WITH(UPDLOCK,HOLDLOCK) WHERE IdCierreTemporal IN ({ids}) AND Conciliado=1) THROW 51046,'Uno o más cierres ya quedaron incluidos en una conciliación; no se deben depositar otra vez.',1;
 IF EXISTS(SELECT 1 FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x WITH(UPDLOCK,HOLDLOCK) JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE x.IdCierreTemporal IN ({ids}) AND l.Anulado=0) THROW 51043,'Uno o más cierres ya están incluidos en otro depósito.',1;
 IF NOT EXISTS(SELECT 1 FROM dbo.FIN_CIERRE_TEMPORAL WHERE IdCierreTemporal IN ({ids}) AND Ventas>0) THROW 51050,'El total seleccionado debe ser mayor que cero.',1;", connection, (SqlTransaction)transaction))
                     { verify.Parameters.Add("@banco", SqlDbType.Int).Value = request.IdBanco; verify.Parameters.Add("@cantidad", SqlDbType.Int).Value = request.IdsCierre.Length; await verify.ExecuteNonQueryAsync(); }
                     await using var insert = new SqlCommand($@"
-DECLARE @capital decimal(12,2),@ganancia decimal(12,2),@ventas decimal(12,2);
-SELECT @capital=SUM(CapitalAsignado),@ganancia=SUM(PersonalAsignado),@ventas=SUM(Ventas) FROM dbo.FIN_CIERRE_TEMPORAL WHERE IdCierreTemporal IN ({ids});
-INSERT dbo.FIN_DEPOSITO_LOTE(IdBanco,MontoTotal,Fecha,Comprobante,IdUsuario) VALUES(@banco,@ventas,@fecha,@comprobante,@usuario);
+DECLARE @capital decimal(12,2),@ganancia decimal(12,2),@ventas decimal(12,2),@salidaCapital decimal(12,2),@salidaGanancia decimal(12,2),@netoCapital decimal(12,2),@netoGanancia decimal(12,2),@totalDeposito decimal(12,2);
+SELECT @capital=SUM(CapitalAsignado),@ganancia=SUM(PersonalAsignado),@ventas=SUM(Ventas),@salidaCapital=SUM(SalidasCapitalCaja),@salidaGanancia=SUM(SalidasGananciaCaja)
+FROM dbo.FIN_CIERRE_TEMPORAL WHERE IdCierreTemporal IN ({ids});
+SET @netoCapital=@capital-@salidaCapital; SET @netoGanancia=@ganancia-@salidaGanancia; SET @totalDeposito=@netoCapital+@netoGanancia;
+IF @netoCapital<0 OR @netoGanancia<0 THROW 51051,'Las salidas en efectivo superan uno de los fondos seleccionados. Incluye cierres posteriores para cubrir el faltante antes de depositar.',1;
+IF @totalDeposito<=0 THROW 51050,'El total neto a depositar debe ser mayor que cero.',1;
+INSERT dbo.FIN_DEPOSITO_LOTE(IdBanco,MontoTotal,Fecha,Comprobante,IdUsuario) VALUES(@banco,@totalDeposito,@fecha,@comprobante,@usuario);
 DECLARE @lote int=CONVERT(int,SCOPE_IDENTITY());
-INSERT dbo.FIN_DEPOSITO_LOTE_CIERRE(IdLote,IdCierreTemporal,Ventas,Capital,Ganancia)
- SELECT @lote,IdCierreTemporal,Ventas,CapitalAsignado,PersonalAsignado FROM dbo.FIN_CIERRE_TEMPORAL WHERE IdCierreTemporal IN ({ids});
-SELECT @lote,@ventas,@capital,@ganancia;", connection, (SqlTransaction)transaction);
+INSERT dbo.FIN_DEPOSITO_LOTE_CIERRE(IdLote,IdCierreTemporal,Ventas,Capital,Ganancia,CapitalDepositado,GananciaDepositada)
+ SELECT @lote,IdCierreTemporal,Ventas,CapitalAsignado,PersonalAsignado,CapitalAsignado-SalidasCapitalCaja,PersonalAsignado-SalidasGananciaCaja FROM dbo.FIN_CIERRE_TEMPORAL WHERE IdCierreTemporal IN ({ids});
+SELECT @lote,@totalDeposito,@netoCapital,@netoGanancia,@ventas,@capital,@ganancia,@salidaCapital,@salidaGanancia;", connection, (SqlTransaction)transaction);
                     insert.Parameters.Add("@banco", SqlDbType.Int).Value = request.IdBanco; insert.Parameters.Add("@fecha", SqlDbType.Date).Value = request.Fecha.Date;
                     insert.Parameters.Add("@comprobante", SqlDbType.VarChar, 100).Value = request.Comprobante.Trim(); insert.Parameters.Add("@usuario", SqlDbType.Int).Value = UserId.Value;
-                    int id; decimal sales, capital, gain; await using (var reader = await insert.ExecuteReaderAsync()) { await reader.ReadAsync(); id = reader.GetInt32(0); sales = reader.GetDecimal(1); capital = reader.GetDecimal(2); gain = reader.GetDecimal(3); }
-                    await transaction.CommitAsync(); return Ok(new { id, ventas = sales, capital, ganancia = gain, mensaje = "Depósito registrado con sus cierres y desglose." });
+                    int id; decimal deposited, capital, gain, sales, grossCapital, grossGain, cashCapital, cashGain; await using (var reader = await insert.ExecuteReaderAsync()) { await reader.ReadAsync(); id = reader.GetInt32(0); deposited = reader.GetDecimal(1); capital = reader.GetDecimal(2); gain = reader.GetDecimal(3); sales = reader.GetDecimal(4); grossCapital = reader.GetDecimal(5); grossGain = reader.GetDecimal(6); cashCapital = reader.GetDecimal(7); cashGain = reader.GetDecimal(8); }
+                    await transaction.CommitAsync(); return Ok(new { id, ventas = sales, totalDepositado = deposited, capital, ganancia = gain, capitalGenerado = grossCapital, gananciaGenerada = grossGain, salidaCapital = cashCapital, salidaGanancia = cashGain, mensaje = "Depósito neto registrado y vinculado a sus cierres." });
                 }
                 catch { if (transaction.Connection != null) await transaction.RollbackAsync(); throw; }
             }
-            catch (SqlException ex) when (ex.Number is 51041 or 51042 or 51043 or 51050) { return Conflict(new { mensaje = ex.Message }); }
+            catch (SqlException ex) when (ex.Number is 51041 or 51042 or 51043 or 51046 or 51050 or 51051) { return Conflict(new { mensaje = ex.Message }); }
             catch (SqlException ex) { _logger.LogError(ex, "No se pudo registrar el depósito agrupado."); return StatusCode(503, new { mensaje = "No se pudo registrar el depósito. Revisa la migración y la conexión." }); }
         }
 
@@ -199,13 +211,14 @@ SELECT @destino=COUNT(*) FROM dbo.FIN_BANCO_TEMPORAL WITH(UPDLOCK,HOLDLOCK) WHER
 IF @origen<>1 OR @destino<>1 THROW 51044,'No se encontró uno de los bancos.',1;
 SELECT @disponible=CASE WHEN @fondo='Capital' THEN b.SaldoCapitalInicial ELSE b.SaldoGananciaInicial END FROM dbo.FIN_BANCO_TEMPORAL b WITH(UPDLOCK,HOLDLOCK) WHERE b.IdBanco=@origenId;
 SELECT @disponible=@disponible+ISNULL(SUM(x.FondoMonto),0) FROM (
- SELECT CASE WHEN @fondo='Capital' THEN c.Capital ELSE c.Ganancia END FondoMonto
+ SELECT CASE WHEN @fondo='Capital' THEN c.CapitalDepositado ELSE c.GananciaDepositada END FondoMonto
  FROM dbo.FIN_DEPOSITO_LOTE_CIERRE c JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=c.IdLote WHERE l.IdBanco=@origenId AND l.Anulado=0
 ) x;
 SELECT @disponible=@disponible-ISNULL(SUM(Monto),0) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoOrigen=@origenId AND Fondo=@fondo;
  SELECT @disponible=@disponible+ISNULL(SUM(Monto),0) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoDestino=@origenId AND Fondo=@fondo;
  SELECT @disponible=@disponible-ISNULL(SUM(Monto),0) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco=@origenId AND Anulado=0 AND CuentaOrigen=@fondo;
  SELECT @disponible=@disponible-ISNULL(SUM(Monto),0) FROM dbo.PAGO_GASTO_PERSONAL WHERE IdBanco=@origenId AND Anulado=0 AND CuentaOrigen=@fondo;
+ SELECT @disponible=@disponible+ISNULL(SUM(Ajuste),0) FROM dbo.FIN_CONCILIACION_DETALLE WHERE IdBanco=@origenId AND Fondo=CASE WHEN @fondo='Personal' THEN 'Ganancia' ELSE 'Capital' END;
 IF @monto>@disponible THROW 51045,'El monto supera el fondo disponible en el banco de origen.',1;
 INSERT dbo.FIN_TRANSFERENCIA_BANCARIA(IdBancoOrigen,IdBancoDestino,Fondo,Monto,Fecha,Comprobante,IdUsuario) VALUES(@origenId,@destinoId,@fondo,@monto,@fecha,@comprobante,@usuario);", connection, (SqlTransaction)transaction);
                     command.Parameters.Add("@origenId", SqlDbType.Int).Value = request.IdBancoOrigen; command.Parameters.Add("@destinoId", SqlDbType.Int).Value = request.IdBancoDestino;
@@ -262,13 +275,13 @@ UPDATE dbo.FIN_DEPOSITO_LOTE SET Anulado=1,MotivoAnulacion=@motivo,UsuarioAnulac
                 var rows = new List<object>();
                 await using var command = new SqlCommand(@"
 SELECT TOP(30) Id,Fecha,Tipo,Concepto,Monto,Banco,Detalle,Responsable,Anulado,Comprobante FROM (
- SELECT l.IdLote Id,l.Fecha,CASE WHEN l.Anulado=1 THEN 'Depósito anulado' ELSE 'Depósito' END Tipo,'Boleta '+l.Comprobante Concepto,l.MontoTotal Monto,b.Nombre Banco,CONCAT('Ventas Q ',FORMAT(SUM(c.Ventas),'N2'),' · Capital Q ',FORMAT(SUM(c.Capital),'N2'),' · Ganancia Q ',FORMAT(SUM(c.Ganancia),'N2'),CASE WHEN l.Anulado=1 THEN ' · '+ISNULL(l.MotivoAnulacion,'Anulado') ELSE '' END) Detalle,u.NombreCompleto Responsable,CAST(l.Anulado AS bit) Anulado,'depositos' Grupo,l.Comprobante Comprobante
+ SELECT l.IdLote Id,l.Fecha,CASE WHEN l.Anulado=1 THEN 'Depósito anulado' ELSE 'Depósito' END Tipo,'Boleta '+l.Comprobante Concepto,l.MontoTotal Monto,b.Nombre Banco,CONCAT('Cierres Q ',FORMAT(SUM(c.Ventas),'N2'),' · Salidas efectivo: Capital Q ',FORMAT(SUM(c.Capital-c.CapitalDepositado),'N2'),' y Ganancia Q ',FORMAT(SUM(c.Ganancia-c.GananciaDepositada),'N2'),' · Depósito: Capital Q ',FORMAT(SUM(c.CapitalDepositado),'N2'),' y Ganancia Q ',FORMAT(SUM(c.GananciaDepositada),'N2'),CASE WHEN l.Anulado=1 THEN ' · '+ISNULL(l.MotivoAnulacion,'Anulado') ELSE '' END) Detalle,u.NombreCompleto Responsable,CAST(l.Anulado AS bit) Anulado,'depositos' Grupo,l.Comprobante Comprobante
  FROM dbo.FIN_DEPOSITO_LOTE l JOIN dbo.FIN_BANCO_TEMPORAL b ON b.IdBanco=l.IdBanco JOIN dbo.FIN_DEPOSITO_LOTE_CIERRE c ON c.IdLote=l.IdLote LEFT JOIN dbo.USUARIO u ON u.IdUsuario=l.IdUsuario GROUP BY l.Fecha,l.Comprobante,l.MontoTotal,b.Nombre,u.NombreCompleto,l.IdLote,l.Anulado,l.MotivoAnulacion
  UNION ALL SELECT t.IdTransferencia,t.Fecha,'Transferencia', 'Boleta '+t.Comprobante,t.Monto,bo.Nombre,CONCAT(CASE WHEN t.Fondo='Personal' THEN 'Ganancia' ELSE t.Fondo END,' · ',bo.Nombre,' → ',bd.Nombre),u.NombreCompleto,CAST(0 AS bit),'depositos',t.Comprobante
  FROM dbo.FIN_TRANSFERENCIA_BANCARIA t JOIN dbo.FIN_BANCO_TEMPORAL bo ON bo.IdBanco=t.IdBancoOrigen JOIN dbo.FIN_BANCO_TEMPORAL bd ON bd.IdBanco=t.IdBancoDestino LEFT JOIN dbo.USUARIO u ON u.IdUsuario=t.IdUsuario
- UNION ALL SELECT m.IdMovimiento,CONVERT(date,m.Fecha),'Salida',m.Concepto,m.Monto,CASE WHEN m.PagadoDesdeCaja=0 THEN ISNULL(b.Nombre,'Banco') WHEN m.OrigenEfectivo='Capital' THEN 'Capital en efectivo' WHEN m.OrigenEfectivo='Ganancia' THEN 'Ganancia en efectivo' ELSE 'Caja de ventas' END,CONCAT(CASE WHEN m.CuentaOrigen='Personal' THEN 'Ganancia' WHEN m.CuentaOrigen='Caja' THEN 'Sin fondo asignado' ELSE m.CuentaOrigen END,' · ',CASE WHEN m.PagadoDesdeCaja=1 THEN 'Efectivo' ELSE 'Banco' END),u.NombreCompleto,CAST(0 AS bit),'salidas',ISNULL(m.Referencia,'')
+ UNION ALL SELECT m.IdMovimiento,CONVERT(date,m.Fecha),'Salida',m.Concepto,m.Monto,CASE WHEN m.IdBanco IS NOT NULL THEN ISNULL(b.Nombre,'Banco') WHEN m.OrigenEfectivo='Capital' THEN 'Capital en efectivo' WHEN m.OrigenEfectivo='Ganancia' THEN 'Ganancia en efectivo' ELSE 'Caja de ventas' END,CONCAT(CASE WHEN m.CuentaOrigen='Personal' THEN 'Ganancia' WHEN m.CuentaOrigen='Caja' THEN 'Sin fondo asignado' ELSE m.CuentaOrigen END,' · ',CASE WHEN m.IdBanco IS NULL THEN 'Efectivo' ELSE 'Banco' END),u.NombreCompleto,CAST(0 AS bit),'salidas',ISNULL(m.Referencia,'')
  FROM dbo.FIN_MOVIMIENTO m LEFT JOIN dbo.FIN_BANCO_TEMPORAL b ON b.IdBanco=m.IdBanco LEFT JOIN dbo.USUARIO u ON u.IdUsuario=m.IdUsuario WHERE m.Anulado=0
- UNION ALL SELECT p.IdPagoGastoPersonal,CONVERT(date,p.FechaPago),'Salida',COALESCE(NULLIF(p.Observaciones,''),g.Nombre),p.Monto,CASE WHEN p.PagadoDesdeCaja=0 THEN ISNULL(b.Nombre,'Banco') WHEN p.OrigenEfectivo='Capital' THEN 'Capital en efectivo' WHEN p.OrigenEfectivo='Ganancia' THEN 'Ganancia en efectivo' ELSE 'Caja de ventas' END,CONCAT(CASE WHEN p.CuentaOrigen='Personal' THEN 'Ganancia' WHEN p.CuentaOrigen='Caja' THEN 'Sin fondo asignado' ELSE p.CuentaOrigen END,' · ',CASE WHEN p.PagadoDesdeCaja=1 THEN 'Efectivo' ELSE 'Banco' END),u.NombreCompleto,CAST(0 AS bit),'salidas',ISNULL(p.Referencia,'')
+ UNION ALL SELECT p.IdPagoGastoPersonal,CONVERT(date,p.FechaPago),'Salida',COALESCE(NULLIF(p.Observaciones,''),g.Nombre),p.Monto,CASE WHEN p.IdBanco IS NOT NULL THEN ISNULL(b.Nombre,'Banco') WHEN p.OrigenEfectivo='Capital' THEN 'Capital en efectivo' WHEN p.OrigenEfectivo='Ganancia' THEN 'Ganancia en efectivo' ELSE 'Caja de ventas' END,CONCAT(CASE WHEN p.CuentaOrigen='Personal' THEN 'Ganancia' WHEN p.CuentaOrigen='Caja' THEN 'Sin fondo asignado' ELSE p.CuentaOrigen END,' · ',CASE WHEN p.IdBanco IS NULL THEN 'Efectivo' ELSE 'Banco' END),u.NombreCompleto,CAST(0 AS bit),'salidas',ISNULL(p.Referencia,'')
  FROM dbo.PAGO_GASTO_PERSONAL p JOIN dbo.GASTO_PERSONAL_PERIODO per ON per.IdPeriodoGastoPersonal=p.IdPeriodoGastoPersonal JOIN dbo.GASTO_PERSONAL g ON g.IdGastoPersonal=per.IdGastoPersonal LEFT JOIN dbo.FIN_BANCO_TEMPORAL b ON b.IdBanco=p.IdBanco LEFT JOIN dbo.USUARIO u ON u.IdUsuario=p.IdUsuario WHERE p.Anulado=0
 ) m WHERE @tipo IS NULL OR LOWER(@tipo)=m.Grupo ORDER BY Fecha DESC,Id DESC;", connection);
                 command.Parameters.Add("@tipo", SqlDbType.VarChar, 20).Value = string.IsNullOrWhiteSpace(tipo) ? (object)DBNull.Value : tipo.Trim();
@@ -286,7 +299,7 @@ SELECT TOP(30) Id,Fecha,Tipo,Concepto,Monto,Banco,Detalle,Responsable,Anulado,Co
         public sealed class CancelBatchRequest { public string? Motivo { get; set; } }
         public sealed class DepositDataResponse { public List<BankItem> Bancos { get; } = new List<BankItem>(); public List<ClosingItem> Cierres { get; } = new List<ClosingItem>(); public List<BankFundItem> FondosBanco { get; } = new List<BankFundItem>(); }
         public sealed class BankItem { public int Id { get; set; } public string Nombre { get; set; } = ""; public decimal SaldoInicial { get; set; } public decimal SaldoCapitalInicial { get; set; } public decimal SaldoGananciaInicial { get; set; } public decimal Saldo { get; set; } }
-        public sealed class ClosingItem { public int Id { get; set; } public string Fecha { get; set; } = ""; public decimal Ventas { get; set; } public decimal Capital { get; set; } public decimal Ganancia { get; set; } public string Responsable { get; set; } = ""; }
+        public sealed class ClosingItem { public int Id { get; set; } public string Fecha { get; set; } = ""; public decimal Ventas { get; set; } public decimal Capital { get; set; } public decimal Ganancia { get; set; } public decimal CapitalNeto { get; set; } public decimal GananciaNeta { get; set; } public decimal SalidasCapital { get; set; } public decimal SalidasGanancia { get; set; } public string Responsable { get; set; } = ""; }
         public sealed class BankFundItem { public int IdBanco { get; set; } public string Banco { get; set; } = ""; public decimal Capital { get; set; } public decimal Ganancia { get; set; } }
     }
 }

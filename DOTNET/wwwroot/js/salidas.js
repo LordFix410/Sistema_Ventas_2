@@ -77,9 +77,9 @@
     $('#receiptInput').required = bank;
     $('#receiptInput').disabled = !bank;
     const help = {
-      Caja: 'La salida de Caja se toma en cuenta en el cierre y queda señalada para reponer.',
-      Ganancia: 'Salió del efectivo reservado de Ganancia. El cierre te recordará reponer ese fondo.',
-      Capital: 'Salió del efectivo reservado de Capital. El cierre te recordará reponer ese fondo.',
+      Caja: 'La salida de Caja aparecerá en el próximo cierre. Si ya la resolviste, podrás desmarcarla allí para no ajustarla otra vez.',
+      Ganancia: 'Salió del efectivo reservado de Ganancia. Aparecerá en el cierre para ajustar el fondo y el depósito.',
+      Capital: 'Salió del efectivo reservado de Capital. Aparecerá en el cierre para ajustar el fondo y el depósito.',
       BAM: 'Se validará y descontará del saldo bancario de BAM · Ganancia.',
       Banrural: 'Se validará y descontará del saldo bancario de Banrural · Capital.'
     };
@@ -157,6 +157,7 @@
       amount,
       expenseName,
       source,
+      fund: source === 'Capital' || source === 'Banrural' ? 'Capital' : 'Ganancia',
       receipt: String(values.get('comprobante') || '').trim(),
       bankId: bank ? selectedBank.id : null,
       periodId: isOther ? 0 : Number(selected.dataset.periodId),
@@ -180,13 +181,13 @@
     $('#confirmReceiptRow').hidden = !data.receipt;
     $('#confirmReceipt').textContent = data.receipt;
     const effect = {
-      Caja: 'Se registrará como salida de la caja de ventas y aparecerá en el cierre para reponerla.',
-      Capital: 'Se registrará desde el efectivo reservado de Capital y el cierre mostrará cuánto reponer.',
-      Ganancia: 'Se registrará desde el efectivo reservado de Ganancia y el cierre mostrará cuánto reponer.',
+      Caja: 'Se registrará desde Caja. El cierre mostrará el gasto y te permitirá marcarlo si ya quedó resuelto.',
+      Capital: 'Se registrará desde el efectivo de Capital y aparecerá como ajuste en el cierre.',
+      Ganancia: 'Se registrará desde el efectivo de Ganancia y aparecerá como ajuste en el cierre.',
       BAM: 'Se validará el saldo y se descontará directamente de BAM · Ganancia.',
       Banrural: 'Se validará el saldo y se descontará directamente de Banrural · Capital.'
     };
-    $('#confirmEffect').textContent = effect[data.source];
+    $('#confirmEffect').textContent = `${effect[data.source]} Fondo del gasto: ${data.fund}.`;
     $('#confirmDialog').showModal();
     return data;
   }
