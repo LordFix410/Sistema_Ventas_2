@@ -10,7 +10,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="css/app.css?v=18">
   <link rel="stylesheet" href="css/finanzas.css?v=3">
-  <link rel="stylesheet" href="css/dashboard.css?v=3">
+  <link rel="stylesheet" href="css/dashboard.css?v=4">
   <script src="/js/pwa.js?v=1" defer></script>
   <script src="js/dashboard.js?v=3" defer></script>
 </head>
@@ -41,12 +41,20 @@
       </section>
 
       <section class="dashboard-accounts six-account-grid" aria-label="Resumen de capital y ganancia">
-        <article class="account-card capital-card"><div class="account-title"><span class="account-icon">▣</span><h2>Capital disponible</h2></div><strong id="capitalBalance" class="account-amount">Q 0.00</strong></article>
-        <article class="account-card personal-card"><div class="account-title"><span class="account-icon">◉</span><h2>Ganancia disponible</h2></div><strong id="personalBalance" class="account-amount">Q 0.00</strong></article>
-        <article class="account-card capital-card"><div class="account-title"><span class="account-icon">▣</span><h2>Capital depositado</h2></div><strong id="capitalDeposited" class="account-amount">Q 0.00</strong></article>
-        <article class="account-card personal-card"><div class="account-title"><span class="account-icon">◉</span><h2>Ganancia depositada</h2></div><strong id="personalDeposited" class="account-amount">Q 0.00</strong></article>
-        <article class="account-card capital-card"><div class="account-title"><span class="account-icon">▣</span><h2>Capital + Q 150 en caja</h2></div><strong id="capitalCashTotal" class="account-amount">Q 0.00</strong></article>
-        <article class="account-card personal-card"><div class="account-title"><span class="account-icon">◉</span><h2>Ganancia + Q 100 en caja</h2></div><strong id="personalCashTotal" class="account-amount">Q 0.00</strong></article>
+        <section class="dashboard-account-row capital-row" aria-label="Capital">
+          <h2>Capital</h2><div class="account-row-cards">
+            <article class="account-card capital-card"><div class="account-title"><span class="account-icon">▣</span><h3>Disponible</h3></div><strong id="capitalBalance" class="account-amount">Q 0.00</strong></article>
+            <article class="account-card capital-card"><div class="account-title"><span class="account-icon">▣</span><h3>Depositado</h3></div><strong id="capitalDeposited" class="account-amount">Q 0.00</strong></article>
+            <article class="account-card capital-card"><div class="account-title"><span class="account-icon">▣</span><h3>Depositado + Q150 en caja</h3></div><strong id="capitalCashTotal" class="account-amount">Q 0.00</strong></article>
+          </div>
+        </section>
+        <section class="dashboard-account-row gain-row" aria-label="Ganancia">
+          <h2>Ganancia</h2><div class="account-row-cards">
+            <article class="account-card personal-card"><div class="account-title"><span class="account-icon">◉</span><h3>Disponible</h3></div><strong id="personalBalance" class="account-amount">Q 0.00</strong></article>
+            <article class="account-card personal-card"><div class="account-title"><span class="account-icon">◉</span><h3>Depositada</h3></div><strong id="personalDeposited" class="account-amount">Q 0.00</strong></article>
+            <article class="account-card personal-card"><div class="account-title"><span class="account-icon">◉</span><h3>Depositada + Q100 en caja</h3></div><strong id="personalCashTotal" class="account-amount">Q 0.00</strong></article>
+          </div>
+        </section>
       </section>
 
       <section class="finance-card dashboard-outflows" aria-label="Salidas registradas del mes">

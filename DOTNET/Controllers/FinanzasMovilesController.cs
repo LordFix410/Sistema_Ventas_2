@@ -47,9 +47,9 @@ DECLARE @inicio date=DATEFROMPARTS(YEAR(GETDATE()),MONTH(GETDATE()),1), @fin dat
 DECLARE @ultimoCierre datetime2(0)=(SELECT MAX(FechaCierre) FROM dbo.FIN_CIERRE_TEMPORAL);
 IF @ultimoCierre IS NULL SET @ultimoCierre=CONVERT(datetime2(0),CONVERT(date,GETDATE()));
 SELECT
-  CAST(ISNULL((SELECT SUM(CapitalGenerado) FROM dbo.FIN_CIERRE_CAJA),0)+ISNULL((SELECT SUM(CapitalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Capital'),0)-ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE CuentaOrigen='Capital' AND Anulado=0),0)-ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE CuentaOrigen='Capital' AND Anulado=0),0) AS decimal(12,2)) Capital,
+  CAST(ISNULL((SELECT SUM(CapitalGenerado) FROM dbo.FIN_CIERRE_CAJA),0)+ISNULL((SELECT SUM(CapitalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Capital'),0)-ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE CuentaOrigen='Capital' AND Anulado=0 AND PagadoDesdeCaja=0),0)-ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE CuentaOrigen='Capital' AND Anulado=0 AND PagadoDesdeCaja=0),0) AS decimal(12,2)) Capital,
  CAST(ISNULL((SELECT SUM(CapitalGenerado) FROM dbo.FIN_CIERRE_CAJA),0)+ISNULL((SELECT SUM(CapitalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Capital'),0) AS decimal(12,2)) CapitalGeneradoTotal,
-  CAST(ISNULL((SELECT SUM(GananciaGenerada) FROM dbo.FIN_CIERRE_CAJA),0)+ISNULL((SELECT SUM(PersonalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Personal'),0)-ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE CuentaOrigen='Personal' AND Anulado=0),0)-ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE CuentaOrigen='Personal' AND Anulado=0),0) AS decimal(12,2)) Personal,
+  CAST(ISNULL((SELECT SUM(GananciaGenerada) FROM dbo.FIN_CIERRE_CAJA),0)+ISNULL((SELECT SUM(PersonalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Personal'),0)-ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE CuentaOrigen='Personal' AND Anulado=0 AND PagadoDesdeCaja=0),0)-ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE CuentaOrigen='Personal' AND Anulado=0 AND PagadoDesdeCaja=0),0) AS decimal(12,2)) Personal,
  CAST(ISNULL((SELECT SUM(GananciaGenerada) FROM dbo.FIN_CIERRE_CAJA),0)+ISNULL((SELECT SUM(PersonalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Personal'),0) AS decimal(12,2)) PersonalGeneradoTotal,
  CAST(ISNULL((SELECT SUM(Capital) FROM dbo.FIN_DEPOSITO),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_DEPOSITO_TEMPORAL WHERE Cuenta='Capital' AND Anulado=0),0)+ISNULL((SELECT SUM(c.Capital) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE c JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=c.IdLote WHERE l.Anulado=0),0) AS decimal(12,2)) DepositadoCapital,
  CAST(ISNULL((SELECT SUM(Ganancia) FROM dbo.FIN_DEPOSITO),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_DEPOSITO_TEMPORAL WHERE Cuenta='Personal' AND Anulado=0),0)+ISNULL((SELECT SUM(c.Ganancia) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE c JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=c.IdLote WHERE l.Anulado=0),0) AS decimal(12,2)) DepositadoPersonal,
@@ -63,7 +63,9 @@ SELECT
  CAST(ISNULL((SELECT SUM(CapitalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL WHERE FechaCierre>=@inicio AND FechaCierre<@fin),0)+ISNULL((SELECT SUM(CapitalGenerado) FROM dbo.FIN_CIERRE_CAJA WHERE FechaCierre>=@inicio AND FechaCierre<@fin),0) AS decimal(12,2)) CapitalGeneradoMes,
   CAST(ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE CuentaOrigen='Capital' AND Anulado=0 AND Fecha>=@inicio AND Fecha<@fin),0)+ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE CuentaOrigen='Capital' AND Anulado=0 AND FechaPago>=@inicio AND FechaPago<@fin),0) AS decimal(12,2)) SalidasCapitalMes,
   CAST(ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE CuentaOrigen='Personal' AND Anulado=0 AND Fecha>=@inicio AND Fecha<@fin),0)+ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE CuentaOrigen='Personal' AND Anulado=0 AND FechaPago>=@inicio AND FechaPago<@fin),0) AS decimal(12,2)) SalidasPersonalMes,
-  CAST(ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE PagadoDesdeCaja=1 AND Anulado=0 AND FechaRegistro>@ultimoCierre),0)+ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE PagadoDesdeCaja=1 AND Anulado=0 AND FechaRegistro>@ultimoCierre),0) AS decimal(12,2)) SalidasCajaPendientes,
+ CAST(ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE PagadoDesdeCaja=1 AND Anulado=0 AND FechaRegistro>@ultimoCierre),0)+ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE PagadoDesdeCaja=1 AND Anulado=0 AND FechaRegistro>@ultimoCierre),0) AS decimal(12,2)) SalidasEfectivoPendientes,
+ CAST(ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE PagadoDesdeCaja=1 AND Anulado=0 AND OrigenEfectivo='Capital' AND FechaRegistro>@ultimoCierre),0)+ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE PagadoDesdeCaja=1 AND Anulado=0 AND OrigenEfectivo='Capital' AND FechaRegistro>@ultimoCierre),0) AS decimal(12,2)) SalidasCapitalEfectivoPendientes,
+ CAST(ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE PagadoDesdeCaja=1 AND Anulado=0 AND OrigenEfectivo='Ganancia' AND FechaRegistro>@ultimoCierre),0)+ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE PagadoDesdeCaja=1 AND Anulado=0 AND OrigenEfectivo='Ganancia' AND FechaRegistro>@ultimoCierre),0) AS decimal(12,2)) SalidasGananciaEfectivoPendientes,
  (SELECT TOP (1) g.Nombre FROM dbo.GASTO_PERSONAL_PERIODO p JOIN dbo.GASTO_PERSONAL g ON g.IdGastoPersonal=p.IdGastoPersonal LEFT JOIN (SELECT IdPeriodoGastoPersonal,SUM(Monto) Pagado FROM dbo.PAGO_GASTO_PERSONAL GROUP BY IdPeriodoGastoPersonal) x ON x.IdPeriodoGastoPersonal=p.IdPeriodoGastoPersonal WHERE p.Anio=YEAR(GETDATE()) AND p.Mes=MONTH(GETDATE()) AND p.MontoProgramado>ISNULL(x.Pagado,0) AND g.Activo=1 ORDER BY p.FechaVencimiento,p.IdPeriodoGastoPersonal) ProximoGasto,
  (SELECT TOP (1) CONVERT(varchar(10),p.FechaVencimiento,23) FROM dbo.GASTO_PERSONAL_PERIODO p JOIN dbo.GASTO_PERSONAL g ON g.IdGastoPersonal=p.IdGastoPersonal LEFT JOIN (SELECT IdPeriodoGastoPersonal,SUM(Monto) Pagado FROM dbo.PAGO_GASTO_PERSONAL GROUP BY IdPeriodoGastoPersonal) x ON x.IdPeriodoGastoPersonal=p.IdPeriodoGastoPersonal WHERE p.Anio=YEAR(GETDATE()) AND p.Mes=MONTH(GETDATE()) AND p.MontoProgramado>ISNULL(x.Pagado,0) AND g.Activo=1 ORDER BY p.FechaVencimiento,p.IdPeriodoGastoPersonal) FechaProximoGasto;";
                 await using (var command = new SqlCommand(totalsSql, connection))
@@ -78,7 +80,9 @@ SELECT
                         response.AsignadoPersonalMes = Money(reader, "AsignadoPersonalMes"); response.VentasManualMes = Money(reader, "VentasManualMes");
                         response.VentasMesTotal = Money(reader, "VentasMesTotal"); response.CapitalGeneradoMes = Money(reader, "CapitalGeneradoMes");
                         response.SalidasCapitalMes = Money(reader, "SalidasCapitalMes"); response.SalidasPersonalMes = Money(reader, "SalidasPersonalMes");
-                        response.SalidasCajaPendientes = Money(reader, "SalidasCajaPendientes");
+                        response.SalidasEfectivoPendientes = Money(reader, "SalidasEfectivoPendientes");
+                        response.SalidasCapitalEfectivoPendientes = Money(reader, "SalidasCapitalEfectivoPendientes");
+                        response.SalidasGananciaEfectivoPendientes = Money(reader, "SalidasGananciaEfectivoPendientes");
                         response.ProximoGasto = reader.IsDBNull(reader.GetOrdinal("ProximoGasto")) ? "Sin pendientes" : reader.GetString(reader.GetOrdinal("ProximoGasto"));
                         response.FechaProximoGasto = reader.IsDBNull(reader.GetOrdinal("FechaProximoGasto")) ? "" : reader.GetString(reader.GetOrdinal("FechaProximoGasto"));
                     }
@@ -127,22 +131,21 @@ SELECT TOP (10) c.IdCierreTemporal,c.FechaCierre,'Cierre' Tipo,c.Ventas,c.Capita
 FROM dbo.FIN_CIERRE_TEMPORAL c LEFT JOIN dbo.USUARIO u ON u.IdUsuario=c.IdUsuario
 WHERE (@desde IS NULL OR c.FechaCierre>=@desde) AND (@hasta IS NULL OR c.FechaCierre<DATEADD(day,1,@hasta))
 ORDER BY c.FechaCierre DESC,c.IdCierreTemporal DESC;", connection);
-                command.Parameters.Add("@tipo", SqlDbType.VarChar, 20).Value = filter;
                 command.Parameters.Add("@desde", SqlDbType.Date).Value = desde.HasValue ? (object)desde.Value.Date : DBNull.Value;
                 command.Parameters.Add("@hasta", SqlDbType.Date).Value = hasta.HasValue ? (object)hasta.Value.Date : DBNull.Value;
                 await using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                     cierres.Add(new CloseAudit
                     {
-                        Id = reader.GetInt32(0),
-                        Fecha = reader.GetDateTime(1).ToString("dd/MM/yyyy HH:mm"), FechaIso = reader.GetDateTime(1).ToString("yyyy-MM-dd"),
-                        Tipo = reader.GetString(2), Ventas = Money(reader, 3),
-                        Capital = reader.IsDBNull(4) ? (decimal?)null : Money(reader, 4),
-                        Ganancia = reader.IsDBNull(5) ? (decimal?)null : Money(reader, 5),
-                        Responsable = reader.IsDBNull(6) ? "" : reader.GetString(6),
-                        Cuenta = reader.IsDBNull(7) ? "" : reader.GetString(7),
-                        Comprobante = reader.IsDBNull(8) ? "" : reader.GetString(8),
-                        Anulado = reader.GetBoolean(9)
+                        Id = Convert.ToInt32(reader[0]),
+                        Fecha = Convert.ToDateTime(reader[1]).ToString("dd/MM/yyyy HH:mm"), FechaIso = Convert.ToDateTime(reader[1]).ToString("yyyy-MM-dd"),
+                        Tipo = Convert.ToString(reader[2]) ?? "Cierre", Ventas = Convert.ToDecimal(reader[3]),
+                        Capital = reader.IsDBNull(4) ? (decimal?)null : Convert.ToDecimal(reader[4]),
+                        Ganancia = reader.IsDBNull(5) ? (decimal?)null : Convert.ToDecimal(reader[5]),
+                        Responsable = reader.IsDBNull(6) ? "" : Convert.ToString(reader[6]) ?? "",
+                        Cuenta = reader.IsDBNull(7) ? "" : Convert.ToString(reader[7]) ?? "",
+                        Comprobante = reader.IsDBNull(8) ? "" : Convert.ToString(reader[8]) ?? "",
+                        Anulado = Convert.ToBoolean(reader[9])
                     });
                 return Ok(new { actividades = cierres });
             }
@@ -151,6 +154,11 @@ ORDER BY c.FechaCierre DESC,c.IdCierreTemporal DESC;", connection);
                 _logger.LogError(ex, "No se pudo consultar la auditoría de cierres.");
                 return StatusCode(503, new { mensaje = "No se pudo consultar la auditoría. Revisa la conexión y las tablas de Finanzas." });
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Falló la lectura de cierres recientes.");
+                return StatusCode(500, new { mensaje = "No se pudieron mostrar los cierres recientes. Actualiza la página y, si continúa, revisa el registro del servidor." });
+            }
         }
 
         [HttpPost("cierres")]
@@ -158,7 +166,7 @@ ORDER BY c.FechaCierre DESC,c.IdCierreTemporal DESC;", connection);
         {
             if (!UserId.HasValue) return Unauthorized(new { mensaje = "La sesión venció. Inicia sesión otra vez." });
             if (string.IsNullOrWhiteSpace(ConnectionString)) return StatusCode(503, new { mensaje = "Falta configurar SQL Server." });
-            if (request.EfectivoInicial < 0 || request.EfectivoContado < 0 || request.SalidasCajaEsperadas < 0 || request.EfectivoInicial > MaxAmount || request.EfectivoContado > MaxAmount || request.SalidasCajaEsperadas > MaxAmount) return BadRequest(new { mensaje = "Revisa el efectivo inicial, el efectivo contado y las salidas registradas." });
+            if (request.EfectivoInicial < 0 || request.EfectivoContado < 0 || request.SalidasEfectivoEsperadas < 0 || request.EfectivoInicial > MaxAmount || request.EfectivoContado > MaxAmount || request.SalidasEfectivoEsperadas > MaxAmount) return BadRequest(new { mensaje = "Revisa el efectivo inicial, el efectivo contado y las salidas registradas." });
             try
             {
                 await using var connection = new SqlConnection(ConnectionString); await connection.OpenAsync();
@@ -173,17 +181,17 @@ DECLARE @ultimoCierre datetime2(0)=(SELECT MAX(FechaCierre) FROM dbo.FIN_CIERRE_
 IF @ultimoCierre IS NULL SET @ultimoCierre=CONVERT(datetime2(0),CONVERT(date,@momento));
 SELECT @momento MomentoCierre,
  CAST(ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE PagadoDesdeCaja=1 AND FechaRegistro>@ultimoCierre AND FechaRegistro<=@momento),0)
-     +ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE PagadoDesdeCaja=1 AND FechaRegistro>@ultimoCierre AND FechaRegistro<=@momento),0) AS decimal(12,2)) SalidasCaja;", connection, transaction))
+     +ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE PagadoDesdeCaja=1 AND FechaRegistro>@ultimoCierre AND FechaRegistro<=@momento),0) AS decimal(12,2)) SalidasEfectivo;", connection, transaction))
                     await using (var reader = await pendingCommand.ExecuteReaderAsync())
                     {
                         await reader.ReadAsync();
                         closeAt = reader.GetDateTime(0);
                         cashOutflows = Money(reader, 1);
                     }
-                    if (Math.Abs(cashOutflows - request.SalidasCajaEsperadas) >= 0.005m)
+                    if (Math.Abs(cashOutflows - request.SalidasEfectivoEsperadas) >= 0.005m)
                     {
                         await transaction.RollbackAsync();
-                        return Conflict(new { mensaje = "Se registraron nuevas salidas desde que abriste el cierre. Actualiza el resumen y vuelve a revisar el cálculo." });
+                        return Conflict(new { mensaje = "Se registraron nuevos pagos en efectivo desde que abriste el cierre. Actualiza el resumen y vuelve a revisar el cálculo." });
                     }
 
                     var sales = request.EfectivoContado + cashOutflows - request.EfectivoInicial;
@@ -205,7 +213,7 @@ VALUES(@fecha,@ventas,@capital,@personal,@usuario,@efectivoInicial,@efectivoCont
                     command.Parameters.Add("@usuario", SqlDbType.Int).Value = UserId.Value;
                     var id = Convert.ToInt32(await command.ExecuteScalarAsync());
                     await transaction.CommitAsync();
-                    return Ok(new { id, ventas = sales, capital, personal, salidasCaja = cashOutflows, mensaje = "Cierre guardado." });
+                    return Ok(new { id, ventas = sales, capital, personal, salidasEfectivo = cashOutflows, mensaje = "Cierre guardado." });
                 }
                 catch
                 {
@@ -308,52 +316,103 @@ UPDATE dbo.FIN_DEPOSITO_TEMPORAL SET Anulado=1 WHERE IdDepositoTemporal=@id;", c
         public async Task<IActionResult> SaveExpense([FromBody] ExpenseRequest request)
         {
             if (!UserId.HasValue) return Unauthorized(new { mensaje = "La sesión venció. Inicia sesión otra vez." });
-            var type = (request.Tipo ?? "").Trim(); var concept = (request.Concepto ?? "").Trim();
-            var sourceAccount = NormalizeAccount(request.CuentaOrigen);
+            var source = (request.OrigenPago ?? "").Trim();
+            var concept = (request.Concepto ?? "").Trim();
             var receipt = (request.Comprobante ?? "").Trim();
-            if (request.Monto <= 0 || request.Monto > MaxAmount || request.Fecha == default || request.Fecha.Date > DateTime.Today || (sourceAccount != "Capital" && sourceAccount != "Personal") || receipt.Length > 100 || (request.PagadoDesdeCaja && request.IdBanco.HasValue) || (!request.PagadoDesdeCaja && (!request.IdBanco.HasValue || request.IdBanco <= 0))) return BadRequest(new { mensaje = "Indica un monto, fecha, fondo y origen válidos. Si salió de banco, selecciona cuál." });
+            var isCash = source is "Caja" or "Capital" or "Ganancia";
+            var isBank = source is "BAM" or "Banrural";
+            var sourceAccount = source switch { "Caja" => "Caja", "Capital" or "Banrural" => "Capital", "Ganancia" or "BAM" => "Personal", _ => "" };
+            var cashSource = isCash ? source : null;
+            var paidFromCash = isCash;
+            if (request.Monto <= 0 || request.Monto > MaxAmount || request.Fecha == default || request.Fecha.Date > DateTime.Today || (!isCash && !isBank) || receipt.Length > 100 || (isBank && (string.IsNullOrWhiteSpace(receipt) || !request.IdBanco.HasValue || request.IdBanco <= 0)) || (isCash && request.IdBanco.HasValue))
+                return BadRequest(new { mensaje = "Indica un monto, gasto, origen y fecha válidos. Las salidas bancarias requieren comprobante." });
+            if (request.IdPeriodoGastoPersonal <= 0 && (concept.Length is 0 or > 150))
+                return BadRequest(new { mensaje = "Si seleccionas Otros, escribe el concepto (máximo 150 caracteres)." });
             if (string.IsNullOrWhiteSpace(ConnectionString)) return StatusCode(503, new { mensaje = "Falta configurar SQL Server." });
             try
             {
-                await using var connection = new SqlConnection(ConnectionString); await connection.OpenAsync();
-                if (type == "Personal")
+                await using var connection = new SqlConnection(ConnectionString);
+                await connection.OpenAsync();
+                using var transaction = connection.BeginTransaction(IsolationLevel.Serializable);
+                try
                 {
-                    if (request.IdPeriodoGastoPersonal <= 0) return BadRequest(new { mensaje = "Selecciona el gasto personal que se pagó." });
-                    using var transaction = connection.BeginTransaction(IsolationLevel.Serializable);
-                    try
+                    if (isBank)
+                    {
+                        await using var bankCommand = new SqlCommand(@"
+SELECT b.Nombre,CASE WHEN UPPER(b.Nombre) LIKE '%BANRURAL%' THEN 'Capital' ELSE 'Ganancia' END Fondo,
+ CAST(CASE WHEN UPPER(b.Nombre) LIKE '%BANRURAL%' THEN b.SaldoCapitalInicial
+   +ISNULL((SELECT SUM(x.Capital) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
+   -ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoOrigen=b.IdBanco AND t.Fondo='Capital'),0)
+   +ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoDestino=b.IdBanco AND t.Fondo='Capital'),0)
+   -ISNULL((SELECT SUM(m.Monto) FROM dbo.FIN_MOVIMIENTO m WHERE m.IdBanco=b.IdBanco AND m.Anulado=0 AND m.CuentaOrigen='Capital'),0)
+   -ISNULL((SELECT SUM(p.Monto) FROM dbo.PAGO_GASTO_PERSONAL p WHERE p.IdBanco=b.IdBanco AND p.Anulado=0 AND p.CuentaOrigen='Capital'),0)
+ ELSE b.SaldoGananciaInicial
+   +ISNULL((SELECT SUM(x.Ganancia) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
+   -ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoOrigen=b.IdBanco AND t.Fondo='Ganancia'),0)
+   +ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoDestino=b.IdBanco AND t.Fondo='Ganancia'),0)
+   -ISNULL((SELECT SUM(m.Monto) FROM dbo.FIN_MOVIMIENTO m WHERE m.IdBanco=b.IdBanco AND m.Anulado=0 AND m.CuentaOrigen='Personal'),0)
+   -ISNULL((SELECT SUM(p.Monto) FROM dbo.PAGO_GASTO_PERSONAL p WHERE p.IdBanco=b.IdBanco AND p.Anulado=0 AND p.CuentaOrigen='Personal'),0)
+ END AS decimal(12,2)) Disponible
+FROM dbo.FIN_BANCO_TEMPORAL b WITH(UPDLOCK,HOLDLOCK)
+WHERE b.IdBanco=@idBanco AND b.Activo=1 AND ((@source='BAM' AND UPPER(b.Nombre) LIKE '%BAM%') OR (@source='Banrural' AND UPPER(b.Nombre) LIKE '%BANRURAL%'));", connection, transaction);
+                        bankCommand.Parameters.Add("@idBanco", SqlDbType.Int).Value = request.IdBanco!.Value;
+                        bankCommand.Parameters.Add("@source", SqlDbType.VarChar, 20).Value = source;
+                        await using var bankReader = await bankCommand.ExecuteReaderAsync();
+                        if (!await bankReader.ReadAsync()) throw new InvalidOperationException("No se encontró el banco seleccionado. Revisa la cuenta BAM o Banrural en Depósitos.");
+                        var bankFund = bankReader.GetString(1);
+                        var available = bankReader.GetDecimal(2);
+                        await bankReader.CloseAsync();
+                        if (bankFund != sourceAccount) throw new InvalidOperationException("El banco seleccionado no corresponde al fondo configurado.");
+                        if (request.Monto > available) throw new InvalidOperationException($"El saldo disponible de {source} es Q {available:N2}; no alcanza para esta salida.");
+                    }
+                    if (request.IdPeriodoGastoPersonal > 0)
                     {
                         await using var command = new SqlCommand(@"
-DECLARE @saldo decimal(12,2);
-SELECT @saldo=p.MontoProgramado-ISNULL(SUM(pg.Monto),0) FROM dbo.GASTO_PERSONAL_PERIODO p WITH(UPDLOCK,HOLDLOCK) LEFT JOIN dbo.PAGO_GASTO_PERSONAL pg ON pg.IdPeriodoGastoPersonal=p.IdPeriodoGastoPersonal WHERE p.IdPeriodoGastoPersonal=@periodo GROUP BY p.MontoProgramado;
-IF @saldo IS NULL THROW 51021,'No se encontró el gasto personal pendiente.',1;
+DECLARE @saldo decimal(12,2),@concepto varchar(250);
+SELECT @saldo=p.MontoProgramado-ISNULL(x.Pagado,0),@concepto=g.Nombre
+FROM dbo.GASTO_PERSONAL_PERIODO p WITH(UPDLOCK,HOLDLOCK)
+JOIN dbo.GASTO_PERSONAL g ON g.IdGastoPersonal=p.IdGastoPersonal AND g.Activo=1
+OUTER APPLY(SELECT SUM(Monto) Pagado FROM dbo.PAGO_GASTO_PERSONAL WHERE IdPeriodoGastoPersonal=p.IdPeriodoGastoPersonal AND Anulado=0) x
+WHERE p.IdPeriodoGastoPersonal=@periodo AND p.Anio=YEAR(@fecha) AND p.Mes=MONTH(@fecha);
+IF @saldo IS NULL THROW 51023,'La fecha debe pertenecer al período actual para registrar un gasto de la lista.',1;
 IF @monto>@saldo THROW 51022,'El monto supera el saldo pendiente de ese gasto.',1;
-INSERT dbo.PAGO_GASTO_PERSONAL(IdPeriodoGastoPersonal,IdUsuario,Monto,FechaPago,MedioPago,Referencia,Observaciones,CuentaOrigen,PagadoDesdeCaja,IdBanco) VALUES(@periodo,@usuario,@monto,@fecha,@medioPago,@referencia,@concepto,@cuentaOrigen,@pagadoDesdeCaja,@idBanco);", connection, (SqlTransaction)transaction);
-                        command.Parameters.Add("@periodo", SqlDbType.Int).Value = request.IdPeriodoGastoPersonal; command.Parameters.Add("@usuario", SqlDbType.Int).Value = UserId.Value;
-                        AddMoney(command, "@monto", request.Monto); command.Parameters.Add("@fecha", SqlDbType.DateTime2).Value = request.Fecha.Date;
-                        command.Parameters.Add("@medioPago", SqlDbType.VarChar, 20).Value = request.PagadoDesdeCaja ? "Efectivo" : "Transferencia";
-                        command.Parameters.Add("@cuentaOrigen", SqlDbType.VarChar, 15).Value = sourceAccount; command.Parameters.Add("@pagadoDesdeCaja", SqlDbType.Bit).Value = request.PagadoDesdeCaja;
-                        command.Parameters.Add("@idBanco", SqlDbType.Int).Value = request.IdBanco.HasValue ? (object)request.IdBanco.Value : DBNull.Value; command.Parameters.Add("@referencia", SqlDbType.VarChar, 100).Value = receipt.Length == 0 ? (object)DBNull.Value : receipt;
-                        command.Parameters.Add("@concepto", SqlDbType.VarChar, 250).Value = string.IsNullOrWhiteSpace(concept) ? "Pago de gasto personal" : concept;
-                        await command.ExecuteNonQueryAsync(); transaction.Commit();
+INSERT dbo.PAGO_GASTO_PERSONAL(IdPeriodoGastoPersonal,IdUsuario,Monto,FechaPago,MedioPago,Referencia,Observaciones,CuentaOrigen,PagadoDesdeCaja,IdBanco,OrigenEfectivo)
+VALUES(@periodo,@usuario,@monto,@fecha,@medioPago,@referencia,@concepto,@cuentaOrigen,@pagadoDesdeCaja,@idBanco,@origenEfectivo);", connection, transaction);
+                        command.Parameters.Add("@periodo", SqlDbType.Int).Value = request.IdPeriodoGastoPersonal;
+                        command.Parameters.Add("@usuario", SqlDbType.Int).Value = UserId.Value;
+                        AddMoney(command, "@monto", request.Monto);
+                        command.Parameters.Add("@fecha", SqlDbType.DateTime2).Value = request.Fecha.Date;
+                        command.Parameters.Add("@medioPago", SqlDbType.VarChar, 20).Value = paidFromCash ? "Efectivo" : "Transferencia";
+                        command.Parameters.Add("@referencia", SqlDbType.VarChar, 100).Value = receipt.Length == 0 ? (object)DBNull.Value : receipt;
+                        command.Parameters.Add("@cuentaOrigen", SqlDbType.VarChar, 15).Value = sourceAccount;
+                        command.Parameters.Add("@pagadoDesdeCaja", SqlDbType.Bit).Value = paidFromCash;
+                        command.Parameters.Add("@idBanco", SqlDbType.Int).Value = request.IdBanco.HasValue ? (object)request.IdBanco.Value : DBNull.Value;
+                        command.Parameters.Add("@origenEfectivo", SqlDbType.VarChar, 20).Value = cashSource == null ? (object)DBNull.Value : cashSource;
+                        await command.ExecuteNonQueryAsync();
                     }
-                    catch { transaction.Rollback(); throw; }
+                    else
+                    {
+                        await using var command = new SqlCommand("INSERT dbo.FIN_MOVIMIENTO(Tipo,IdCompra,IdUsuario,Fecha,Concepto,Monto,MedioPago,Referencia,CuentaOrigen,PagadoDesdeCaja,IdBanco,OrigenEfectivo) VALUES('Empresa',NULL,@usuario,@fecha,@concepto,@monto,@medioPago,@referencia,@cuentaOrigen,@pagadoDesdeCaja,@idBanco,@origenEfectivo);", connection, transaction);
+                        command.Parameters.Add("@usuario", SqlDbType.Int).Value = UserId.Value;
+                        command.Parameters.Add("@fecha", SqlDbType.DateTime2).Value = request.Fecha.Date;
+                        command.Parameters.Add("@medioPago", SqlDbType.VarChar, 20).Value = paidFromCash ? "Efectivo" : "Transferencia";
+                        command.Parameters.Add("@referencia", SqlDbType.VarChar, 100).Value = receipt.Length == 0 ? (object)DBNull.Value : receipt;
+                        command.Parameters.Add("@cuentaOrigen", SqlDbType.VarChar, 15).Value = sourceAccount;
+                        command.Parameters.Add("@pagadoDesdeCaja", SqlDbType.Bit).Value = paidFromCash;
+                        command.Parameters.Add("@idBanco", SqlDbType.Int).Value = request.IdBanco.HasValue ? (object)request.IdBanco.Value : DBNull.Value;
+                        command.Parameters.Add("@origenEfectivo", SqlDbType.VarChar, 20).Value = cashSource == null ? (object)DBNull.Value : cashSource;
+                        command.Parameters.Add("@concepto", SqlDbType.VarChar, 150).Value = concept;
+                        AddMoney(command, "@monto", request.Monto);
+                        await command.ExecuteNonQueryAsync();
+                    }
+                    await transaction.CommitAsync();
+                    return Ok(new { responsable = UserName, mensaje = "Salida registrada." });
                 }
-                else if (type == "Empresa")
-                {
-                    if (string.IsNullOrWhiteSpace(concept) || concept.Length > 150) return BadRequest(new { mensaje = "Escribe el concepto de la salida de empresa (máximo 150 caracteres)." });
-                    await using var command = new SqlCommand("INSERT dbo.FIN_MOVIMIENTO(Tipo,IdCompra,IdUsuario,Fecha,Concepto,Monto,MedioPago,Referencia,CuentaOrigen,PagadoDesdeCaja,IdBanco) VALUES('Empresa',NULL,@usuario,@fecha,@concepto,@monto,@medioPago,@referencia,@cuentaOrigen,@pagadoDesdeCaja,@idBanco); SELECT CONVERT(int,SCOPE_IDENTITY());", connection);
-                    command.Parameters.Add("@usuario", SqlDbType.Int).Value = UserId.Value; command.Parameters.Add("@fecha", SqlDbType.DateTime2).Value = request.Fecha.Date;
-                    command.Parameters.Add("@medioPago", SqlDbType.VarChar, 20).Value = request.PagadoDesdeCaja ? "Efectivo" : "Transferencia";
-                    command.Parameters.Add("@cuentaOrigen", SqlDbType.VarChar, 15).Value = sourceAccount; command.Parameters.Add("@pagadoDesdeCaja", SqlDbType.Bit).Value = request.PagadoDesdeCaja;
-                    command.Parameters.Add("@idBanco", SqlDbType.Int).Value = request.IdBanco.HasValue ? (object)request.IdBanco.Value : DBNull.Value; command.Parameters.Add("@referencia", SqlDbType.VarChar, 100).Value = receipt.Length == 0 ? (object)DBNull.Value : receipt;
-                    command.Parameters.Add("@concepto", SqlDbType.VarChar, 150).Value = concept; AddMoney(command, "@monto", request.Monto);
-                    await command.ExecuteScalarAsync();
-                }
-                else return BadRequest(new { mensaje = "Selecciona si la salida es personal o de empresa." });
-                return Ok(new { responsable = UserName, mensaje = "Salida registrada." });
+                catch { await transaction.RollbackAsync(); throw; }
             }
-            catch (SqlException ex) when (ex.Number is 51021 or 51022)
+            catch (SqlException ex) when (ex.Number is 51021 or 51022 or 51023)
             { return Conflict(new { mensaje = ex.Message }); }
+            catch (InvalidOperationException ex) { return Conflict(new { mensaje = ex.Message }); }
             catch (SqlException ex)
             { _logger.LogError(ex, "No se pudo registrar la salida de Finanzas."); return StatusCode(503, new { mensaje = "No se pudo registrar la salida. Revisa la conexión y las tablas de Finanzas." }); }
         }
@@ -374,11 +433,11 @@ FROM dbo.GASTO_PERSONAL g WHERE g.Activo=1 AND NOT EXISTS(SELECT 1 FROM dbo.GAST
         private static void AddMoney(SqlCommand command, string name, decimal value)
         { var p = command.Parameters.Add(name, SqlDbType.Decimal); p.Precision = 12; p.Scale = 2; p.Value = value; }
 
-        public sealed class ClosingRequest { public decimal EfectivoInicial { get; set; } public decimal EfectivoContado { get; set; } public decimal SalidasCajaEsperadas { get; set; } }
+        public sealed class ClosingRequest { public decimal EfectivoInicial { get; set; } public decimal EfectivoContado { get; set; } public decimal SalidasEfectivoEsperadas { get; set; } }
         public class DepositRequest { public string? Cuenta { get; set; } public decimal Monto { get; set; } public DateTime Fecha { get; set; } public string? Comprobante { get; set; } }
         public sealed class DepositCorrectionRequest : DepositRequest { public string? Motivo { get; set; } }
         public sealed class DepositCancelRequest { public string? Motivo { get; set; } }
-        public sealed class ExpenseRequest { public string? Tipo { get; set; } public string? CuentaOrigen { get; set; } public bool PagadoDesdeCaja { get; set; } public int? IdBanco { get; set; } public int IdPeriodoGastoPersonal { get; set; } public decimal Monto { get; set; } public DateTime Fecha { get; set; } public string? Concepto { get; set; } public string? Comprobante { get; set; } }
+        public sealed class ExpenseRequest { public string? OrigenPago { get; set; } public int? IdBanco { get; set; } public int IdPeriodoGastoPersonal { get; set; } public decimal Monto { get; set; } public DateTime Fecha { get; set; } public string? Concepto { get; set; } public string? Comprobante { get; set; } }
         public sealed class PersonalExpense { public int IdPeriodo { get; set; } public string Nombre { get; set; } = ""; public decimal Saldo { get; set; } }
         public sealed class CloseAudit { public int Id { get; set; } public string Fecha { get; set; } = ""; public string FechaIso { get; set; } = ""; public string Tipo { get; set; } = ""; public decimal Ventas { get; set; } public decimal? Capital { get; set; } public decimal? Ganancia { get; set; } public string Responsable { get; set; } = ""; public string Cuenta { get; set; } = ""; public string Comprobante { get; set; } = ""; public bool Anulado { get; set; } }
         public sealed class FinanceSummary
@@ -386,7 +445,7 @@ FROM dbo.GASTO_PERSONAL g WHERE g.Activo=1 AND NOT EXISTS(SELECT 1 FROM dbo.GAST
             public string Responsable { get; set; } = ""; public string Fecha { get; set; } = ""; public string Mes { get; set; } = "";
             public decimal Capital { get; set; } public decimal CapitalGeneradoTotal { get; set; } public decimal Personal { get; set; } public decimal PersonalGeneradoTotal { get; set; } public decimal DepositadoCapital { get; set; } public decimal DepositadoPersonal { get; set; } public decimal CapitalDepositosMasCaja { get; set; } public decimal GananciaDepositosMasCaja { get; set; }
             public decimal ObligacionesMes { get; set; } public decimal PagadoPersonal { get; set; } public decimal AsignadoPersonalMes { get; set; } public decimal VentasManualMes { get; set; }
-            public decimal VentasMesTotal { get; set; } public decimal CapitalGeneradoMes { get; set; } public decimal SalidasCapitalMes { get; set; } public decimal SalidasPersonalMes { get; set; } public decimal SalidasCajaPendientes { get; set; }
+            public decimal VentasMesTotal { get; set; } public decimal CapitalGeneradoMes { get; set; } public decimal SalidasCapitalMes { get; set; } public decimal SalidasPersonalMes { get; set; } public decimal SalidasEfectivoPendientes { get; set; } public decimal SalidasCapitalEfectivoPendientes { get; set; } public decimal SalidasGananciaEfectivoPendientes { get; set; }
             public string ProximoGasto { get; set; } = ""; public string FechaProximoGasto { get; set; } = "";
             public List<PersonalExpense> Gastos { get; } = new List<PersonalExpense>();
         }

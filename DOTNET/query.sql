@@ -276,12 +276,14 @@ CREATE TABLE PAGO_GASTO_PERSONAL(
     MedioPago varchar(20) not null constraint DF_PAGO_GASTO_PERSONAL_MedioPago default ('Efectivo'),
     CuentaOrigen varchar(15) not null constraint DF_PAGO_GASTO_PERSONAL_CuentaOrigen default ('Personal'),
     PagadoDesdeCaja bit not null constraint DF_PAGO_GASTO_PERSONAL_PagadoDesdeCaja default (0),
+    OrigenEfectivo varchar(20) null,
     Referencia varchar(100) null,
     Observaciones varchar(250) null,
     FechaRegistro datetime2(0) not null constraint DF_PAGO_GASTO_PERSONAL_FechaRegistro default (sysdatetime()),
     constraint CK_PAGO_GASTO_PERSONAL_Monto check (Monto > 0),
     constraint CK_PAGO_GASTO_PERSONAL_MedioPago check (MedioPago in ('Efectivo', 'Transferencia', 'Tarjeta', 'Otro')),
-    constraint CK_PAGO_GASTO_PERSONAL_CuentaOrigen check (CuentaOrigen in ('Capital','Personal'))
+    constraint CK_PAGO_GASTO_PERSONAL_CuentaOrigen check (CuentaOrigen in ('Capital','Personal','Caja')),
+    constraint CK_PAGO_GASTO_PERSONAL_OrigenEfectivo check (OrigenEfectivo is null or OrigenEfectivo in ('Caja','Capital','Ganancia'))
 )
 go
 
@@ -329,12 +331,14 @@ CREATE TABLE FIN_MOVIMIENTO(
     MedioPago varchar(20) not null constraint DF_FIN_MOVIMIENTO_Medio default('Efectivo'),
     CuentaOrigen varchar(15) not null constraint DF_FIN_MOVIMIENTO_CuentaOrigen default('Capital'),
     PagadoDesdeCaja bit not null constraint DF_FIN_MOVIMIENTO_PagadoDesdeCaja default(0),
+    OrigenEfectivo varchar(20) null,
     FechaRegistro datetime2(0) not null constraint DF_FIN_MOVIMIENTO_FechaRegistro default(sysdatetime()),
     Referencia varchar(100) null,
     CONSTRAINT CK_FIN_MOVIMIENTO_Tipo CHECK(Tipo in ('Empresa','Proveedor')),
     CONSTRAINT CK_FIN_MOVIMIENTO_Monto CHECK(Monto > 0),
     CONSTRAINT CK_FIN_MOVIMIENTO_Medio CHECK(MedioPago in ('Efectivo','Transferencia','Tarjeta','Otro')),
-    CONSTRAINT CK_FIN_MOVIMIENTO_CuentaOrigen CHECK(CuentaOrigen in ('Capital','Personal'))
+    CONSTRAINT CK_FIN_MOVIMIENTO_CuentaOrigen CHECK(CuentaOrigen in ('Capital','Personal','Caja')),
+    CONSTRAINT CK_FIN_MOVIMIENTO_OrigenEfectivo CHECK(OrigenEfectivo is null or OrigenEfectivo in ('Caja','Capital','Ganancia'))
 )
 go
 
@@ -1655,3 +1659,15 @@ IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.PAGO_GAS
 
 COMMIT TRANSACTION;
 SELECT N'Migración aplicada: cierres, depósitos por lote, transferencias y salidas bancarias.' AS Resultado;
+
+-- Origen exacto del efectivo usado en una salida.
+IF COL_LENGTH(N'dbo.FIN_MOVIMIENTO', N'OrigenEfectivo') IS NULL EXEC(N'ALTER TABLE dbo.FIN_MOVIMIENTO ADD OrigenEfectivo varchar(20) NULL;');
+IF COL_LENGTH(N'dbo.PAGO_GASTO_PERSONAL', N'OrigenEfectivo') IS NULL EXEC(N'ALTER TABLE dbo.PAGO_GASTO_PERSONAL ADD OrigenEfectivo varchar(20) NULL;');
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID(N'dbo.FIN_MOVIMIENTO') AND name=N'CK_FIN_MOVIMIENTO_CuentaOrigen') EXEC(N'ALTER TABLE dbo.FIN_MOVIMIENTO DROP CONSTRAINT CK_FIN_MOVIMIENTO_CuentaOrigen;');
+EXEC(N'ALTER TABLE dbo.FIN_MOVIMIENTO ADD CONSTRAINT CK_FIN_MOVIMIENTO_CuentaOrigen CHECK(CuentaOrigen IN (''Capital'',''Personal'',''Caja''));');
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID(N'dbo.PAGO_GASTO_PERSONAL') AND name=N'CK_PAGO_GASTO_PERSONAL_CuentaOrigen') EXEC(N'ALTER TABLE dbo.PAGO_GASTO_PERSONAL DROP CONSTRAINT CK_PAGO_GASTO_PERSONAL_CuentaOrigen;');
+EXEC(N'ALTER TABLE dbo.PAGO_GASTO_PERSONAL ADD CONSTRAINT CK_PAGO_GASTO_PERSONAL_CuentaOrigen CHECK(CuentaOrigen IN (''Capital'',''Personal'',''Caja''));');
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID(N'dbo.FIN_MOVIMIENTO') AND name=N'CK_FIN_MOVIMIENTO_OrigenEfectivo') EXEC(N'ALTER TABLE dbo.FIN_MOVIMIENTO ADD CONSTRAINT CK_FIN_MOVIMIENTO_OrigenEfectivo CHECK(OrigenEfectivo IS NULL OR OrigenEfectivo IN (''Caja'',''Capital'',''Ganancia''));');
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID(N'dbo.PAGO_GASTO_PERSONAL') AND name=N'CK_PAGO_GASTO_PERSONAL_OrigenEfectivo') EXEC(N'ALTER TABLE dbo.PAGO_GASTO_PERSONAL ADD CONSTRAINT CK_PAGO_GASTO_PERSONAL_OrigenEfectivo CHECK(OrigenEfectivo IS NULL OR OrigenEfectivo IN (''Caja'',''Capital'',''Ganancia''));');
+EXEC(N'UPDATE dbo.FIN_MOVIMIENTO SET OrigenEfectivo=''Caja'' WHERE PagadoDesdeCaja=1 AND OrigenEfectivo IS NULL;');
+EXEC(N'UPDATE dbo.PAGO_GASTO_PERSONAL SET OrigenEfectivo=''Caja'' WHERE PagadoDesdeCaja=1 AND OrigenEfectivo IS NULL;');

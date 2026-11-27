@@ -73,6 +73,54 @@ FROM dbo.FIN_BANCO_TEMPORAL b WHERE b.Activo=1 ORDER BY b.Nombre;", connection))
             { _logger.LogError(ex, "No se pudieron cargar datos para depósitos."); return StatusCode(503, new { mensaje = "No se pudieron cargar depósitos y bancos. Aplica la migración de módulos financieros." }); }
         }
 
+        [HttpGet("salidas/catalogo")]
+        public async Task<IActionResult> ExpenseCatalog()
+        {
+            if (!UserId.HasValue) return Unauthorized(new { mensaje = "Inicia sesión para registrar salidas." });
+            if (string.IsNullOrWhiteSpace(ConnectionString)) return StatusCode(503, new { mensaje = "Falta configurar SQL Server." });
+            try
+            {
+                await using var connection = new SqlConnection(ConnectionString);
+                await connection.OpenAsync();
+                var expenses = new List<object>();
+                await using (var command = new SqlCommand(@"
+SELECT g.IdGastoPersonal,g.Nombre,p.IdPeriodoGastoPersonal,
+       CAST(CASE WHEN p.IdPeriodoGastoPersonal IS NULL THEN 0 ELSE p.MontoProgramado-ISNULL(x.Pagado,0) END AS decimal(12,2)) Saldo
+FROM dbo.GASTO_PERSONAL g
+LEFT JOIN dbo.GASTO_PERSONAL_PERIODO p ON p.IdGastoPersonal=g.IdGastoPersonal AND p.Anio=YEAR(GETDATE()) AND p.Mes=MONTH(GETDATE())
+LEFT JOIN (SELECT IdPeriodoGastoPersonal,SUM(Monto) Pagado FROM dbo.PAGO_GASTO_PERSONAL WHERE Anulado=0 GROUP BY IdPeriodoGastoPersonal) x ON x.IdPeriodoGastoPersonal=p.IdPeriodoGastoPersonal
+WHERE g.Activo=1 ORDER BY g.Nombre;", connection))
+                await using (var reader = await command.ExecuteReaderAsync())
+                    while (await reader.ReadAsync()) expenses.Add(new { id = reader.GetInt32(0), nombre = reader.GetString(1), idPeriodo = reader.IsDBNull(2) ? 0 : reader.GetInt32(2), saldo = reader.GetDecimal(3) });
+
+                var banks = new List<object>();
+                await using (var command = new SqlCommand(@"
+SELECT b.IdBanco,b.Nombre,f.Cuenta,
+ CAST(CASE WHEN f.Cuenta='Capital' THEN b.SaldoCapitalInicial
+   +ISNULL((SELECT SUM(x.Capital) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
+   -ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoOrigen=b.IdBanco AND t.Fondo='Capital'),0)
+   +ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoDestino=b.IdBanco AND t.Fondo='Capital'),0)
+   -ISNULL((SELECT SUM(m.Monto) FROM dbo.FIN_MOVIMIENTO m WHERE m.IdBanco=b.IdBanco AND m.Anulado=0 AND m.CuentaOrigen='Capital'),0)
+   -ISNULL((SELECT SUM(p.Monto) FROM dbo.PAGO_GASTO_PERSONAL p WHERE p.IdBanco=b.IdBanco AND p.Anulado=0 AND p.CuentaOrigen='Capital'),0)
+ ELSE b.SaldoGananciaInicial
+   +ISNULL((SELECT SUM(x.Ganancia) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
+   -ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoOrigen=b.IdBanco AND t.Fondo='Ganancia'),0)
+   +ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoDestino=b.IdBanco AND t.Fondo='Ganancia'),0)
+   -ISNULL((SELECT SUM(m.Monto) FROM dbo.FIN_MOVIMIENTO m WHERE m.IdBanco=b.IdBanco AND m.Anulado=0 AND m.CuentaOrigen='Personal'),0)
+   -ISNULL((SELECT SUM(p.Monto) FROM dbo.PAGO_GASTO_PERSONAL p WHERE p.IdBanco=b.IdBanco AND p.Anulado=0 AND p.CuentaOrigen='Personal'),0)
+ END AS decimal(12,2)) Disponible
+FROM dbo.FIN_BANCO_TEMPORAL b
+CROSS APPLY (VALUES(CASE WHEN UPPER(b.Nombre) LIKE '%BANRURAL%' THEN 'Capital' ELSE 'Ganancia' END)) f(Cuenta)
+WHERE b.Activo=1 AND (UPPER(b.Nombre) LIKE '%BANRURAL%' OR UPPER(b.Nombre) LIKE '%BAM%')
+ORDER BY CASE WHEN f.Cuenta='Ganancia' THEN 0 ELSE 1 END;", connection))
+                await using (var reader = await command.ExecuteReaderAsync())
+                    while (await reader.ReadAsync()) banks.Add(new { id = reader.GetInt32(0), nombre = reader.GetString(1), fondo = reader.GetString(2), disponible = reader.GetDecimal(3) });
+                return Ok(new { gastos = expenses, bancos = banks });
+            }
+            catch (SqlException ex)
+            { _logger.LogError(ex, "No se pudo cargar el catálogo de salidas."); return StatusCode(503, new { mensaje = "No se pudo cargar el catálogo. Revisa que esté aplicada la migración de origen del efectivo." }); }
+        }
+
         [HttpPost("bancos")]
         public async Task<IActionResult> CreateBank([FromBody] BankRequest request)
         {
@@ -213,18 +261,18 @@ UPDATE dbo.FIN_DEPOSITO_LOTE SET Anulado=1,MotivoAnulacion=@motivo,UsuarioAnulac
                 await using var connection = new SqlConnection(ConnectionString); await connection.OpenAsync();
                 var rows = new List<object>();
                 await using var command = new SqlCommand(@"
-SELECT TOP(30) Id,Fecha,Tipo,Concepto,Monto,Banco,Detalle,Responsable,Anulado FROM (
- SELECT l.IdLote Id,l.Fecha,CASE WHEN l.Anulado=1 THEN 'Depósito anulado' ELSE 'Depósito' END Tipo,'Boleta '+l.Comprobante Concepto,l.MontoTotal Monto,b.Nombre Banco,CONCAT('Ventas Q ',FORMAT(SUM(c.Ventas),'N2'),' · Capital Q ',FORMAT(SUM(c.Capital),'N2'),' · Ganancia Q ',FORMAT(SUM(c.Ganancia),'N2'),CASE WHEN l.Anulado=1 THEN ' · '+ISNULL(l.MotivoAnulacion,'Anulado') ELSE '' END) Detalle,u.NombreCompleto Responsable,CAST(l.Anulado AS bit) Anulado,'depositos' Grupo
+SELECT TOP(30) Id,Fecha,Tipo,Concepto,Monto,Banco,Detalle,Responsable,Anulado,Comprobante FROM (
+ SELECT l.IdLote Id,l.Fecha,CASE WHEN l.Anulado=1 THEN 'Depósito anulado' ELSE 'Depósito' END Tipo,'Boleta '+l.Comprobante Concepto,l.MontoTotal Monto,b.Nombre Banco,CONCAT('Ventas Q ',FORMAT(SUM(c.Ventas),'N2'),' · Capital Q ',FORMAT(SUM(c.Capital),'N2'),' · Ganancia Q ',FORMAT(SUM(c.Ganancia),'N2'),CASE WHEN l.Anulado=1 THEN ' · '+ISNULL(l.MotivoAnulacion,'Anulado') ELSE '' END) Detalle,u.NombreCompleto Responsable,CAST(l.Anulado AS bit) Anulado,'depositos' Grupo,l.Comprobante Comprobante
  FROM dbo.FIN_DEPOSITO_LOTE l JOIN dbo.FIN_BANCO_TEMPORAL b ON b.IdBanco=l.IdBanco JOIN dbo.FIN_DEPOSITO_LOTE_CIERRE c ON c.IdLote=l.IdLote LEFT JOIN dbo.USUARIO u ON u.IdUsuario=l.IdUsuario GROUP BY l.Fecha,l.Comprobante,l.MontoTotal,b.Nombre,u.NombreCompleto,l.IdLote,l.Anulado,l.MotivoAnulacion
- UNION ALL SELECT t.IdTransferencia,t.Fecha,'Transferencia', 'Boleta '+t.Comprobante,t.Monto,bo.Nombre,CONCAT(CASE WHEN t.Fondo='Personal' THEN 'Ganancia' ELSE t.Fondo END,' · ',bo.Nombre,' → ',bd.Nombre),u.NombreCompleto,CAST(0 AS bit),'depositos'
+ UNION ALL SELECT t.IdTransferencia,t.Fecha,'Transferencia', 'Boleta '+t.Comprobante,t.Monto,bo.Nombre,CONCAT(CASE WHEN t.Fondo='Personal' THEN 'Ganancia' ELSE t.Fondo END,' · ',bo.Nombre,' → ',bd.Nombre),u.NombreCompleto,CAST(0 AS bit),'depositos',t.Comprobante
  FROM dbo.FIN_TRANSFERENCIA_BANCARIA t JOIN dbo.FIN_BANCO_TEMPORAL bo ON bo.IdBanco=t.IdBancoOrigen JOIN dbo.FIN_BANCO_TEMPORAL bd ON bd.IdBanco=t.IdBancoDestino LEFT JOIN dbo.USUARIO u ON u.IdUsuario=t.IdUsuario
- UNION ALL SELECT m.IdMovimiento,CONVERT(date,m.Fecha),'Salida',m.Concepto,m.Monto,ISNULL(b.Nombre,'Caja'),CONCAT(CASE WHEN m.CuentaOrigen='Personal' THEN 'Ganancia' ELSE m.CuentaOrigen END,' · ',CASE WHEN m.PagadoDesdeCaja=1 THEN 'Efectivo' ELSE 'Banco' END),u.NombreCompleto,CAST(0 AS bit),'salidas'
+ UNION ALL SELECT m.IdMovimiento,CONVERT(date,m.Fecha),'Salida',m.Concepto,m.Monto,CASE WHEN m.PagadoDesdeCaja=0 THEN ISNULL(b.Nombre,'Banco') WHEN m.OrigenEfectivo='Capital' THEN 'Capital en efectivo' WHEN m.OrigenEfectivo='Ganancia' THEN 'Ganancia en efectivo' ELSE 'Caja de ventas' END,CONCAT(CASE WHEN m.CuentaOrigen='Personal' THEN 'Ganancia' WHEN m.CuentaOrigen='Caja' THEN 'Sin fondo asignado' ELSE m.CuentaOrigen END,' · ',CASE WHEN m.PagadoDesdeCaja=1 THEN 'Efectivo' ELSE 'Banco' END),u.NombreCompleto,CAST(0 AS bit),'salidas',ISNULL(m.Referencia,'')
  FROM dbo.FIN_MOVIMIENTO m LEFT JOIN dbo.FIN_BANCO_TEMPORAL b ON b.IdBanco=m.IdBanco LEFT JOIN dbo.USUARIO u ON u.IdUsuario=m.IdUsuario WHERE m.Anulado=0
- UNION ALL SELECT p.IdPagoGastoPersonal,CONVERT(date,p.FechaPago),'Salida',COALESCE(NULLIF(p.Observaciones,''),g.Nombre),p.Monto,ISNULL(b.Nombre,'Caja'),CONCAT(CASE WHEN p.CuentaOrigen='Personal' THEN 'Ganancia' ELSE p.CuentaOrigen END,' · ',CASE WHEN p.PagadoDesdeCaja=1 THEN 'Efectivo' ELSE 'Banco' END),u.NombreCompleto,CAST(0 AS bit),'salidas'
+ UNION ALL SELECT p.IdPagoGastoPersonal,CONVERT(date,p.FechaPago),'Salida',COALESCE(NULLIF(p.Observaciones,''),g.Nombre),p.Monto,CASE WHEN p.PagadoDesdeCaja=0 THEN ISNULL(b.Nombre,'Banco') WHEN p.OrigenEfectivo='Capital' THEN 'Capital en efectivo' WHEN p.OrigenEfectivo='Ganancia' THEN 'Ganancia en efectivo' ELSE 'Caja de ventas' END,CONCAT(CASE WHEN p.CuentaOrigen='Personal' THEN 'Ganancia' WHEN p.CuentaOrigen='Caja' THEN 'Sin fondo asignado' ELSE p.CuentaOrigen END,' · ',CASE WHEN p.PagadoDesdeCaja=1 THEN 'Efectivo' ELSE 'Banco' END),u.NombreCompleto,CAST(0 AS bit),'salidas',ISNULL(p.Referencia,'')
  FROM dbo.PAGO_GASTO_PERSONAL p JOIN dbo.GASTO_PERSONAL_PERIODO per ON per.IdPeriodoGastoPersonal=p.IdPeriodoGastoPersonal JOIN dbo.GASTO_PERSONAL g ON g.IdGastoPersonal=per.IdGastoPersonal LEFT JOIN dbo.FIN_BANCO_TEMPORAL b ON b.IdBanco=p.IdBanco LEFT JOIN dbo.USUARIO u ON u.IdUsuario=p.IdUsuario WHERE p.Anulado=0
 ) m WHERE @tipo IS NULL OR LOWER(@tipo)=m.Grupo ORDER BY Fecha DESC,Id DESC;", connection);
                 command.Parameters.Add("@tipo", SqlDbType.VarChar, 20).Value = string.IsNullOrWhiteSpace(tipo) ? (object)DBNull.Value : tipo.Trim();
-                await using (var reader = await command.ExecuteReaderAsync()) while (await reader.ReadAsync()) rows.Add(new { id = reader.GetInt32(0), fecha = reader.GetDateTime(1).ToString("dd/MM/yyyy"), tipo = reader.GetString(2), concepto = reader.GetString(3), monto = reader.GetDecimal(4), banco = reader.GetString(5), detalle = reader.GetString(6), responsable = reader.IsDBNull(7) ? "" : reader.GetString(7), anulado = reader.GetBoolean(8) });
+                await using (var reader = await command.ExecuteReaderAsync()) while (await reader.ReadAsync()) rows.Add(new { id = reader.GetInt32(0), fecha = reader.GetDateTime(1).ToString("dd/MM/yyyy"), tipo = reader.GetString(2), concepto = reader.GetString(3), monto = reader.GetDecimal(4), banco = reader.GetString(5), detalle = reader.GetString(6), responsable = reader.IsDBNull(7) ? "" : reader.GetString(7), anulado = reader.GetBoolean(8), comprobante = reader.IsDBNull(9) ? "" : reader.GetString(9) });
                 return Ok(new { movimientos = rows });
             }
             catch (SqlException ex) { _logger.LogError(ex, "No se pudo cargar auditoría de depósitos."); return StatusCode(503, new { mensaje = "No se pudo cargar el historial." }); }

@@ -1,0 +1,27 @@
+.expense-entry-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:14px}
+.expense-entry-form>label,.expense-entry-form>#otherConceptField{display:grid;gap:6px}
+.expense-entry-form>#otherConceptField label{display:grid;gap:6px}
+.expense-entry-form .field-hint{color:#688094;font-size:.76rem;font-weight:500}
+.expense-entry-form .payer-picker,.expense-entry-form .expense-help,.expense-entry-form>button{grid-column:1/-1}
+.payer-picker{display:grid;gap:9px;margin:0;padding:0;border:0}
+.payer-picker legend{margin-bottom:2px;color:#29485e;font-size:.9rem;font-weight:800}
+.payer-options{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.payer-options label{position:relative;min-width:0}
+.payer-options input{position:absolute;width:1px;height:1px;opacity:0}
+.payer-options span{display:grid;place-items:center;min-height:52px;padding:8px;border:1px solid #c6d5df;border-radius:9px;background:#f5f8fa;color:#244b66;text-align:center;font-size:.82rem;font-weight:800;line-height:1.25}
+.payer-options input:checked+span{border-color:#176fa8;background:#176fa8;color:#fff}
+.payer-options input:focus-visible+span{outline:3px solid #64afe34d}
+.selected-concept{grid-column:1/-1;margin:0;padding:10px 12px;border-radius:8px;background:#edf5f9;color:#45647a;font-size:.84rem;font-weight:750}
+.expense-confirm-dialog{width:min(520px,calc(100% - 28px));max-width:520px;padding:0;border:1px solid #d5e1e9;border-radius:16px;color:#183d57;box-shadow:0 20px 60px #102f4650}
+.expense-confirm-dialog::backdrop{background:#0c2638a8;backdrop-filter:blur(2px)}
+.expense-confirm-dialog form{padding:22px}
+.expense-confirm-dialog .eyebrow{margin:0 0 5px;color:#327aa5;font-size:.72rem;font-weight:850;letter-spacing:.1em}
+.expense-confirm-dialog h2{margin:0 0 18px;font-size:1.45rem}
+.expense-confirm-dialog dl{display:grid;gap:0;margin:0 0 14px;padding:7px 13px;border-radius:10px;background:#f1f6f9}
+.expense-confirm-dialog dl>div{display:grid;grid-template-columns:minmax(100px,.75fr) 1.25fr;gap:12px;padding:10px 0;border-bottom:1px solid #dce6ec}
+.expense-confirm-dialog dl>div:last-child{border-bottom:0}
+.expense-confirm-dialog dt{color:#60798b}
+.expense-confirm-dialog dd{margin:0;color:#183d57;font-weight:800;overflow-wrap:anywhere}
+.expense-confirm-dialog .dialog-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:16px}
+.expense-confirm-dialog .dialog-actions .button{min-height:46px}
+@media(max-width:620px){.expense-entry-form{grid-template-columns:1fr;gap:12px}.expense-entry-form .payer-picker,.expense-entry-form .expense-help,.expense-entry-form>button,.selected-concept{grid-column:auto}.payer-options{grid-template-columns:repeat(2,minmax(0,1fr))}.payer-options label:last-child:nth-child(odd){grid-column:1/-1}.expense-confirm-dialog form{padding:17px}.expense-confirm-dialog dl>div{grid-template-columns:100px minmax(0,1fr)}}
