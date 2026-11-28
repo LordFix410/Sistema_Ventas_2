@@ -20,10 +20,46 @@ namespace CapaPresentacion
 {
     public partial class frmUsuarios : Form
     {
+        private readonly Usuario usuarioActual;
+        private FontAwesome.Sharp.IconButton btnPermisosWeb;
+
         public frmUsuarios()
+            : this(null)
         {
+        }
+
+        public frmUsuarios(Usuario actor)
+        {
+            usuarioActual = actor;
             InitializeComponent();
             ExperienciaUsuario.Aplicar(this, txtDocumento, txtBusqueda);
+            CrearBotonPermisosWeb();
+        }
+
+        private void CrearBotonPermisosWeb()
+        {
+            btnPermisosWeb = new FontAwesome.Sharp.IconButton
+            {
+                Name = "btnPermisosWeb", Text = "Accesos web",
+                IconChar = FontAwesome.Sharp.IconChar.Globe, IconColor = System.Drawing.Color.White,
+                IconFont = FontAwesome.Sharp.IconFont.Auto, IconSize = 18,
+                TextImageRelation = TextImageRelation.ImageBeforeText,
+                BackColor = System.Drawing.Color.FromArgb(31, 111, 166), ForeColor = System.Drawing.Color.White,
+                FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand,
+                Location = new System.Drawing.Point(1217, 98), Size = new System.Drawing.Size(150, 38),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Enabled = usuarioActual != null && (usuarioActual.EsAdministradorPrincipal || usuarioActual.EsSuperAdministradorWeb)
+            };
+            btnPermisosWeb.FlatAppearance.BorderSize = 0;
+            btnPermisosWeb.Click += btnPermisosWeb_Click;
+            Controls.Add(btnPermisosWeb);
+        }
+
+        private void btnPermisosWeb_Click(object sender, EventArgs e)
+        {
+            if (usuarioActual == null || (!usuarioActual.EsAdministradorPrincipal && !usuarioActual.EsSuperAdministradorWeb)) return;
+            using (var modal = new CapaPresentacion.Modales.mdPermisosWeb(usuarioActual))
+                modal.ShowDialog(this);
         }
 
         private void frmUsuarios_Load(object sender, EventArgs e)
@@ -43,6 +79,8 @@ namespace CapaPresentacion
             cboRol.DisplayMember = "Texto";
             cboRol.ValueMember = "Valor";
             cboRol.SelectedIndex = 0;
+            cboRol.Enabled = usuarioActual != null && usuarioActual.EsAdministradorPrincipal;
+            if (usuarioActual == null || !usuarioActual.EsAdministradorPrincipal) SeleccionarRolEmpleado();
 
             foreach(DataGridViewColumn columna in dgvData.Columns) {
                 if(columna.Visible == true && columna.Name!= "btnSeleccionar")
@@ -71,6 +109,11 @@ namespace CapaPresentacion
 
         private void btnGuardar_Click(object sender, EventArgs e)
         {
+            if (usuarioActual == null || (!usuarioActual.EsAdministradorPrincipal && !usuarioActual.EsSuperAdministradorWeb))
+            {
+                CapaPresentacion.DialogoSistema.Show("No tienes permiso para administrar usuarios.", "Acceso restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             string mensaje = string.Empty;
             Usuario objUsuario = new Usuario()
             {
@@ -84,9 +127,13 @@ namespace CapaPresentacion
             };
             if(objUsuario.IdUsuario == 0 && txtClave.Text == txtClaveConfirmar.Text)
             {
-               
+                if (!usuarioActual.EsAdministradorPrincipal && !RolSeleccionadaEsEmpleado())
+                {
+                    CapaPresentacion.DialogoSistema.Show("Solo el administrador principal puede asignar el rol Administrador.", "Acceso restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
 
-                int idusuariogenerado = new CN_Usuario().Registrar(objUsuario, out mensaje);
+                int idusuariogenerado = new CN_Usuario().Registrar(objUsuario, usuarioActual.IdUsuario, out mensaje);
 
                 if (mensaje == string.Empty && idusuariogenerado != 0)
                 {
@@ -122,7 +169,20 @@ namespace CapaPresentacion
             {
                 if (txtClave.Text == txtClaveConfirmar.Text)
                 {
-                    bool resultado = new CN_Usuario().Editar(objUsuario, out mensaje);
+                    Usuario objetivo = new CN_Usuario().Listar().FirstOrDefault(x => x.IdUsuario == objUsuario.IdUsuario);
+                    if (!usuarioActual.EsAdministradorPrincipal && objetivo != null &&
+                        (objetivo.EsAdministradorPrincipal || objetivo.EsSuperAdministradorWeb ||
+                         (objetivo.oRol != null && string.Equals(objetivo.oRol.Descripcion, "ADMINISTRADOR", StringComparison.OrdinalIgnoreCase))))
+                    {
+                        CapaPresentacion.DialogoSistema.Show("Solo el administrador principal puede editar otra cuenta administradora.", "Acceso restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    if (!usuarioActual.EsAdministradorPrincipal && !RolSeleccionadaEsEmpleado())
+                    {
+                        CapaPresentacion.DialogoSistema.Show("Solo el administrador principal puede asignar el rol Administrador.", "Acceso restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    bool resultado = new CN_Usuario().Editar(objUsuario, usuarioActual.IdUsuario, out mensaje);
                     if (resultado)
                     {
                         DataGridViewRow row = dgvData.Rows[Convert.ToInt32(txtIndice.Text)];
@@ -160,8 +220,29 @@ namespace CapaPresentacion
             txtCorreo.Clear();
             txtClave.Clear();
             txtClaveConfirmar.Clear();
-            cboRol.SelectedIndex = 0;
+            SeleccionarRolPredeterminado();
             cboEstado.SelectedIndex = 0;
+            cboRol.Enabled = usuarioActual != null && usuarioActual.EsAdministradorPrincipal;
+        }
+
+        private void SeleccionarRolPredeterminado()
+        {
+            if (usuarioActual == null || !usuarioActual.EsAdministradorPrincipal) { SeleccionarRolEmpleado(); return; }
+            if (cboRol.Items.Count > 0) cboRol.SelectedIndex = 0;
+        }
+
+        private void SeleccionarRolEmpleado()
+        {
+            foreach (OpcionCombo opcion in cboRol.Items)
+                if (string.Equals(Convert.ToString(opcion.Texto), "EMPLEADO", StringComparison.OrdinalIgnoreCase))
+                { cboRol.SelectedItem = opcion; return; }
+            if (cboRol.Items.Count > 0) cboRol.SelectedIndex = 0;
+        }
+
+        private bool RolSeleccionadaEsEmpleado()
+        {
+            return cboRol.SelectedItem is OpcionCombo opcion &&
+                string.Equals(Convert.ToString(opcion.Texto), "EMPLEADO", StringComparison.OrdinalIgnoreCase);
         }
 
         private void dgvData_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
@@ -209,6 +290,8 @@ namespace CapaPresentacion
                             break;
                         }
                     }
+                    cboRol.Enabled = usuarioActual != null && usuarioActual.EsAdministradorPrincipal &&
+                        Convert.ToInt32(dgvData.Rows[indice].Cells["IdUsuario"].Value) != usuarioActual.IdUsuario;
 
                     foreach (OpcionCombo oc in cboEstado.Items)
                     {
@@ -240,7 +323,12 @@ namespace CapaPresentacion
                         IdUsuario = Convert.ToInt32(txtId.Text)
                     };
 
-                    bool respuesta = new CN_Usuario().Eliminar(ousuario, out mensaje);
+                    if (usuarioActual == null || (!usuarioActual.EsAdministradorPrincipal && !usuarioActual.EsSuperAdministradorWeb))
+                    {
+                        CapaPresentacion.DialogoSistema.Show("No tienes permiso para administrar usuarios.", "Acceso restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    bool respuesta = new CN_Usuario().Eliminar(ousuario, usuarioActual.IdUsuario, out mensaje);
 
                     if (respuesta) 
                     {

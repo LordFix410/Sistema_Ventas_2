@@ -308,7 +308,7 @@ namespace CapaPresentacion
             dgvProductos.DataSource = negocio.ListarProductos();
             Ocultar(dgvProductos, "IdProducto", "IdGrupoReposicion", "CantidadMinima", "CantidadMaxima", "IdGrupoProveedor");
             FormatearCabeceras(dgvProductos,
-                new[] { "Codigo", "Código" }, new[] { "Nombre", "Producto" }, new[] { "Categoria", "Categoría" },
+                new[] { "Codigo", "Código" }, new[] { "Equivalencia", "Equivalente" }, new[] { "Nombre", "Producto" }, new[] { "Categoria", "Categoría" },
                 new[] { "Stock", "Stock actual" }, new[] { "GrupoReposicion", "Grupo de reposición" }, new[] { "GrupoProveedores", "Perfil proveedores" });
             foreach (DataGridViewColumn col in dgvProductos.Columns)
                 if (col.Visible) col.MinimumWidth = 100;
@@ -338,7 +338,7 @@ namespace CapaPresentacion
             Ocultar(dgvCotizaciones, "IdGrupoReposicion", "IdGrupoProveedor", "IdProveedor", "IdProducto");
             FormatearCabeceras(dgvCotizaciones,
                 new[] { "GrupoReposicion", "Grupo de reposición" }, new[] { "GrupoProveedores", "Perfil proveedor" },
-                new[] { "Proveedor", "Proveedor" }, new[] { "Codigo", "Código" }, new[] { "Nombre", "Producto" },
+                new[] { "Proveedor", "Proveedor" }, new[] { "Codigo", "Código" }, new[] { "Equivalencia", "Equivalente" }, new[] { "Nombre", "Producto" },
                 new[] { "StockActual", "Stock grupo/producto" }, new[] { "CantidadMinima", "Mínimo" },
                 new[] { "CantidadMaxima", "Máximo objetivo" }, new[] { "FaltanteReferencia", "Faltante referencia" },
                 new[] { "UltimoPrecioConEsteProveedor", "Último precio proveedor" },
@@ -485,13 +485,14 @@ namespace CapaPresentacion
                 return;
             }
             DataTable exportar = origen.DefaultView.ToTable(false,
-                "GrupoReposicion", "GrupoProveedores", "Proveedor", "Codigo", "Nombre", "StockActual",
+                "GrupoReposicion", "GrupoProveedores", "Proveedor", "Codigo", "Equivalencia", "Nombre", "StockActual",
                 "CantidadMinima", "CantidadMaxima", "FaltanteReferencia", "UltimoPrecioConEsteProveedor",
                 "FechaUltimaCompraConEsteProveedor", "UltimoPrecioHistorico", "UltimoProveedorHistorico", "FechaUltimoPrecioHistorico");
             CambiarNombreColumna(exportar, "GrupoReposicion", "Grupo de reposición");
             CambiarNombreColumna(exportar, "GrupoProveedores", "Perfil de proveedores");
             CambiarNombreColumna(exportar, "Proveedor", "Proveedor");
             CambiarNombreColumna(exportar, "Codigo", "Código");
+            CambiarNombreColumna(exportar, "Equivalencia", "Equivalente");
             CambiarNombreColumna(exportar, "Nombre", "Producto");
             CambiarNombreColumna(exportar, "StockActual", "Stock actual");
             CambiarNombreColumna(exportar, "CantidadMinima", "Mínimo");

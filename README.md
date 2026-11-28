@@ -43,6 +43,8 @@ Estos pasos se ejecutan **una sola vez en la computadora servidor**:
 
 **Importante:** `query.sql` es para una instalación limpia. Si `DBSISTEMA_VENTA` ya existe, no vuelvas a ejecutar el archivo completo sobre esa instancia: el `CREATE DATABASE` fallará. Haz una copia de seguridad antes de cualquier cambio de esquema.
 
+Para actualizar una base existente con las validaciones actuales de Forms, ejecuta una vez `migracion_validar_stock_venta.sql`, `migracion_validar_compra_forms.sql` y `migracion_devoluciones_forms.sql` sobre `DBSISTEMA_VENTA` antes de usar la versión nueva. No vuelvas a ejecutar `query.sql` completo sobre una base con datos.
+
 El esquema de caja del cierre temporal (efectivo inicial/contado y salidas) y el origen de fondos de cada salida ya están incluidos en `query.sql` para instalaciones nuevas. Para actualizar una base existente, ejecuta primero `migracion_finanzas_temporal.sql` solo si todavía no existen las tablas temporales; después ejecuta `DOTNET/migracion_finanzas_caja_cuentas.sql` una vez para agregar las columnas nuevas sin borrar los datos existentes.
 
 El script incluye datos de ejemplo, entre ellos usuarios de prueba:

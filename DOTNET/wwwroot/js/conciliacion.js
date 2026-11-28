@@ -22,7 +22,7 @@
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      if (response.status === 401 && url !== '/api/productos/sesion') show(false);
+      if ((response.status === 401 || response.status === 403) && url !== '/api/productos/sesion') show(false);
       throw new Error(data?.mensaje || 'No se pudo completar la solicitud.');
     }
     return data;
@@ -79,8 +79,8 @@
     const bam = snapshot.bancos.find(bank => /\bbam\b/i.test(bank.nombre));
     const input = (location, fund) => Number($(`#balanceRows input[data-location="${location}"][data-fund="${fund}"]`).value);
     const bankBalances = snapshot.bancos.map(bank => {
-      if (bank.idBanco === banrural.idBanco) return { idBanco: bank.idBanco, saldoCapital: input('banrural', 'Capital'), saldoGanancia: bank.ganancia };
-      if (bank.idBanco === bam.idBanco) return { idBanco: bank.idBanco, saldoCapital: bank.capital, saldoGanancia: input('bam', 'Ganancia') };
+      if (bank.idBanco === banrural.idBanco) return { idBanco: bank.idBanco, saldoCapital: input('banrural', 'Capital'), saldoGanancia: 0 };
+      if (bank.idBanco === bam.idBanco) return { idBanco: bank.idBanco, saldoCapital: 0, saldoGanancia: input('bam', 'Ganancia') };
       // Las cuentas adicionales, si existen, permanecen en el saldo que ya registra el sistema.
       return { idBanco: bank.idBanco, saldoCapital: bank.capital, saldoGanancia: bank.ganancia };
     });
@@ -229,7 +229,6 @@
     addRow(body, 'Efectivo en caja', 'caja', data.caja.capital, data.caja.ganancia, ['Capital', 'Ganancia']);
     updateTotals();
     renderHistory(data.historial);
-    renderClosings(data.cierresSinBoleta || []);
   }
 
   async function refresh() {
@@ -247,7 +246,7 @@
     try {
       const data = await api('/api/productos/sesion', {
         method: 'POST',
-        body: JSON.stringify({ clave: new FormData(loginForm).get('clave') })
+        body: JSON.stringify({ clave: new FormData(loginForm).get('clave'), pagina: 'conciliacion.html' })
       });
       show(true, data.nombre);
       await refresh();
@@ -267,21 +266,21 @@
     const reconciliationForm = event.currentTarget;
     if (!snapshot || !namedBanksAvailable || !reconciliationForm.reportValidity()) return;
     const form = new FormData(reconciliationForm);
+    const motivo = String(form.get('motivo') || '').trim();
+    if (motivo.length < 5) {
+      message('Escribe un motivo de al menos 5 caracteres para guardar la conciliación.');
+      return;
+    }
     const saldos = actualBalances();
     const adjustment = calculateAdjustments();
-    const cierres = selectedClosingStates(String(form.get('fecha')));
-    const markedAsDeposited = cierres.filter(closing => closing.yaDepositado).length;
-    const keptPending = cierres.length - markedAsDeposited;
     const confirmation = [
       `Guardar conciliación del ${form.get('fecha')}?`,
       '',
       `Ajuste Capital: ${currency.format(adjustment.capital)}`,
       `Ajuste Ganancia: ${currency.format(adjustment.gain)}`,
       `Diferencia total: ${currency.format(adjustment.capital + adjustment.gain)}`,
-      `Cierres marcados como depositados: ${markedAsDeposited}`,
-      `Cierres que seguirán pendientes: ${keptPending}`,
       '',
-      'Solo cambiarán los cierres que marcaste. Los demás seguirán disponibles para registrar su depósito.'
+      'Esta conciliación fija esos saldos como los actuales. Los cierres anteriores a esta fecha quedarán cubiertos por el saldo y no volverán a aparecer como pendientes.'
     ].join('\n');
     if (!window.confirm(confirmation)) return;
 
@@ -289,7 +288,7 @@
     try {
       await api('/api/finanzas/conciliaciones', {
         method: 'POST',
-        body: JSON.stringify({ fecha: form.get('fecha'), motivo: String(form.get('motivo')).trim(), saldos, cierres })
+        body: JSON.stringify({ fecha: form.get('fecha'), motivo, saldos })
       });
       message('Conciliación guardada en la auditoría. El historial se conservó.', true);
       reconciliationForm.reset();

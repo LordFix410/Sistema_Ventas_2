@@ -33,7 +33,17 @@ namespace CapaPresentacion
             int x = Math.Max(margen, label10.Left);
             int ancho = Math.Max(300, ClientSize.Width - x - margen);
             int y = label10.Bottom + 20;
-            dataGridView1.SetBounds(x, y, ancho, Math.Max(140, ClientSize.Height - y - margen));
+            int altoContenido = dataGridView1.ColumnHeadersHeight + 8;
+            foreach (DataGridViewRow fila in dataGridView1.Rows)
+            {
+                if (!fila.IsNewRow && fila.Visible)
+                    altoContenido += fila.Height;
+            }
+
+            // El grid acompaña la cantidad de productos de la factura. Con muchas
+            // filas queda limitado y se desplaza dentro del propio grid.
+            int alto = Math.Max(125, Math.Min(360, altoContenido));
+            dataGridView1.SetBounds(x, y, ancho, alto);
         }
 
         private void btnBuscar_Click(object sender, EventArgs e)
@@ -47,6 +57,7 @@ namespace CapaPresentacion
             txtMontoPago.Text = "0.00";
             txtMontoTotal.Text = "0.00";
             dataGridView1.Rows.Clear();
+            AjustarDisenoAdaptable();
 
             Venta oVenta = new CN_Venta().ObtenerVenta(txtBusqueda.Text);
 
@@ -66,6 +77,7 @@ namespace CapaPresentacion
                 {
                     dataGridView1.Rows.Add(new object[] { dc.oProducto.Nombre, dc.PrecioVenta, dc.Cantidad, dc.SubTotal });
                 }
+                AjustarDisenoAdaptable();
 
                 txtMontoCambio.Text = oVenta.MontoCambio.ToString("0.00");
                 txtMontoPago.Text = oVenta.MontoPago.ToString("0.00");
@@ -86,6 +98,7 @@ namespace CapaPresentacion
             txtNombreCliente.Text = "";
 
             dataGridView1.Rows.Clear();
+            AjustarDisenoAdaptable();
             txtMontoTotal.Text = "0.00";
             txtMontoPago.Text = "0.00";
             txtMontoCambio.Text = "0.00";

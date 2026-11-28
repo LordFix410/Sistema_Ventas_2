@@ -73,7 +73,7 @@
         : `Categoría ${category.nombre} creada como inactiva. Actívala desde Categorías para poder usarla.`, true);
       $('#addCategoryButton').focus();
     } catch (error) {
-      if (error.status === 401) { location.reload(); return; }
+      if (error.status === 401 || error.status === 403) { location.reload(); return; }
       message($('#quickCategoryMessage'), error.message);
       $('#quickCategoryName').focus();
     } finally { button.disabled = false; }
@@ -127,7 +127,7 @@
   $('#loginForm').addEventListener('submit', async event => {
     event.preventDefault(); const form = new FormData(event.currentTarget); const button = event.currentTarget.querySelector('button'); button.disabled = true;
     message($('#loginMessage'), 'Verificando contraseña…');
-    try { await request('/sesion', { method: 'POST', body: JSON.stringify({ clave: form.get('clave') }) }); showSignedIn(); message($('#catalogMessage'), 'Cargando catálogos…'); await refreshCatalogs(); }
+    try { await request('/sesion', { method: 'POST', body: JSON.stringify({ clave: form.get('clave'), pagina: 'productos.html' }) }); showSignedIn(); message($('#catalogMessage'), 'Cargando catálogos…'); await refreshCatalogs(); }
     catch (error) { if (productApp.hidden) message($('#loginMessage'), error.message); else message($('#catalogMessage'), error.message); }
     finally { button.disabled = false; }
   });
@@ -690,7 +690,7 @@
       const result = await request('', { method: 'POST', body: JSON.stringify(payload) });
       sessionStorage.removeItem(productDraftKey); message($('#productMessage'), result.mensaje, true); form.reset(); productPhotoPreview.hidden = true; productPhotoControls.hidden = true; productPhotoPreview.removeAttribute('src'); $('#replenishmentGroup').dispatchEvent(new Event('change')); $('#scanButton').focus();
     }
-    catch (error) { if (error.status === 401) { location.reload(); return; } message($('#productMessage'), error.message); }
+    catch (error) { if (error.status === 401 || error.status === 403) { location.reload(); return; } message($('#productMessage'), error.message); }
     finally { button.disabled = false; button.textContent = 'Crear producto'; }
   });
 

@@ -17,10 +17,14 @@ namespace CapaPresentacion.Modales
     public partial class mdProducto : Form
     {
         private readonly bool _mostrarMargen;
+        private readonly bool _vistaVenta;
+        private readonly bool _vistaCompra;
         public Producto _Producto { get; set; }
-        public mdProducto(bool mostrarMargen = true)
+        public mdProducto(bool mostrarMargen = true, bool vistaVenta = false, bool vistaCompra = false)
         {
             _mostrarMargen = mostrarMargen;
+            _vistaVenta = vistaVenta;
+            _vistaCompra = vistaCompra;
             InitializeComponent();
             var columnaFoto = new DataGridViewImageColumn
             {
@@ -30,13 +34,38 @@ namespace CapaPresentacion.Modales
             dgvData.Columns.Insert(1, columnaFoto);
             columnaFoto.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
             dgvData.Columns["PORCENTAJE"].Visible = _mostrarMargen;
+            dgvData.Columns["PRECIOCOMPRA"].Visible = _mostrarMargen;
+            dgvData.Columns["PRECIOVENTA"].Visible = true;
+            dgvData.Columns["PORCENTAJE"].HeaderText = "%";
+            dgvData.Columns["PORCENTAJE"].DefaultCellStyle.Format = "0.##'%'";
+            if (_vistaVenta)
+            {
+                dgvData.Columns["Codigo"].Visible = false;
+                dgvData.Columns["Categoria"].Visible = false;
+                dgvData.Columns["Stock"].Visible = true;
+                dgvData.Columns["Equivalencia"].HeaderText = "EQUIVALENCIA";
+                dgvData.Columns["Nombre"].HeaderText = "PRODUCTO";
+                dgvData.Columns["Stock"].HeaderText = "EXISTENCIA";
+                dgvData.Columns["PRECIOVENTA"].HeaderText = "PRECIO";
+            }
+            if (_vistaCompra)
+            {
+                foreach (string nombreColumna in new[] { "Codigo", "Categoria", "Stock", "PRECIOCOMPRA", "PRECIOVENTA", "PORCENTAJE" })
+                    dgvData.Columns[nombreColumna].Visible = false;
+                dgvData.Columns["Equivalencia"].HeaderText = "EQUIVALENCIA";
+                dgvData.Columns["Nombre"].HeaderText = "PRODUCTO";
+            }
             dgvData.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgvData.RowTemplate.Height = 48;
             dgvData.RowTemplate.Height = 68;
+            dgvData.RowHeadersVisible = false;
             if (dgvData.Columns.Contains("Foto")) dgvData.Columns["Foto"].Width = 68;
             if (dgvData.Columns.Contains("Codigo")) dgvData.Columns["Codigo"].FillWeight = 28;
-            if (dgvData.Columns.Contains("Nombre")) dgvData.Columns["Nombre"].FillWeight = 48;
+            if (dgvData.Columns.Contains("Equivalencia")) dgvData.Columns["Equivalencia"].FillWeight = 38;
+            if (dgvData.Columns.Contains("Nombre")) dgvData.Columns["Nombre"].FillWeight = 52;
             if (dgvData.Columns.Contains("Categoria")) dgvData.Columns["Categoria"].FillWeight = 24;
+            cboBuscar.Visible = false;
+            label11.Visible = false;
+            txtBusqueda.SetBounds(241, 22, 368, 23);
             CapaPresentacion.Utilidades.ExperienciaUsuario.Aplicar(this, txtBusqueda, txtBusqueda);
             txtBusqueda.KeyDown += txtBusqueda_KeyDown;
             dgvData.KeyDown += dgvData_KeyDown;
@@ -73,21 +102,6 @@ namespace CapaPresentacion.Modales
 
         private void mdProducto_Load(object sender, EventArgs e)
         {
-            foreach (DataGridViewColumn columna in dgvData.Columns)
-            {
-                if (columna.Visible == true)
-                {
-                    cboBuscar.Items.Add(new OpcionCombo() { Valor = columna.Name, Texto = columna.HeaderText });
-                }
-            }
-            cboBuscar.DisplayMember = "Texto";
-            cboBuscar.ValueMember = "Valor";
-            int indiceNombre = cboBuscar.Items
-                .Cast<OpcionCombo>()
-                .ToList()
-                .FindIndex(opcion => string.Equals(Convert.ToString(opcion.Valor), "Nombre", StringComparison.OrdinalIgnoreCase));
-            cboBuscar.SelectedIndex = indiceNombre >= 0 ? indiceNombre : 0;
-
             // No se carga el inventario completo al abrir el modal. El usuario
             // puede escribir un criterio y buscarlo directamente en SQL.
             dgvData.Rows.Clear();
@@ -154,6 +168,7 @@ namespace CapaPresentacion.Modales
             {
                 IdProducto = Convert.ToInt32(fila.Cells["IdProducto"].Value),
                 Codigo = Convert.ToString(fila.Cells["Codigo"].Value),
+                Equivalencia = Convert.ToString(fila.Cells["Equivalencia"].Value),
                 Nombre = Convert.ToString(fila.Cells["Nombre"].Value),
                 Stock = Convert.ToInt32(fila.Cells["Stock"].Value),
                 PrecioCompra = Convert.ToDecimal(fila.Cells["PRECIOCOMPRA"].Value),
@@ -170,7 +185,6 @@ namespace CapaPresentacion.Modales
 
         private void btnBuscar_Click(object sender, EventArgs e)
         {
-            string columnaFiltro = ((OpcionCombo)cboBuscar.SelectedItem).Valor.ToString();
             string busqueda = txtBusqueda.Text.Trim();
             bool busquedaVacia = NormalizarBusqueda(busqueda).Length == 0;
             if (busquedaVacia && CapaPresentacion.DialogoSistema.Show(this,
@@ -183,7 +197,7 @@ namespace CapaPresentacion.Modales
             {
                 List<Producto> resultados = busquedaVacia
                     ? new CN_Producto().Listar().Where(p => p.Estado).ToList()
-                    : new CN_Producto().Buscar(columnaFiltro, busqueda, true);
+                    : new CN_Producto().BuscarFlexible(busqueda, true);
 
                 foreach (DataGridViewRow fila in dgvData.Rows)
                     if (fila.Cells["Foto"].Value is System.Drawing.Image imagen) imagen.Dispose();
@@ -191,8 +205,9 @@ namespace CapaPresentacion.Modales
                 foreach (Producto item in resultados)
                 {
                     int indice = dgvData.Rows.Add(item.IdProducto,
-                        GestorImagenProducto.CargarMiniatura(item.ImagenRuta, 52, 52), item.Codigo, item.Nombre,
-                        item.oCategoria.Descripcion, item.Stock, item.PrecioCompra, item.PrecioVenta,
+                        GestorImagenProducto.CargarMiniatura(item.ImagenRuta, 52, 52), item.Codigo,
+                        item.Equivalencia ?? string.Empty, item.Nombre, item.oCategoria.Descripcion,
+                        item.Stock, item.PrecioCompra, item.PrecioVenta,
                         FormatoPorcentaje.ParaMostrar(item.Porcentaje, item.PrecioCompra));
                     dgvData.Rows[indice].Tag = item;
                 }

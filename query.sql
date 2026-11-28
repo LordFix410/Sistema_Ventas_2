@@ -5,8 +5,8 @@
     Incluye las tablas de obligaciones personales, cierres temporales web y permisos de Finanzas.
     Al final crea o actualiza el login de aplicación ventas_app2.
     Ejecutar con una cuenta administradora del servidor SQL.
-    Para una base ya existente ejecuta las migraciones pendientes; las columnas de caja/cuenta
-    también están en DOTNET/migracion_finanzas_caja_cuentas.sql.
+    No ejecutar sobre una base ya existente. Para actualizar la conciliación y los cierres web
+    en una base existente, usa DOTNET/migracion_finanzas_web.sql después de las migraciones base.
 */
 
 create database DBSISTEMA_VENTA
@@ -64,9 +64,30 @@ Correo varchar(50),
 Clave varchar(50),
 IdRol int references ROL(IdRol),
 Estado bit,
+ EsAdministradorPrincipal bit NOT NULL CONSTRAINT DF_USUARIO_EsAdministradorPrincipal DEFAULT(0),
+ EsSuperAdministradorWeb bit NOT NULL CONSTRAINT DF_USUARIO_EsSuperAdministradorWeb DEFAULT(0),
 FechaRegistro datetime default getdate()
 )
 go
+
+CREATE TABLE PAGINA_WEB(
+    CodigoPagina varchar(100) NOT NULL PRIMARY KEY,
+    Nombre varchar(100) NOT NULL,
+    Orden int NOT NULL,
+    Activa bit NOT NULL CONSTRAINT DF_PAGINA_WEB_Activa DEFAULT(1)
+)
+GO
+
+CREATE TABLE PERMISO_PAGINA_WEB(
+    IdUsuario int NOT NULL CONSTRAINT FK_PERMISO_PAGINA_WEB_USUARIO REFERENCES USUARIO(IdUsuario),
+    CodigoPagina varchar(100) NOT NULL CONSTRAINT FK_PERMISO_PAGINA_WEB_PAGINA REFERENCES PAGINA_WEB(CodigoPagina),
+    FechaRegistro datetime NOT NULL CONSTRAINT DF_PERMISO_PAGINA_WEB_Fecha DEFAULT(getdate()),
+    CONSTRAINT PK_PERMISO_PAGINA_WEB PRIMARY KEY(IdUsuario,CodigoPagina)
+)
+GO
+
+CREATE UNIQUE INDEX UX_USUARIO_AdministradorPrincipal ON dbo.USUARIO(EsAdministradorPrincipal) WHERE EsAdministradorPrincipal=1
+GO
 
 create table CATEGORIA(
 IdCategoria int primary key identity,
@@ -81,6 +102,7 @@ IdProducto int primary key identity,
 Codigo varchar(50),
 Nombre varchar(500),
 Descripcion varchar(500),
+Equivalencia varchar(500) NULL,
 IdCategoria int references CATEGORIA(IdCategoria),
 IdGrupoReposicion int NULL,
 CantidadMinima int NULL,
@@ -179,6 +201,11 @@ TipoDocumento varchar(50),
 NumeroDocumento varchar(50),
 MontoTotal decimal(10,2),
 MontoNoInventariable decimal(10,2) NOT NULL CONSTRAINT DF_COMPRA_MontoNoInventariable DEFAULT (0),
+NumeroFacturaProveedor varchar(100) NULL,
+Anulada bit NOT NULL CONSTRAINT DF_COMPRA_Anulada DEFAULT (0),
+FechaAnulacion datetime NULL,
+IdUsuarioAnulacion int NULL references USUARIO(IdUsuario),
+MotivoAnulacion varchar(500) NULL,
 FechaRegistro datetime default getdate()
 )
 go
@@ -454,6 +481,7 @@ GO
 -- =============================================
 
 create PROC SP_REGISTRARUSUARIO(
+@IdUsuarioActor int,
 @Documento varchar(50),
 @NombreCompleto varchar(100),
 @Correo varchar(100),
@@ -467,6 +495,20 @@ as
 begin
 	set @IdUsuarioResultado = 0
 	set @Mensaje = ''
+	declare @EsPrincipal bit = 0, @PuedeGestionar bit = 0
+	select @EsPrincipal = EsAdministradorPrincipal,
+	       @PuedeGestionar = case when Estado = 1 and (EsAdministradorPrincipal = 1 or EsSuperAdministradorWeb = 1) then 1 else 0 end
+	from USUARIO where IdUsuario = @IdUsuarioActor
+	if isnull(@PuedeGestionar, 0) = 0
+	begin
+		set @Mensaje = 'No tienes permiso para administrar usuarios.'
+		return
+	end
+	if @EsPrincipal = 0 and not exists(select 1 from ROL where IdRol=@IdRol and upper(Descripcion)='EMPLEADO')
+	begin
+		set @Mensaje = 'Solo el administrador principal puede asignar el rol Administrador.'
+		return
+	end
 
 	if not exists(select * from USUARIO where Documento = @Documento)
 	begin
@@ -481,6 +523,7 @@ end
 go
 
 create PROC SP_EDITARUSUARIO(
+@IdUsuarioActor int,
 @IdUsuario int,
 @Documento varchar(50),
 @NombreCompleto varchar(100),
@@ -495,6 +538,44 @@ as
 begin
 	set @Respuesta = 0
 	set @Mensaje = ''
+	declare @EsPrincipal bit = 0, @PuedeGestionar bit = 0, @ObjetivoPrincipal bit = 0,
+	        @ObjetivoSuper bit = 0, @RolActual int, @EstadoActual bit
+	select @EsPrincipal = EsAdministradorPrincipal,
+	       @PuedeGestionar = case when Estado = 1 and (EsAdministradorPrincipal = 1 or EsSuperAdministradorWeb = 1) then 1 else 0 end
+	from USUARIO where IdUsuario = @IdUsuarioActor
+	if isnull(@PuedeGestionar, 0) = 0
+	begin
+		set @Mensaje = 'No tienes permiso para administrar usuarios.'
+		return
+	end
+	select @ObjetivoPrincipal=EsAdministradorPrincipal,@ObjetivoSuper=EsSuperAdministradorWeb,@RolActual=IdRol,@EstadoActual=Estado
+	from USUARIO where IdUsuario=@IdUsuario
+	if @RolActual is null
+	begin
+		set @Mensaje = 'No se encontró el usuario seleccionado.'
+		return
+	end
+	if @EsPrincipal=0 and @IdUsuario<>@IdUsuarioActor and
+	   (@ObjetivoPrincipal=1 or @ObjetivoSuper=1 or exists(select 1 from ROL where IdRol=@RolActual and upper(Descripcion)='ADMINISTRADOR'))
+	begin
+		set @Mensaje = 'Solo el administrador principal puede modificar otro administrador.'
+		return
+	end
+	if @EsPrincipal=0 and not exists(select 1 from ROL where IdRol=@IdRol and upper(Descripcion)='EMPLEADO')
+	begin
+		set @Mensaje = 'Solo el administrador principal puede asignar el rol Administrador.'
+		return
+	end
+	if @IdUsuario=@IdUsuarioActor and (@IdRol<>@RolActual or @Estado=0)
+	begin
+		set @Mensaje = 'No puedes cambiar tu propio rol ni desactivar tu cuenta.'
+		return
+	end
+	if @ObjetivoPrincipal=1 and (@IdRol<>@RolActual or @Estado=0)
+	begin
+		set @Mensaje = 'La cuenta del administrador principal no se puede cambiar de rol ni desactivar.'
+		return
+	end
 
 	if not exists(select * from USUARIO where Documento = @Documento and idusuario != @IdUsuario)
 	begin
@@ -515,6 +596,7 @@ end
 go
 
 create PROC SP_ELIMINARUSUARIO(
+@IdUsuarioActor int,
 @IdUsuario int,
 @Respuesta bit output,
 @Mensaje varchar(500) output
@@ -524,6 +606,19 @@ begin
 	set @Respuesta = 0
 	set @Mensaje = ''
 	declare @pasoreglas bit = 1
+	declare @EsPrincipal bit = 0, @PuedeGestionar bit = 0, @ObjetivoPrincipal bit = 0,
+	        @ObjetivoSuper bit = 0, @RolActual int
+	select @EsPrincipal = EsAdministradorPrincipal,
+	       @PuedeGestionar = case when Estado = 1 and (EsAdministradorPrincipal = 1 or EsSuperAdministradorWeb = 1) then 1 else 0 end
+	from USUARIO where IdUsuario = @IdUsuarioActor
+	select @ObjetivoPrincipal=EsAdministradorPrincipal,@ObjetivoSuper=EsSuperAdministradorWeb,@RolActual=IdRol
+	from USUARIO where IdUsuario=@IdUsuario
+	if isnull(@PuedeGestionar, 0) = 0 or @IdUsuario=@IdUsuarioActor or @ObjetivoPrincipal=1 or
+	   (@EsPrincipal=0 and (@ObjetivoSuper=1 or exists(select 1 from ROL where IdRol=@RolActual and upper(Descripcion)='ADMINISTRADOR')))
+	begin
+		set @Mensaje = 'No tienes permiso para eliminar este usuario.'
+		return
+	end
 
 	IF EXISTS (SELECT * FROM COMPRA C 
 	INNER JOIN USUARIO U ON U.IdUsuario = C.IdUsuario
@@ -625,13 +720,14 @@ create PROC sp_RegistrarProducto(
 @IdCategoria int,
 @Estado bit,
 @Resultado int output,
-@Mensaje varchar(500) output
+@Mensaje varchar(500) output,
+@Equivalencia varchar(500) = NULL
 )as
 begin
 	SET @Resultado = 0
 	IF NOT EXISTS (SELECT * FROM producto WHERE Codigo = @Codigo)
 	begin
-		insert into producto(Codigo,Nombre,Descripcion,IdCategoria,Estado) values (@Codigo,@Nombre,@Descripcion,@IdCategoria,@Estado)
+		insert into producto(Codigo,Nombre,Descripcion,Equivalencia,IdCategoria,Estado) values (@Codigo,@Nombre,@Descripcion,@Equivalencia,@IdCategoria,@Estado)
 		set @Resultado = SCOPE_IDENTITY()
 	end
 	ELSE
@@ -647,7 +743,8 @@ create procedure sp_ModificarProducto(
 @IdCategoria int,
 @Estado bit,
 @Resultado bit output,
-@Mensaje varchar(500) output
+@Mensaje varchar(500) output,
+@Equivalencia varchar(500) = NULL
 )
 as
 begin
@@ -657,6 +754,7 @@ begin
 		codigo = @Codigo,
 		Nombre = @Nombre,
 		Descripcion = @Descripcion,
+		Equivalencia = @Equivalencia,
 		IdCategoria = @IdCategoria,
 		Estado = @Estado
 		where IdProducto = @IdProducto
@@ -994,6 +1092,28 @@ insert into USUARIO(Documento, NombreCompleto, Correo, Clave, IdRol, Estado)
 values ('empleado1', 'Juan Pérez', 'empleado@sistema.com', '1234', 2, 1)
 GO
 
+INSERT dbo.PAGINA_WEB(CodigoPagina,Nombre,Orden) VALUES
+('dashboard.html','Dashboard',1),
+('finanzas.html','Cierres',2),
+('depositos.html','Depósitos y transferencias',3),
+('salidas.html','Salidas',4),
+('conciliacion.html','Conciliación',5),
+('productos.html','Productos',6),
+('venta.html','Ventas web',7)
+GO
+
+UPDATE dbo.USUARIO SET EsAdministradorPrincipal=1,EsSuperAdministradorWeb=1 WHERE Documento='admin'
+GO
+
+INSERT dbo.PERMISO_PAGINA_WEB(IdUsuario,CodigoPagina)
+SELECT u.IdUsuario,p.CodigoPagina FROM dbo.USUARIO u CROSS JOIN dbo.PAGINA_WEB p
+WHERE u.Documento='admin'
+GO
+
+INSERT dbo.PERMISO_PAGINA_WEB(IdUsuario,CodigoPagina)
+SELECT u.IdUsuario,'venta.html' FROM dbo.USUARIO u WHERE u.Documento='empleado1'
+GO
+
 -- 5. Datos del Negocio
 INSERT INTO NEGOCIO(IdNegocio, Nombre, NIT, Direccion, Logo) 
 values (1, 'Sistema de Ventas GT', '123456789-1', 'Ciudad de Guatemala', null)
@@ -1069,6 +1189,7 @@ OUTER APPLY
     INNER JOIN dbo.COMPRA c ON c.IdCompra = dc.IdCompra
     WHERE dc.IdProducto = dv.IdProducto
       AND c.FechaRegistro <= v.FechaRegistro
+      AND c.Anulada = 0
     ORDER BY c.FechaRegistro DESC, dc.IdDetalleCompra DESC
 ) compra
 WHERE dv.PrecioCompra = 0 AND compra.PrecioCompra IS NOT NULL;
@@ -1091,7 +1212,8 @@ CREATE PROCEDURE dbo.sp_RegistrarProducto
     @CantidadMinima int = NULL,
     @CantidadMaxima int = NULL,
     @IdGrupoProveedor int = NULL,
-    @ImagenRuta nvarchar(260) = NULL
+    @ImagenRuta nvarchar(260) = NULL,
+    @Equivalencia varchar(500) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1102,6 +1224,21 @@ BEGIN
         SET @Mensaje = 'El porcentaje no puede ser negativo';
         RETURN;
     END;
+    SET @Porcentaje = ISNULL(@Porcentaje, 0);
+    IF @Estado = 1 AND @PrecioCompra = 0 AND @PrecioVenta = 0
+    BEGIN
+        SET @Mensaje = 'Ingresa costo o precio de venta para calcular el otro valor.';
+        RETURN;
+    END;
+    IF @Estado = 1 AND @PrecioCompra = 0 AND @PrecioVenta > 0 AND @Porcentaje = 0
+    BEGIN
+        SET @Mensaje = 'Ingresa un margen mayor que cero para calcular el costo.';
+        RETURN;
+    END;
+    IF @PrecioCompra = 0 AND @PrecioVenta > 0 AND @Porcentaje > 0
+        SET @PrecioCompra = ROUND(@PrecioVenta / (1 + @Porcentaje / 100.0), 2);
+    IF @PrecioCompra > 0 AND @PrecioVenta = 0
+        SET @PrecioVenta = CONVERT(decimal(10,2), CEILING(@PrecioCompra * (1 + @Porcentaje / 100.0) * 4.0) / 4.0);
     IF @PrecioCompra < 0 OR @PrecioVenta < 0
        OR (@PrecioCompra > 0 AND @PrecioVenta < @PrecioCompra)
        OR ABS(@PrecioVenta * 4 - ROUND(@PrecioVenta * 4, 0)) > 0.0001
@@ -1111,9 +1248,9 @@ BEGIN
     END;
     IF NOT EXISTS (SELECT 1 FROM dbo.PRODUCTO WHERE Codigo = @Codigo)
     BEGIN
-        INSERT INTO dbo.PRODUCTO(Codigo, Nombre, Descripcion, IdCategoria, PrecioCompra, PrecioVenta, Porcentaje, Estado,
+        INSERT INTO dbo.PRODUCTO(Codigo, Nombre, Descripcion, Equivalencia, IdCategoria, PrecioCompra, PrecioVenta, Porcentaje, Estado,
             IdGrupoReposicion, CantidadMinima, CantidadMaxima, IdGrupoProveedor, ImagenRuta)
-        VALUES(@Codigo, @Nombre, @Descripcion, @IdCategoria, @PrecioCompra, @PrecioVenta,
+        VALUES(@Codigo, @Nombre, @Descripcion, @Equivalencia, @IdCategoria, @PrecioCompra, @PrecioVenta,
             CASE WHEN @PrecioCompra = 0 THEN @Porcentaje
                  ELSE CEILING(((@PrecioVenta - @PrecioCompra) / @PrecioCompra) * 10000) / 10000 END, @Estado,
             @IdGrupoReposicion, @CantidadMinima, @CantidadMaxima, @IdGrupoProveedor, @ImagenRuta);
@@ -1142,7 +1279,8 @@ CREATE PROCEDURE dbo.sp_ModificarProducto
     @CantidadMinima int = NULL,
     @CantidadMaxima int = NULL,
     @IdGrupoProveedor int = NULL,
-    @ImagenRuta nvarchar(260) = NULL
+    @ImagenRuta nvarchar(260) = NULL,
+    @Equivalencia varchar(500) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1153,6 +1291,21 @@ BEGIN
         SET @Mensaje = 'El porcentaje no puede ser negativo';
         RETURN;
     END;
+    SET @Porcentaje = ISNULL(@Porcentaje, 0);
+    IF @Estado = 1 AND @PrecioCompra = 0 AND @PrecioVenta = 0
+    BEGIN
+        SET @Mensaje = 'Ingresa costo o precio de venta para calcular el otro valor.';
+        RETURN;
+    END;
+    IF @Estado = 1 AND @PrecioCompra = 0 AND @PrecioVenta > 0 AND @Porcentaje = 0
+    BEGIN
+        SET @Mensaje = 'Ingresa un margen mayor que cero para calcular el costo.';
+        RETURN;
+    END;
+    IF @PrecioCompra = 0 AND @PrecioVenta > 0 AND @Porcentaje > 0
+        SET @PrecioCompra = ROUND(@PrecioVenta / (1 + @Porcentaje / 100.0), 2);
+    IF @PrecioCompra > 0 AND @PrecioVenta = 0
+        SET @PrecioVenta = CONVERT(decimal(10,2), CEILING(@PrecioCompra * (1 + @Porcentaje / 100.0) * 4.0) / 4.0);
     IF @PrecioCompra < 0 OR @PrecioVenta < 0
        OR (@PrecioCompra > 0 AND @PrecioVenta < @PrecioCompra)
        OR ABS(@PrecioVenta * 4 - ROUND(@PrecioVenta * 4, 0)) > 0.0001
@@ -1170,6 +1323,7 @@ BEGIN
     SET Codigo = @Codigo,
         Nombre = @Nombre,
         Descripcion = @Descripcion,
+        Equivalencia = @Equivalencia,
         IdCategoria = @IdCategoria,
         PrecioCompra = @PrecioCompra,
         PrecioVenta = @PrecioVenta,
@@ -1195,7 +1349,7 @@ BEGIN
     SET @Codigo = LTRIM(RTRIM(@Codigo));
     IF @Codigo IS NULL OR @Codigo = '' RETURN;
 
-    SELECT TOP (2) p.IdProducto, p.Codigo, p.Nombre, p.Descripcion,
+    SELECT TOP (2) p.IdProducto, p.Codigo, p.Nombre, p.Descripcion, p.Equivalencia,
            c.IdCategoria, c.Descripcion AS DescripcionCategoria, p.Stock,
            p.PrecioCompra, p.PrecioVenta, p.Porcentaje, p.Estado,
            p.IdGrupoReposicion,
@@ -1251,12 +1405,23 @@ BEGIN
         IF ABS(@MontoTotal - (SELECT SUM(SubTotal) FROM @DetalleVenta)) > 0.01 OR @MontoPago < @MontoTotal OR ABS(@MontoCambio - (@MontoPago - @MontoTotal)) > 0.01
             THROW 50014, 'Los montos de la venta no coinciden con el detalle o el pago', 1;
 
+        IF EXISTS
+        (
+            SELECT 1
+            FROM @DetalleVenta dv
+            LEFT JOIN dbo.PRODUCTO p WITH (UPDLOCK, HOLDLOCK) ON p.IdProducto = dv.IdProducto
+            WHERE p.IdProducto IS NULL
+               OR (ISNULL(p.Estado, 0) = 0 AND NOT (ISNULL(p.Codigo, '') LIKE 'T%' AND ISNULL(p.Descripcion, '') = 'ARTICULO TEMPORAL DE VENTA'))
+        )
+            THROW 50017, 'Uno o más productos ya no existen o están inactivos. Verifica el producto antes de registrar la venta.', 1;
+
         DECLARE @ProductosSolicitados int = (SELECT COUNT(DISTINCT IdProducto) FROM @DetalleVenta);
         DECLARE @ProductosActualizados int;
         UPDATE p
         SET p.Stock = p.Stock - dv.Cantidad
         FROM dbo.PRODUCTO p
-        INNER JOIN @DetalleVenta dv ON dv.IdProducto = p.IdProducto;
+        INNER JOIN @DetalleVenta dv ON dv.IdProducto = p.IdProducto
+        WHERE (p.Estado = 1 OR (ISNULL(p.Codigo, '') LIKE 'T%' AND ISNULL(p.Descripcion, '') = 'ARTICULO TEMPORAL DE VENTA'));
         SET @ProductosActualizados = @@ROWCOUNT;
         IF @ProductosActualizados <> @ProductosSolicitados
             THROW 50015, 'Uno o más productos ya no existen', 1;
@@ -1309,7 +1474,8 @@ CREATE PROCEDURE dbo.sp_RegistrarCompra
     @MontoNoInventariable decimal(18,2),
     @DetalleCompra dbo.EDetalle_Compra READONLY,
     @Resultado bit OUTPUT,
-    @Mensaje varchar(500) OUTPUT
+    @Mensaje varchar(500) OUTPUT,
+    @NumeroFacturaProveedor varchar(100) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1339,7 +1505,7 @@ BEGIN
                OR Porcentaje < 0 OR MontoTotal < 0
                OR ABS(MontoTotal - ROUND(PrecioCompra * Cantidad, 2)) > 0.01
                OR ABS(PrecioVenta * 4 - ROUND(PrecioVenta * 4, 0)) > 0.0001
-               OR (PrecioCompra > 0 AND ABS(Porcentaje - ((PrecioVenta - PrecioCompra) / PrecioCompra * 100.0)) > 0.01)
+               OR (PrecioCompra > 0 AND ABS(Porcentaje - ((PrecioVenta - PrecioCompra) / PrecioCompra)) > 0.0001)
         )
             THROW 50002, 'El detalle de compra contiene precios, porcentajes o cantidades inválidos', 1;
 
@@ -1349,11 +1515,29 @@ BEGIN
         IF @MontoNoInventariable IS NULL OR @MontoNoInventariable < 0
             THROW 50004, 'El importe no inventariable no es válido', 1;
 
+        IF NOT EXISTS
+        (
+            SELECT 1 FROM dbo.PROVEEDOR WITH (UPDLOCK, HOLDLOCK)
+            WHERE IdProveedor = @IdProveedor AND Estado = 1
+        )
+            THROW 50006, 'Selecciona un proveedor activo para registrar la compra', 1;
+
+        IF EXISTS
+        (
+            SELECT 1
+            FROM @DetalleCompra dc
+            LEFT JOIN dbo.PRODUCTO p WITH (UPDLOCK, HOLDLOCK) ON p.IdProducto = dc.IdProducto
+            WHERE p.IdProducto IS NULL OR p.Estado = 0
+        )
+            THROW 50007, 'La compra contiene un producto que ya no existe o está inactivo. Reactívalo antes de registrar.', 1;
+
         IF ABS(@MontoTotal - (SELECT SUM(MontoTotal) FROM @DetalleCompra) - @MontoNoInventariable) > 1.00
             THROW 50004, 'El total de la factura no coincide con los productos y el importe no inventariable', 1;
 
-        INSERT INTO dbo.COMPRA(IdUsuario, IdProveedor, TipoDocumento, NumeroDocumento, MontoTotal, MontoNoInventariable)
-        VALUES(@IdUsuario, @IdProveedor, @TipoDocumento, @NumeroDocumento, @MontoTotal, @MontoNoInventariable);
+        INSERT INTO dbo.COMPRA(IdUsuario, IdProveedor, TipoDocumento, NumeroDocumento, MontoTotal,
+            MontoNoInventariable, NumeroFacturaProveedor)
+        VALUES(@IdUsuario, @IdProveedor, @TipoDocumento, @NumeroDocumento, @MontoTotal,
+            @MontoNoInventariable, NULLIF(LTRIM(RTRIM(@NumeroFacturaProveedor)), ''));
         SET @idcompra = SCOPE_IDENTITY();
 
         INSERT INTO dbo.DETALLE_COMPRA(IdCompra, IdProducto, PrecioCompra, PrecioVenta, Porcentaje, Cantidad, MontoTotal)
@@ -1370,7 +1554,8 @@ BEGIN
             p.Porcentaje = CASE WHEN dc.PrecioCompra = 0 THEN 0
                 ELSE CEILING(((dc.PrecioVenta - dc.PrecioCompra) / dc.PrecioCompra) * 10000) / 10000 END
         FROM dbo.PRODUCTO p
-        INNER JOIN @DetalleCompra dc ON dc.IdProducto = p.IdProducto;
+        INNER JOIN @DetalleCompra dc ON dc.IdProducto = p.IdProducto
+        WHERE p.Estado = 1;
 
         IF @@ROWCOUNT <> (SELECT COUNT(*) FROM @DetalleCompra)
             THROW 50005, 'Uno o más productos de la compra ya no existen', 1;
@@ -1407,7 +1592,8 @@ BEGIN
     INNER JOIN dbo.DETALLE_COMPRA dc ON dc.IdCompra = c.IdCompra
     INNER JOIN dbo.PRODUCTO p ON p.IdProducto = dc.IdProducto
     INNER JOIN dbo.CATEGORIA ca ON ca.IdCategoria = p.IdCategoria
-    WHERE CONVERT(date, c.FechaRegistro) BETWEEN @fechainicio AND @fechafin
+    WHERE c.Anulada = 0
+      AND CONVERT(date, c.FechaRegistro) BETWEEN @fechainicio AND @fechafin
       AND pr.IdProveedor = IIF(@idproveedor = 0, pr.IdProveedor, @idproveedor);
 END;
 GO
@@ -1459,7 +1645,7 @@ BEGIN
     ),
     ProductosPendientes AS
     (
-        SELECT p.IdProducto, p.Codigo, p.Nombre,
+        SELECT p.IdProducto, p.Codigo, p.Equivalencia, p.Nombre,
                sg.IdGrupoReposicion, sg.GrupoReposicion,
                sg.StockActual, sg.CantidadMinima, sg.CantidadMaxima,
                sg.CantidadMinima - sg.StockActual AS CantidadFaltante,
@@ -1470,7 +1656,7 @@ BEGIN
 
         UNION ALL
 
-        SELECT p.IdProducto, p.Codigo, p.Nombre,
+        SELECT p.IdProducto, p.Codigo, p.Equivalencia, p.Nombre,
                CAST(NULL AS int), CAST(NULL AS varchar(100)),
                p.Stock, p.CantidadMinima, p.CantidadMaxima,
                p.CantidadMinima - p.Stock, p.IdGrupoProveedor
@@ -1482,7 +1668,7 @@ BEGIN
     SELECT pp.IdGrupoReposicion, pp.GrupoReposicion,
            gp.IdGrupoProveedor, gp.Nombre AS GrupoProveedores,
            pr.IdProveedor, pr.RazonSocial AS Proveedor,
-           pp.IdProducto, pp.Codigo, pp.Nombre AS Producto,
+           pp.IdProducto, pp.Codigo, pp.Equivalencia, pp.Nombre AS Producto,
            pp.StockActual, pp.CantidadMinima, pp.CantidadMaxima,
            pp.CantidadFaltante AS FaltanteReferencia,
            ultimo.PrecioCompra AS UltimoPrecioConEsteProveedor,
@@ -1499,7 +1685,7 @@ BEGIN
         SELECT TOP (1) dc.PrecioCompra, c.FechaRegistro AS FechaCompra
         FROM dbo.DETALLE_COMPRA dc
         INNER JOIN dbo.COMPRA c ON c.IdCompra = dc.IdCompra
-        WHERE dc.IdProducto = pp.IdProducto AND c.IdProveedor = pr.IdProveedor
+        WHERE dc.IdProducto = pp.IdProducto AND c.IdProveedor = pr.IdProveedor AND c.Anulada=0
         ORDER BY c.FechaRegistro DESC, dc.IdDetalleCompra DESC
     ) ultimo
     OUTER APPLY
@@ -1508,7 +1694,7 @@ BEGIN
         FROM dbo.DETALLE_COMPRA dc
         INNER JOIN dbo.COMPRA c ON c.IdCompra = dc.IdCompra
         INNER JOIN dbo.PROVEEDOR prh ON prh.IdProveedor = c.IdProveedor
-        WHERE dc.IdProducto = pp.IdProducto
+        WHERE dc.IdProducto = pp.IdProducto AND c.Anulada=0
         ORDER BY c.FechaRegistro DESC, dc.IdDetalleCompra DESC
     ) historico
     ORDER BY gp.Nombre, pr.RazonSocial, pp.GrupoReposicion, pp.Nombre;
@@ -1637,6 +1823,7 @@ BEGIN
         Comprobante varchar(100) NOT NULL,
         IdUsuario int NULL CONSTRAINT FK_FIN_TRANSFERENCIA_BANCARIA_USUARIO REFERENCES dbo.USUARIO(IdUsuario),
         FechaRegistro datetime2(0) NOT NULL CONSTRAINT DF_FIN_TRANSFERENCIA_BANCARIA_FechaRegistro DEFAULT(sysdatetime()),
+        AfectaSaldo bit NOT NULL CONSTRAINT DF_FIN_TRANSFERENCIA_BANCARIA_AfectaSaldo DEFAULT(1),
         CONSTRAINT CK_FIN_TRANSFERENCIA_BANCARIA_Fondo CHECK(Fondo IN ('Capital','Personal')),
         CONSTRAINT CK_FIN_TRANSFERENCIA_BANCARIA_Monto CHECK(Monto>0),
         CONSTRAINT CK_FIN_TRANSFERENCIA_BANCARIA_Bancos CHECK(IdBancoOrigen<>IdBancoDestino)
@@ -1644,6 +1831,9 @@ BEGIN
     CREATE INDEX IX_FIN_TRANSFERENCIA_BANCARIA_OrigenFecha ON dbo.FIN_TRANSFERENCIA_BANCARIA(IdBancoOrigen,Fecha);
     CREATE INDEX IX_FIN_TRANSFERENCIA_BANCARIA_DestinoFecha ON dbo.FIN_TRANSFERENCIA_BANCARIA(IdBancoDestino,Fecha);
 END;
+
+IF COL_LENGTH(N'dbo.FIN_TRANSFERENCIA_BANCARIA', N'AfectaSaldo') IS NULL
+    ALTER TABLE dbo.FIN_TRANSFERENCIA_BANCARIA ADD AfectaSaldo bit NOT NULL CONSTRAINT DF_FIN_TRANSFERENCIA_BANCARIA_AfectaSaldo DEFAULT(1) WITH VALUES;
 
 IF COL_LENGTH(N'dbo.FIN_MOVIMIENTO', N'IdBanco') IS NULL
     ALTER TABLE dbo.FIN_MOVIMIENTO ADD IdBanco int NULL CONSTRAINT FK_FIN_MOVIMIENTO_BANCO_TEMPORAL REFERENCES dbo.FIN_BANCO_TEMPORAL(IdBanco);
@@ -1673,3 +1863,461 @@ IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT
 IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID(N'dbo.PAGO_GASTO_PERSONAL') AND name=N'CK_PAGO_GASTO_PERSONAL_OrigenEfectivo') EXEC(N'ALTER TABLE dbo.PAGO_GASTO_PERSONAL ADD CONSTRAINT CK_PAGO_GASTO_PERSONAL_OrigenEfectivo CHECK(OrigenEfectivo IS NULL OR OrigenEfectivo IN (''Caja'',''Capital'',''Ganancia''));');
 EXEC(N'UPDATE dbo.FIN_MOVIMIENTO SET OrigenEfectivo=''Caja'' WHERE PagadoDesdeCaja=1 AND OrigenEfectivo IS NULL;');
 EXEC(N'UPDATE dbo.PAGO_GASTO_PERSONAL SET OrigenEfectivo=''Caja'' WHERE PagadoDesdeCaja=1 AND OrigenEfectivo IS NULL;');
+
+
+-- Devoluciones/anulaciones Forms incluidas también en instalación limpia.
+/* Ejecutar una sola vez en DBSISTEMA_VENTA antes de usar Devoluciones en Forms.
+   Registra devoluciones/anulaciones, audita el usuario y repone stock en una transacción.
+   El reembolso queda como referencia para el cierre manual; no modifica Finanzas web. */
+USE DBSISTEMA_VENTA;
+GO
+
+IF OBJECT_ID(N'dbo.DEVOLUCION_VENTA', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.DEVOLUCION_VENTA
+    (
+        IdDevolucion int IDENTITY(1,1) NOT NULL CONSTRAINT PK_DEVOLUCION_VENTA PRIMARY KEY,
+        IdVenta int NOT NULL CONSTRAINT FK_DEVOLUCION_VENTA_VENTA REFERENCES dbo.VENTA(IdVenta),
+        IdUsuario int NOT NULL CONSTRAINT FK_DEVOLUCION_VENTA_USUARIO REFERENCES dbo.USUARIO(IdUsuario),
+        Tipo varchar(15) NOT NULL,
+        Motivo varchar(250) NOT NULL,
+        MontoDevuelto decimal(18,2) NOT NULL,
+        FechaRegistro datetime2(0) NOT NULL CONSTRAINT DF_DEVOLUCION_VENTA_Fecha DEFAULT(SYSDATETIME()),
+        CONSTRAINT CK_DEVOLUCION_VENTA_Tipo CHECK(Tipo IN ('PARCIAL','ANULACION')),
+        CONSTRAINT CK_DEVOLUCION_VENTA_Monto CHECK(MontoDevuelto >= 0),
+        CONSTRAINT CK_DEVOLUCION_VENTA_Motivo CHECK(LEN(LTRIM(RTRIM(Motivo))) > 0)
+    );
+    CREATE INDEX IX_DEVOLUCION_VENTA_VentaFecha ON dbo.DEVOLUCION_VENTA(IdVenta, FechaRegistro);
+END;
+GO
+
+IF OBJECT_ID(N'dbo.DETALLE_DEVOLUCION_VENTA', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.DETALLE_DEVOLUCION_VENTA
+    (
+        IdDetalleDevolucion int IDENTITY(1,1) NOT NULL CONSTRAINT PK_DETALLE_DEVOLUCION_VENTA PRIMARY KEY,
+        IdDevolucion int NOT NULL CONSTRAINT FK_DETALLE_DEVOLUCION_CABECERA REFERENCES dbo.DEVOLUCION_VENTA(IdDevolucion),
+        IdDetalleVenta int NOT NULL CONSTRAINT FK_DETALLE_DEVOLUCION_VENTA REFERENCES dbo.DETALLE_VENTA(IdDetalleVenta),
+        Cantidad int NOT NULL,
+        PrecioVenta decimal(18,2) NOT NULL,
+        SubTotal decimal(18,2) NOT NULL,
+        CONSTRAINT CK_DETALLE_DEVOLUCION_CANTIDAD CHECK(Cantidad > 0),
+        CONSTRAINT CK_DETALLE_DEVOLUCION_PRECIOS CHECK(PrecioVenta >= 0 AND SubTotal >= 0)
+    );
+    CREATE INDEX IX_DETALLE_DEVOLUCION_VENTA_Detalle ON dbo.DETALLE_DEVOLUCION_VENTA(IdDetalleVenta);
+END;
+GO
+
+IF TYPE_ID(N'dbo.EDetalle_DevolucionVenta') IS NULL
+    EXEC(N'CREATE TYPE dbo.EDetalle_DevolucionVenta AS TABLE
+    (
+        IdDetalleVenta int NOT NULL PRIMARY KEY,
+        Cantidad int NOT NULL
+    );');
+GO
+
+GRANT EXECUTE, REFERENCES ON TYPE::dbo.EDetalle_DevolucionVenta TO [ventas_app2];
+GO
+
+CREATE OR ALTER PROCEDURE dbo.usp_RegistrarDevolucionVenta
+    @IdVenta int,
+    @IdUsuario int,
+    @Tipo varchar(15),
+    @Motivo varchar(250),
+    @MontoReembolsado decimal(18,2),
+    @Detalle dbo.EDetalle_DevolucionVenta READONLY,
+    @Resultado bit OUTPUT,
+    @Mensaje varchar(500) OUTPUT,
+    @MontoDevuelto decimal(18,2) OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    SET @Resultado = 0;
+    SET @Mensaje = '';
+    SET @MontoDevuelto = 0;
+    DECLARE @ValorProductos decimal(18,2)=0;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        IF @Tipo NOT IN ('PARCIAL','ANULACION')
+            THROW 50101, 'Tipo de devolución no válido.', 1;
+        IF NULLIF(LTRIM(RTRIM(@Motivo)), '') IS NULL
+            THROW 50102, 'Escribe el motivo de la devolución o anulación.', 1;
+        IF NOT EXISTS (SELECT 1 FROM @Detalle)
+            THROW 50103, 'Selecciona al menos un producto y una cantidad.', 1;
+        IF EXISTS (SELECT 1 FROM @Detalle WHERE Cantidad <= 0)
+            THROW 50104, 'Las cantidades devueltas deben ser mayores que cero.', 1;
+
+        IF NOT EXISTS
+        (
+            SELECT 1 FROM dbo.VENTA WITH (UPDLOCK, HOLDLOCK)
+            WHERE IdVenta=@IdVenta
+        )
+            THROW 50105, 'No se encontró la venta seleccionada.', 1;
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.USUARIO WHERE IdUsuario=@IdUsuario AND Estado=1)
+            THROW 50106, 'El usuario que registra la devolución no está activo.', 1;
+
+        IF EXISTS
+        (
+            SELECT 1
+            FROM @Detalle d
+            LEFT JOIN dbo.DETALLE_VENTA dv WITH (UPDLOCK, HOLDLOCK)
+                ON dv.IdDetalleVenta=d.IdDetalleVenta AND dv.IdVenta=@IdVenta
+            OUTER APPLY
+            (
+                SELECT SUM(dd.Cantidad) AS CantidadDevuelta
+                FROM dbo.DETALLE_DEVOLUCION_VENTA dd WITH (UPDLOCK, HOLDLOCK)
+                WHERE dd.IdDetalleVenta=d.IdDetalleVenta
+            ) prev
+            WHERE dv.IdDetalleVenta IS NULL
+               OR d.Cantidad > dv.Cantidad-ISNULL(prev.CantidadDevuelta,0)
+        )
+            THROW 50107, 'La cantidad supera lo que aún queda disponible para devolver en esta venta.', 1;
+
+        IF @Tipo='ANULACION' AND EXISTS
+        (
+            SELECT 1
+            FROM dbo.DETALLE_VENTA dv WITH (UPDLOCK, HOLDLOCK)
+            OUTER APPLY
+            (
+                SELECT SUM(dd.Cantidad) AS CantidadDevuelta
+                FROM dbo.DETALLE_DEVOLUCION_VENTA dd WITH (UPDLOCK, HOLDLOCK)
+                WHERE dd.IdDetalleVenta=dv.IdDetalleVenta
+            ) prev
+            LEFT JOIN @Detalle d ON d.IdDetalleVenta=dv.IdDetalleVenta
+            WHERE dv.IdVenta=@IdVenta
+              AND ISNULL(d.Cantidad,0) <> dv.Cantidad-ISNULL(prev.CantidadDevuelta,0)
+        )
+            THROW 50108, 'Para anular la factura, incluye la cantidad pendiente de todos sus productos.', 1;
+
+        SELECT @ValorProductos=CONVERT(decimal(18,2),SUM(CONVERT(decimal(18,2),d.Cantidad)*dv.PrecioVenta))
+        FROM @Detalle d
+        INNER JOIN dbo.DETALLE_VENTA dv ON dv.IdDetalleVenta=d.IdDetalleVenta AND dv.IdVenta=@IdVenta;
+
+        IF @MontoReembolsado IS NULL OR @MontoReembolsado<0 OR @MontoReembolsado>@ValorProductos
+            THROW 50109, 'El reembolso debe estar entre cero y el valor de los productos devueltos.', 1;
+        SET @MontoDevuelto=@MontoReembolsado;
+
+        INSERT dbo.DEVOLUCION_VENTA(IdVenta,IdUsuario,Tipo,Motivo,MontoDevuelto)
+        VALUES(@IdVenta,@IdUsuario,@Tipo,LEFT(LTRIM(RTRIM(@Motivo)),250),@MontoDevuelto);
+
+        DECLARE @IdDevolucion int=CONVERT(int,SCOPE_IDENTITY());
+        INSERT dbo.DETALLE_DEVOLUCION_VENTA(IdDevolucion,IdDetalleVenta,Cantidad,PrecioVenta,SubTotal)
+        SELECT @IdDevolucion,d.IdDetalleVenta,d.Cantidad,dv.PrecioVenta,
+               CONVERT(decimal(18,2),d.Cantidad*dv.PrecioVenta)
+        FROM @Detalle d
+        INNER JOIN dbo.DETALLE_VENTA dv ON dv.IdDetalleVenta=d.IdDetalleVenta AND dv.IdVenta=@IdVenta;
+
+        /* Los artículos F2 son renglones de venta sin inventario real. */
+        UPDATE p
+        SET p.Stock=p.Stock+d.Cantidad
+        FROM dbo.PRODUCTO p
+        INNER JOIN dbo.DETALLE_VENTA dv ON dv.IdProducto=p.IdProducto
+        INNER JOIN @Detalle d ON d.IdDetalleVenta=dv.IdDetalleVenta
+        WHERE dv.IdVenta=@IdVenta
+          AND NOT (ISNULL(p.Codigo,'') LIKE 'T%' AND UPPER(ISNULL(p.Descripcion,''))='ARTICULO TEMPORAL DE VENTA');
+
+        SET @Resultado=1;
+        SET @Mensaje='Devolución registrada; revisa el monto para el cierre manual.';
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF XACT_STATE()<>0 ROLLBACK TRANSACTION;
+        SET @Resultado=0;
+        SET @Mensaje=ERROR_MESSAGE();
+        SET @MontoDevuelto=0;
+    END CATCH
+END;
+GO
+
+GRANT EXECUTE ON OBJECT::dbo.usp_RegistrarDevolucionVenta TO [ventas_app2];
+GO
+
+/* Corrección auditada de compras guardadas. */
+CREATE TYPE dbo.ECompra_Correccion AS TABLE
+(
+    IdDetalleCompra int NOT NULL,
+    IdProductoActual int NOT NULL,
+    IdProductoNuevo int NOT NULL,
+    CantidadActual int NOT NULL,
+    CantidadNueva int NOT NULL,
+    PrecioCompraActual decimal(18,2) NOT NULL,
+    PrecioCompraNuevo decimal(18,2) NOT NULL
+);
+GO
+
+CREATE TABLE dbo.COMPRA_CORRECCION
+(
+    IdCorreccion int IDENTITY(1,1) PRIMARY KEY,
+    IdCompra int NOT NULL REFERENCES dbo.COMPRA(IdCompra),
+    IdUsuario int NOT NULL REFERENCES dbo.USUARIO(IdUsuario),
+    Tipo varchar(12) NOT NULL,
+    Motivo varchar(500) NOT NULL,
+    IdProveedorAnterior int NULL,
+    IdProveedorNuevo int NULL,
+    NumeroFacturaAnterior varchar(100) NULL,
+    NumeroFacturaNuevo varchar(100) NULL,
+    MontoTotalAnterior decimal(18,2) NOT NULL,
+    MontoTotalNuevo decimal(18,2) NOT NULL,
+    FechaRegistro datetime NOT NULL CONSTRAINT DF_COMPRA_CORRECCION_Fecha DEFAULT (GETDATE())
+);
+GO
+
+CREATE TABLE dbo.COMPRA_CORRECCION_DETALLE
+(
+    IdAuditoriaDetalle int IDENTITY(1,1) PRIMARY KEY,
+    IdCorreccion int NOT NULL REFERENCES dbo.COMPRA_CORRECCION(IdCorreccion),
+    IdDetalleCompra int NOT NULL,
+    IdProductoAnterior int NOT NULL,
+    IdProductoNuevo int NOT NULL,
+    CantidadAnterior int NOT NULL,
+    CantidadNueva int NOT NULL,
+    PrecioCompraAnterior decimal(18,2) NOT NULL,
+    PrecioCompraNuevo decimal(18,2) NOT NULL,
+    MontoAnterior decimal(18,2) NOT NULL,
+    MontoNuevo decimal(18,2) NOT NULL
+);
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_CorregirCompra
+    @IdCompra int,
+    @IdUsuario int,
+    @IdProveedorNuevo int,
+    @NumeroFacturaProveedorNuevo varchar(100),
+    @Motivo varchar(500),
+    @Detalle dbo.ECompra_Correccion READONLY,
+    @Resultado bit OUTPUT,
+    @Mensaje varchar(500) OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    SET @Resultado=0;
+    SET @Mensaje='';
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        DECLARE @ProveedorAnterior int, @FacturaAnterior varchar(100),
+                @MontoTotal decimal(18,2), @NoInventariable decimal(18,2), @IdCorreccion int;
+
+        IF NULLIF(LTRIM(RTRIM(@Motivo)),'') IS NULL
+            THROW 50201, 'Escribe el motivo de la corrección.', 1;
+        IF NOT EXISTS (SELECT 1 FROM dbo.USUARIO WHERE IdUsuario=@IdUsuario AND Estado=1)
+            THROW 50202, 'El usuario que corrige la compra no está activo.', 1;
+        SELECT @ProveedorAnterior=c.IdProveedor,@FacturaAnterior=c.NumeroFacturaProveedor,
+               @MontoTotal=c.MontoTotal,@NoInventariable=c.MontoNoInventariable
+        FROM dbo.COMPRA c WITH (UPDLOCK,HOLDLOCK) WHERE c.IdCompra=@IdCompra AND c.Anulada=0;
+        IF @ProveedorAnterior IS NULL THROW 50203, 'No se encontró una compra activa para corregir.', 1;
+        IF @IdProveedorNuevo<>@ProveedorAnterior AND NOT EXISTS
+            (SELECT 1 FROM dbo.PROVEEDOR WHERE IdProveedor=@IdProveedorNuevo AND Estado=1)
+            THROW 50204, 'Selecciona un proveedor activo.', 1;
+        IF @IdProveedorNuevo<>@ProveedorAnterior AND EXISTS
+            (SELECT 1 FROM dbo.FIN_MOVIMIENTO WHERE IdCompra=@IdCompra AND Tipo='Proveedor')
+            THROW 50205, 'No se puede cambiar el proveedor porque ya hay pagos relacionados con esta compra.', 1;
+        IF NOT EXISTS (SELECT 1 FROM dbo.DETALLE_COMPRA WHERE IdCompra=@IdCompra)
+            THROW 50206, 'La compra no tiene renglones para corregir.', 1;
+        IF (SELECT COUNT(*) FROM @Detalle)<>(SELECT COUNT(*) FROM dbo.DETALLE_COMPRA WHERE IdCompra=@IdCompra)
+            THROW 50207, 'Conserva todos los renglones de la compra.', 1;
+        IF EXISTS (SELECT IdDetalleCompra FROM @Detalle GROUP BY IdDetalleCompra HAVING COUNT(*)>1)
+            THROW 50208, 'Hay renglones duplicados en la corrección.', 1;
+        IF EXISTS
+        (
+            SELECT 1 FROM dbo.DETALLE_COMPRA a WITH (UPDLOCK,HOLDLOCK)
+            LEFT JOIN @Detalle d ON d.IdDetalleCompra=a.IdDetalleCompra
+            WHERE a.IdCompra=@IdCompra AND
+                (d.IdDetalleCompra IS NULL OR d.IdProductoActual<>a.IdProducto
+                 OR d.CantidadActual<>a.Cantidad OR d.PrecioCompraActual<>a.PrecioCompra)
+        ) THROW 50209, 'La compra cambió desde que la abriste. Búscala de nuevo y revisa los valores actuales.', 1;
+        IF EXISTS
+        (
+            SELECT 1 FROM @Detalle d
+            LEFT JOIN dbo.DETALLE_COMPRA a ON a.IdDetalleCompra=d.IdDetalleCompra AND a.IdCompra=@IdCompra
+            LEFT JOIN dbo.PRODUCTO p ON p.IdProducto=d.IdProductoNuevo
+            WHERE a.IdDetalleCompra IS NULL OR d.CantidadNueva<=0 OR d.PrecioCompraNuevo<0
+                OR p.IdProducto IS NULL OR (d.IdProductoNuevo<>d.IdProductoActual AND p.Estado=0)
+        ) THROW 50210, 'Revisa que los productos, cantidades y costos nuevos sean válidos.', 1;
+        IF EXISTS (SELECT IdProductoNuevo FROM @Detalle GROUP BY IdProductoNuevo HAVING COUNT(*)>1)
+            THROW 50211, 'No se puede repetir un producto en la misma compra.', 1;
+        IF ABS(@MontoTotal-
+            (SELECT SUM(CONVERT(decimal(18,2),ROUND(PrecioCompraNuevo*CantidadNueva,2))) FROM @Detalle)
+            -@NoInventariable)>1.00
+            THROW 50212, 'El total corregido difiere más de Q1.00 del total de factura.', 1;
+
+        INSERT dbo.COMPRA_CORRECCION(IdCompra,IdUsuario,Tipo,Motivo,IdProveedorAnterior,IdProveedorNuevo,
+            NumeroFacturaAnterior,NumeroFacturaNuevo,MontoTotalAnterior,MontoTotalNuevo)
+        VALUES(@IdCompra,@IdUsuario,'CORRECCION',LEFT(LTRIM(RTRIM(@Motivo)),500),@ProveedorAnterior,@IdProveedorNuevo,
+            @FacturaAnterior,NULLIF(LTRIM(RTRIM(@NumeroFacturaProveedorNuevo)),''),@MontoTotal,@MontoTotal);
+        SET @IdCorreccion=CONVERT(int,SCOPE_IDENTITY());
+        INSERT dbo.COMPRA_CORRECCION_DETALLE(IdCorreccion,IdDetalleCompra,IdProductoAnterior,IdProductoNuevo,
+            CantidadAnterior,CantidadNueva,PrecioCompraAnterior,PrecioCompraNuevo,MontoAnterior,MontoNuevo)
+        SELECT @IdCorreccion,a.IdDetalleCompra,a.IdProducto,d.IdProductoNuevo,a.Cantidad,d.CantidadNueva,
+            a.PrecioCompra,d.PrecioCompraNuevo,a.MontoTotal,
+            CONVERT(decimal(18,2),ROUND(d.PrecioCompraNuevo*d.CantidadNueva,2))
+        FROM dbo.DETALLE_COMPRA a INNER JOIN @Detalle d ON d.IdDetalleCompra=a.IdDetalleCompra
+        WHERE a.IdCompra=@IdCompra;
+
+        DECLARE @Afectados TABLE(IdProducto int PRIMARY KEY);
+        INSERT @Afectados SELECT IdProductoActual FROM @Detalle UNION SELECT IdProductoNuevo FROM @Detalle;
+        ;WITH M AS
+        (
+            SELECT IdProductoActual IdProducto,-CantidadActual Cambio FROM @Detalle
+            UNION ALL SELECT IdProductoNuevo,CantidadNueva FROM @Detalle
+        ), A AS (SELECT IdProducto,SUM(Cambio) Cambio FROM M GROUP BY IdProducto)
+        UPDATE p SET p.Stock=p.Stock+A.Cambio FROM dbo.PRODUCTO p INNER JOIN A ON A.IdProducto=p.IdProducto;
+
+        UPDATE a
+        SET a.IdProducto=d.IdProductoNuevo,a.Cantidad=d.CantidadNueva,a.PrecioCompra=d.PrecioCompraNuevo,
+            a.MontoTotal=CONVERT(decimal(18,2),ROUND(d.PrecioCompraNuevo*d.CantidadNueva,2)),
+            a.PrecioVenta=CASE WHEN d.IdProductoNuevo=d.IdProductoActual THEN a.PrecioVenta ELSE p.PrecioVenta END,
+            a.Porcentaje=CASE WHEN d.IdProductoNuevo<>d.IdProductoActual THEN p.Porcentaje
+                WHEN d.PrecioCompraNuevo<=0 THEN 0
+                ELSE CEILING(((a.PrecioVenta-d.PrecioCompraNuevo)/d.PrecioCompraNuevo)*10000)/10000 END
+        FROM dbo.DETALLE_COMPRA a INNER JOIN @Detalle d ON d.IdDetalleCompra=a.IdDetalleCompra
+        INNER JOIN dbo.PRODUCTO p ON p.IdProducto=d.IdProductoNuevo WHERE a.IdCompra=@IdCompra;
+        UPDATE dbo.COMPRA SET IdProveedor=@IdProveedorNuevo,
+            NumeroFacturaProveedor=NULLIF(LTRIM(RTRIM(@NumeroFacturaProveedorNuevo)),'') WHERE IdCompra=@IdCompra;
+
+        UPDATE p SET p.PrecioCompra=ISNULL(u.PrecioCompra,0),
+            p.Porcentaje=CASE WHEN ISNULL(u.PrecioCompra,0)<=0 THEN 0
+                ELSE CEILING(((p.PrecioVenta-u.PrecioCompra)/u.PrecioCompra)*10000)/10000 END
+        FROM dbo.PRODUCTO p INNER JOIN @Afectados x ON x.IdProducto=p.IdProducto
+        OUTER APPLY
+        (
+            SELECT TOP (1) dc.PrecioCompra FROM dbo.DETALLE_COMPRA dc
+            INNER JOIN dbo.COMPRA c ON c.IdCompra=dc.IdCompra
+            WHERE dc.IdProducto=p.IdProducto AND c.Anulada=0
+            ORDER BY c.FechaRegistro DESC,dc.IdDetalleCompra DESC
+        ) u;
+        SET @Resultado=1;
+        SET @Mensaje='Compra corregida y auditada. El inventario y costo vigente se actualizaron; se conservó el precio de venta.';
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF XACT_STATE()<>0 ROLLBACK TRANSACTION;
+        SET @Resultado=0; SET @Mensaje=ERROR_MESSAGE();
+    END CATCH
+END;
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_AnularCompra
+    @IdCompra int,
+    @IdUsuario int,
+    @Motivo varchar(500),
+    @Resultado bit OUTPUT,
+    @Mensaje varchar(500) OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    SET @Resultado=0; SET @Mensaje='';
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        DECLARE @Proveedor int,@Factura varchar(100),@Monto decimal(18,2),@IdCorreccion int;
+        IF NULLIF(LTRIM(RTRIM(@Motivo)),'') IS NULL THROW 50301, 'Escribe el motivo de la anulación.', 1;
+        IF NOT EXISTS (SELECT 1 FROM dbo.USUARIO WHERE IdUsuario=@IdUsuario AND Estado=1)
+            THROW 50302, 'El usuario que anula la compra no está activo.', 1;
+        SELECT @Proveedor=IdProveedor,@Factura=NumeroFacturaProveedor,@Monto=MontoTotal
+        FROM dbo.COMPRA WITH (UPDLOCK,HOLDLOCK) WHERE IdCompra=@IdCompra AND Anulada=0;
+        IF @Proveedor IS NULL THROW 50303, 'No se encontró una compra activa para anular.', 1;
+        IF EXISTS (SELECT 1 FROM dbo.FIN_MOVIMIENTO WHERE IdCompra=@IdCompra AND Tipo='Proveedor')
+            THROW 50304, 'No se puede anular: hay pagos asociados a esta compra. Revisa esos pagos primero.', 1;
+        INSERT dbo.COMPRA_CORRECCION(IdCompra,IdUsuario,Tipo,Motivo,IdProveedorAnterior,IdProveedorNuevo,
+            NumeroFacturaAnterior,NumeroFacturaNuevo,MontoTotalAnterior,MontoTotalNuevo)
+        VALUES(@IdCompra,@IdUsuario,'ANULACION',LEFT(LTRIM(RTRIM(@Motivo)),500),@Proveedor,@Proveedor,@Factura,@Factura,@Monto,@Monto);
+        SET @IdCorreccion=CONVERT(int,SCOPE_IDENTITY());
+        INSERT dbo.COMPRA_CORRECCION_DETALLE(IdCorreccion,IdDetalleCompra,IdProductoAnterior,IdProductoNuevo,
+            CantidadAnterior,CantidadNueva,PrecioCompraAnterior,PrecioCompraNuevo,MontoAnterior,MontoNuevo)
+        SELECT @IdCorreccion,IdDetalleCompra,IdProducto,IdProducto,Cantidad,0,PrecioCompra,PrecioCompra,MontoTotal,0
+        FROM dbo.DETALLE_COMPRA WHERE IdCompra=@IdCompra;
+        DECLARE @Afectados TABLE(IdProducto int PRIMARY KEY);
+        INSERT @Afectados SELECT DISTINCT IdProducto FROM dbo.DETALLE_COMPRA WHERE IdCompra=@IdCompra;
+        UPDATE p SET p.Stock=p.Stock-x.Cantidad
+        FROM dbo.PRODUCTO p INNER JOIN
+            (SELECT IdProducto,SUM(Cantidad) Cantidad FROM dbo.DETALLE_COMPRA WHERE IdCompra=@IdCompra GROUP BY IdProducto) x
+            ON x.IdProducto=p.IdProducto;
+        UPDATE dbo.COMPRA SET Anulada=1,FechaAnulacion=GETDATE(),IdUsuarioAnulacion=@IdUsuario,
+            MotivoAnulacion=LEFT(LTRIM(RTRIM(@Motivo)),500) WHERE IdCompra=@IdCompra;
+        UPDATE p SET p.PrecioCompra=ISNULL(u.PrecioCompra,0),
+            p.Porcentaje=CASE WHEN ISNULL(u.PrecioCompra,0)<=0 THEN 0
+                ELSE CEILING(((p.PrecioVenta-u.PrecioCompra)/u.PrecioCompra)*10000)/10000 END
+        FROM dbo.PRODUCTO p INNER JOIN @Afectados x ON x.IdProducto=p.IdProducto
+        OUTER APPLY
+        (
+            SELECT TOP (1) dc.PrecioCompra FROM dbo.DETALLE_COMPRA dc
+            INNER JOIN dbo.COMPRA c ON c.IdCompra=dc.IdCompra
+            WHERE dc.IdProducto=p.IdProducto AND c.Anulada=0
+            ORDER BY c.FechaRegistro DESC,dc.IdDetalleCompra DESC
+        ) u;
+        SET @Resultado=1; SET @Mensaje='Compra anulada y auditada. El inventario se ajustó sin borrar el historial.';
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF XACT_STATE()<>0 ROLLBACK TRANSACTION;
+        SET @Resultado=0; SET @Mensaje=ERROR_MESSAGE();
+    END CATCH
+END;
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_ReactivarCompra
+    @IdCompra int,
+    @IdUsuario int,
+    @Motivo varchar(500),
+    @Resultado bit OUTPUT,
+    @Mensaje varchar(500) OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    SET @Resultado=0; SET @Mensaje='';
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        DECLARE @Proveedor int,@Factura varchar(100),@Monto decimal(18,2),@IdCorreccion int;
+        IF NULLIF(LTRIM(RTRIM(@Motivo)),'') IS NULL THROW 50401, 'Escribe el motivo de la restauración.', 1;
+        IF NOT EXISTS (SELECT 1 FROM dbo.USUARIO WHERE IdUsuario=@IdUsuario AND Estado=1)
+            THROW 50402, 'El usuario que restaura la compra no está activo.', 1;
+        SELECT @Proveedor=IdProveedor,@Factura=NumeroFacturaProveedor,@Monto=MontoTotal
+        FROM dbo.COMPRA WITH (UPDLOCK,HOLDLOCK) WHERE IdCompra=@IdCompra AND Anulada=1;
+        IF @Proveedor IS NULL THROW 50403, 'No se encontró una compra anulada para restaurar.', 1;
+        IF EXISTS (SELECT 1 FROM dbo.FIN_MOVIMIENTO WHERE IdCompra=@IdCompra AND Tipo='Proveedor')
+            THROW 50404, 'La compra tiene pagos relacionados. Revisa esos movimientos antes de restaurarla.', 1;
+        INSERT dbo.COMPRA_CORRECCION(IdCompra,IdUsuario,Tipo,Motivo,IdProveedorAnterior,IdProveedorNuevo,
+            NumeroFacturaAnterior,NumeroFacturaNuevo,MontoTotalAnterior,MontoTotalNuevo)
+        VALUES(@IdCompra,@IdUsuario,'REACTIVACION',LEFT(LTRIM(RTRIM(@Motivo)),500),@Proveedor,@Proveedor,@Factura,@Factura,@Monto,@Monto);
+        SET @IdCorreccion=CONVERT(int,SCOPE_IDENTITY());
+        INSERT dbo.COMPRA_CORRECCION_DETALLE(IdCorreccion,IdDetalleCompra,IdProductoAnterior,IdProductoNuevo,
+            CantidadAnterior,CantidadNueva,PrecioCompraAnterior,PrecioCompraNuevo,MontoAnterior,MontoNuevo)
+        SELECT @IdCorreccion,IdDetalleCompra,IdProducto,IdProducto,0,Cantidad,PrecioCompra,PrecioCompra,0,MontoTotal
+        FROM dbo.DETALLE_COMPRA WHERE IdCompra=@IdCompra;
+        DECLARE @Afectados TABLE(IdProducto int PRIMARY KEY);
+        INSERT @Afectados SELECT DISTINCT IdProducto FROM dbo.DETALLE_COMPRA WHERE IdCompra=@IdCompra;
+        UPDATE p SET p.Stock=p.Stock+x.Cantidad
+        FROM dbo.PRODUCTO p INNER JOIN
+            (SELECT IdProducto,SUM(Cantidad) Cantidad FROM dbo.DETALLE_COMPRA WHERE IdCompra=@IdCompra GROUP BY IdProducto) x
+            ON x.IdProducto=p.IdProducto;
+        UPDATE dbo.COMPRA SET Anulada=0,FechaAnulacion=NULL,IdUsuarioAnulacion=NULL,MotivoAnulacion=NULL
+        WHERE IdCompra=@IdCompra;
+        UPDATE p SET p.PrecioCompra=ISNULL(u.PrecioCompra,0),
+            p.Porcentaje=CASE WHEN ISNULL(u.PrecioCompra,0)<=0 THEN 0
+                ELSE CEILING(((p.PrecioVenta-u.PrecioCompra)/u.PrecioCompra)*10000)/10000 END
+        FROM dbo.PRODUCTO p INNER JOIN @Afectados x ON x.IdProducto=p.IdProducto
+        OUTER APPLY
+        (
+            SELECT TOP (1) dc.PrecioCompra FROM dbo.DETALLE_COMPRA dc
+            INNER JOIN dbo.COMPRA c ON c.IdCompra=dc.IdCompra
+            WHERE dc.IdProducto=p.IdProducto AND c.Anulada=0
+            ORDER BY c.FechaRegistro DESC,dc.IdDetalleCompra DESC
+        ) u;
+        SET @Resultado=1; SET @Mensaje='Compra restaurada y auditada. Sus unidades volvieron al inventario.';
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF XACT_STATE()<>0 ROLLBACK TRANSACTION;
+        SET @Resultado=0; SET @Mensaje=ERROR_MESSAGE();
+    END CATCH
+END;
+GO
+
+GRANT EXECUTE, REFERENCES ON TYPE::dbo.ECompra_Correccion TO [ventas_app2];
+GO

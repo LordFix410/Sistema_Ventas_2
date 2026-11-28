@@ -52,6 +52,11 @@ namespace CapaNegocio
             return objcd_producto.Buscar(columna, termino, soloActivos);
         }
 
+        public List<Producto> BuscarFlexible(string termino, bool soloActivos = true)
+        {
+            return objcd_producto.BuscarFlexible(termino, soloActivos);
+        }
+
         public int Registrar(Producto obj, out string Mensaje)
         {
             Mensaje = string.Empty;

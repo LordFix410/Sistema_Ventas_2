@@ -141,6 +141,9 @@
     <Compile Include="frmDetalleVenta.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="frmDevoluciones.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="frmFinanzas.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -234,7 +237,16 @@
     <Compile Include="Modales\mdCliente.Designer.cs">
       <DependentUpon>mdCliente.cs</DependentUpon>
     </Compile>
+    <Compile Include="Modales\mdCorregirCompra.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Modales\mdCorregirCompra.Designer.cs">
+      <DependentUpon>mdCorregirCompra.cs</DependentUpon>
+    </Compile>
     <Compile Include="Modales\mdDatosProducto.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Modales\mdPermisosWeb.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Modales\mdDatosProducto.Designer.cs">
@@ -316,6 +328,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Modales\mdCliente.resx">
       <DependentUpon>mdCliente.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Modales\mdCorregirCompra.resx">
+      <DependentUpon>mdCorregirCompra.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Modales\mdDatosProducto.resx">
       <DependentUpon>mdDatosProducto.cs</DependentUpon>

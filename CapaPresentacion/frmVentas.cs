@@ -355,7 +355,9 @@ namespace CapaPresentacion
 
         private void btnBuscarProducto_Click(object sender, EventArgs e)
         {
-            using (var modal = new mdProducto(false))
+            // En ventas se muestra solo lo útil para elegir el artículo;
+            // el stock se informa, pero no bloquea una venta si llega a cero.
+            using (var modal = new mdProducto(false, true))
             {
                 var result = modal.ShowDialog();
 
@@ -384,6 +386,7 @@ namespace CapaPresentacion
             int indiceProductoExistente = -1;
             int idProductoActual;
 
+            // Los IDs negativos son artículos temporales válidos hasta que se preparan para la venta.
             if (!int.TryParse(txtIdProducto.Text, out idProductoActual) || idProductoActual == 0)
             {
                 CapaPresentacion.DialogoSistema.Show("Debe de seleccionar un producto", "Mensaje de sistema", MessageBoxButtons.OK, MessageBoxIcon.Warning);

@@ -60,6 +60,8 @@ namespace CapaDatos
                     numeroDocumento.Value = obj.NumeroDocumento;
                     cmd.Parameters.AddWithValue("MontoTotal",obj.MontoTotal);
                     cmd.Parameters.AddWithValue("MontoNoInventariable", obj.MontoNoInventariable);
+                    cmd.Parameters.Add("NumeroFacturaProveedor", SqlDbType.VarChar, 100).Value =
+                        string.IsNullOrWhiteSpace(obj.NumeroFacturaProveedor) ? (object)DBNull.Value : obj.NumeroFacturaProveedor.Trim();
                     SqlParameter parametroDetalle = cmd.Parameters.AddWithValue("DetalleCompra", detalleCompra);
                     parametroDetalle.SqlDbType = SqlDbType.Structured;
                     parametroDetalle.TypeName = "dbo.EDetalle_Compra";
@@ -134,6 +136,224 @@ namespace CapaDatos
             }
 
 
+        }
+
+        public Compra ObtenerCompraParaCorreccion(string numero)
+        {
+            using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+            using (SqlCommand comando = new SqlCommand(@"
+SELECT c.IdCompra,c.IdProveedor,c.TipoDocumento,c.NumeroDocumento,
+       c.NumeroFacturaProveedor,c.MontoTotal,c.MontoNoInventariable,
+       c.Anulada,c.MotivoAnulacion,c.FechaRegistro,pr.RazonSocial
+FROM dbo.COMPRA c
+INNER JOIN dbo.PROVEEDOR pr ON pr.IdProveedor=c.IdProveedor
+WHERE c.NumeroDocumento=@NumeroDocumento;", conexion))
+            {
+                comando.Parameters.Add("@NumeroDocumento", SqlDbType.VarChar, 50).Value = (numero ?? string.Empty).Trim();
+                conexion.Open();
+                using (SqlDataReader lector = comando.ExecuteReader())
+                {
+                    if (!lector.Read()) return null;
+                    return new Compra
+                    {
+                        IdCompra = Convert.ToInt32(lector["IdCompra"]),
+                        oProveedor = new Proveedor
+                        {
+                            IdProveedor = Convert.ToInt32(lector["IdProveedor"]),
+                            RazonSocial = Convert.ToString(lector["RazonSocial"])
+                        },
+                        TipoDocumento = Convert.ToString(lector["TipoDocumento"]),
+                        NumeroDocumento = Convert.ToString(lector["NumeroDocumento"]),
+                        NumeroFacturaProveedor = lector["NumeroFacturaProveedor"] == DBNull.Value ? string.Empty : Convert.ToString(lector["NumeroFacturaProveedor"]),
+                        MontoTotal = Convert.ToDecimal(lector["MontoTotal"]),
+                        MontoNoInventariable = Convert.ToDecimal(lector["MontoNoInventariable"]),
+                        Anulada = Convert.ToBoolean(lector["Anulada"]),
+                        MotivoAnulacion = lector["MotivoAnulacion"] == DBNull.Value ? string.Empty : Convert.ToString(lector["MotivoAnulacion"]),
+                        FechaRegistro = Convert.ToDateTime(lector["FechaRegistro"]).ToString("dd/MM/yyyy HH:mm")
+                    };
+                }
+            }
+        }
+
+        public List<Detalle_Compra> ObtenerDetalleCompraParaCorreccion(int idCompra)
+        {
+            List<Detalle_Compra> lista = new List<Detalle_Compra>();
+            using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+            using (SqlCommand comando = new SqlCommand(@"
+SELECT dc.IdDetalleCompra,dc.IdProducto,p.Codigo,p.Nombre,dc.Cantidad,
+       dc.PrecioCompra,dc.PrecioVenta,dc.Porcentaje,dc.MontoTotal
+FROM dbo.DETALLE_COMPRA dc
+INNER JOIN dbo.PRODUCTO p ON p.IdProducto=dc.IdProducto
+WHERE dc.IdCompra=@IdCompra
+ORDER BY dc.IdDetalleCompra;", conexion))
+            {
+                comando.Parameters.Add("@IdCompra", SqlDbType.Int).Value = idCompra;
+                conexion.Open();
+                using (SqlDataReader lector = comando.ExecuteReader())
+                {
+                    while (lector.Read())
+                    {
+                        lista.Add(new Detalle_Compra
+                        {
+                            IdDetalleCompra = Convert.ToInt32(lector["IdDetalleCompra"]),
+                            IdProducto = Convert.ToInt32(lector["IdProducto"]),
+                            oProducto = new Producto
+                            {
+                                IdProducto = Convert.ToInt32(lector["IdProducto"]),
+                                Codigo = Convert.ToString(lector["Codigo"]),
+                                Nombre = Convert.ToString(lector["Nombre"])
+                            },
+                            Cantidad = Convert.ToInt32(lector["Cantidad"]),
+                            PrecioCompra = Convert.ToDecimal(lector["PrecioCompra"]),
+                            PrecioVenta = Convert.ToDecimal(lector["PrecioVenta"]),
+                            Porcentaje = Convert.ToDecimal(lector["Porcentaje"]),
+                            MontoTotal = Convert.ToDecimal(lector["MontoTotal"])
+                        });
+                    }
+                }
+            }
+            return lista;
+        }
+
+        public bool CorregirCompra(int idCompra, int idUsuario, int idProveedor, string numeroFacturaProveedor,
+            string motivo, DataTable detalle, out string mensaje)
+        {
+            return EjecutarCorreccionCompra("dbo.sp_CorregirCompra", idCompra, idUsuario, idProveedor,
+                numeroFacturaProveedor, motivo, detalle, out mensaje);
+        }
+
+        public bool AnularCompra(int idCompra, int idUsuario, string motivo, out string mensaje)
+        {
+            return EjecutarCorreccionCompra("dbo.sp_AnularCompra", idCompra, idUsuario, 0,
+                null, motivo, null, out mensaje);
+        }
+
+        public bool ReactivarCompra(int idCompra, int idUsuario, string motivo, out string mensaje)
+        {
+            return EjecutarCorreccionCompra("dbo.sp_ReactivarCompra", idCompra, idUsuario, 0,
+                null, motivo, null, out mensaje);
+        }
+
+        public DataTable ObtenerHistorialAnulaciones()
+        {
+            DataTable historial = new DataTable();
+            using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+            using (SqlCommand comando = new SqlCommand(@"
+SELECT h.IdCorreccion,h.IdCompra,h.Fecha,h.Operacion,h.Compra,h.FacturaProveedor,
+       h.Proveedor,h.Total,h.Usuario,h.Motivo
+FROM
+(
+    SELECT cc.IdCorreccion,cc.IdCompra,cc.FechaRegistro AS Fecha,
+           CASE cc.Tipo WHEN 'ANULACION' THEN 'Anulación' ELSE 'Restauración' END AS Operacion,
+           c.NumeroDocumento AS Compra,
+           COALESCE(NULLIF(cc.NumeroFacturaAnterior,''),'—') AS FacturaProveedor,
+           COALESCE(pr.RazonSocial,'Proveedor no disponible') AS Proveedor,
+           cc.MontoTotalAnterior AS Total,u.NombreCompleto AS Usuario,cc.Motivo
+    FROM dbo.COMPRA_CORRECCION cc
+    INNER JOIN dbo.COMPRA c ON c.IdCompra=cc.IdCompra
+    LEFT JOIN dbo.PROVEEDOR pr ON pr.IdProveedor=cc.IdProveedorAnterior
+    INNER JOIN dbo.USUARIO u ON u.IdUsuario=cc.IdUsuario
+    WHERE cc.Tipo IN ('ANULACION','REACTIVACION')
+
+    UNION ALL
+
+    SELECT -c.IdCompra,c.IdCompra,COALESCE(c.FechaAnulacion,c.FechaRegistro),
+           'Anulación',c.NumeroDocumento,COALESCE(NULLIF(c.NumeroFacturaProveedor,''),'—'),
+           COALESCE(pr.RazonSocial,'Proveedor no disponible'),c.MontoTotal,
+           COALESCE(u.NombreCompleto,'Usuario no disponible'),
+           COALESCE(NULLIF(c.MotivoAnulacion,''),'Anulación anterior sin motivo registrado')
+    FROM dbo.COMPRA c
+    LEFT JOIN dbo.PROVEEDOR pr ON pr.IdProveedor=c.IdProveedor
+    LEFT JOIN dbo.USUARIO u ON u.IdUsuario=c.IdUsuarioAnulacion
+    WHERE c.Anulada=1
+      AND NOT EXISTS(SELECT 1 FROM dbo.COMPRA_CORRECCION cc WHERE cc.IdCompra=c.IdCompra AND cc.Tipo='ANULACION')
+) h
+ORDER BY h.Fecha DESC,h.IdCorreccion DESC;", conexion))
+            using (SqlDataAdapter adaptador = new SqlDataAdapter(comando))
+            {
+                adaptador.Fill(historial);
+            }
+            return historial;
+        }
+
+        public DataTable ObtenerDetalleHistorialAnulacion(int idCorreccion)
+        {
+            DataTable detalle = new DataTable();
+            if (idCorreccion < 0)
+            {
+                using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+                using (SqlCommand comando = new SqlCommand(@"
+SELECT COALESCE(p.Codigo,'') AS Codigo,COALESCE(p.Nombre,'Producto no disponible') AS Producto,
+       dc.Cantidad AS CantidadAnterior,0 AS CantidadNueva,
+       dc.PrecioCompra AS CostoAnterior,dc.PrecioCompra AS CostoNuevo,
+       dc.MontoTotal AS TotalAnterior,0 AS TotalNuevo
+FROM dbo.DETALLE_COMPRA dc
+LEFT JOIN dbo.PRODUCTO p ON p.IdProducto=dc.IdProducto
+WHERE dc.IdCompra=@IdCompra
+ORDER BY dc.IdDetalleCompra;", conexion))
+                using (SqlDataAdapter adaptador = new SqlDataAdapter(comando))
+                {
+                    comando.Parameters.Add("@IdCompra", SqlDbType.Int).Value = -idCorreccion;
+                    adaptador.Fill(detalle);
+                }
+                return detalle;
+            }
+
+            using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+            using (SqlCommand comando = new SqlCommand(@"
+SELECT COALESCE(p.Codigo,'') AS Codigo,
+       COALESCE(p.Nombre,'Producto no disponible') AS Producto,
+       d.CantidadAnterior,d.CantidadNueva,
+       d.PrecioCompraAnterior AS CostoAnterior,d.PrecioCompraNuevo AS CostoNuevo,
+       d.MontoAnterior AS TotalAnterior,d.MontoNuevo AS TotalNuevo
+FROM dbo.COMPRA_CORRECCION_DETALLE d
+INNER JOIN dbo.COMPRA_CORRECCION cc ON cc.IdCorreccion=d.IdCorreccion
+LEFT JOIN dbo.PRODUCTO p ON p.IdProducto=d.IdProductoAnterior
+WHERE d.IdCorreccion=@IdCorreccion AND cc.Tipo IN ('ANULACION','REACTIVACION')
+ORDER BY d.IdAuditoriaDetalle;", conexion))
+            using (SqlDataAdapter adaptador = new SqlDataAdapter(comando))
+            {
+                comando.Parameters.Add("@IdCorreccion", SqlDbType.Int).Value = idCorreccion;
+                adaptador.Fill(detalle);
+            }
+            return detalle;
+        }
+
+        private bool EjecutarCorreccionCompra(string procedimiento, int idCompra, int idUsuario, int idProveedor,
+            string numeroFacturaProveedor, string motivo, DataTable detalle, out string mensaje)
+        {
+            mensaje = string.Empty;
+            try
+            {
+                using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+                using (SqlCommand comando = new SqlCommand(procedimiento, conexion))
+                {
+                    comando.CommandType = CommandType.StoredProcedure;
+                    comando.Parameters.Add("@IdCompra", SqlDbType.Int).Value = idCompra;
+                    comando.Parameters.Add("@IdUsuario", SqlDbType.Int).Value = idUsuario;
+                    comando.Parameters.Add("@Motivo", SqlDbType.VarChar, 500).Value = (motivo ?? string.Empty).Trim();
+                    if (procedimiento.EndsWith("sp_CorregirCompra", StringComparison.OrdinalIgnoreCase))
+                    {
+                        comando.Parameters.Add("@IdProveedorNuevo", SqlDbType.Int).Value = idProveedor;
+                        comando.Parameters.Add("@NumeroFacturaProveedorNuevo", SqlDbType.VarChar, 100).Value =
+                            string.IsNullOrWhiteSpace(numeroFacturaProveedor) ? (object)DBNull.Value : numeroFacturaProveedor.Trim();
+                        SqlParameter parametro = comando.Parameters.Add("@Detalle", SqlDbType.Structured);
+                        parametro.TypeName = "dbo.ECompra_Correccion";
+                        parametro.Value = detalle;
+                    }
+                    comando.Parameters.Add("@Resultado", SqlDbType.Bit).Direction = ParameterDirection.Output;
+                    comando.Parameters.Add("@Mensaje", SqlDbType.VarChar, 500).Direction = ParameterDirection.Output;
+                    conexion.Open();
+                    comando.ExecuteNonQuery();
+                    mensaje = Convert.ToString(comando.Parameters["@Mensaje"].Value);
+                    return Convert.ToBoolean(comando.Parameters["@Resultado"].Value);
+                }
+            }
+            catch (Exception ex)
+            {
+                mensaje = ex.Message;
+                return false;
+            }
         }
         public List<Detalle_Compra> ObtenerDetalleCompra(int idcompra)
         {

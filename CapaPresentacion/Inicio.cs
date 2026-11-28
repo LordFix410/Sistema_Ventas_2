@@ -26,6 +26,8 @@ namespace CapaPresentacion
         private readonly ToolStripMenuItem listaProveedoresMenu = new ToolStripMenuItem("Administrar proveedores");
         private readonly ToolStripMenuItem gruposProductoMenu = new ToolStripMenuItem("Grupos de productos");
         private readonly ToolStripMenuItem reportePedidosMenu = new ToolStripMenuItem("Pedidos");
+        private readonly ToolStripMenuItem devolucionesMenu = new ToolStripMenuItem("Devoluciones y anulaciones");
+        private readonly ToolStripMenuItem corregirCompraMenu = new ToolStripMenuItem("Corregir o anular compra");
 
         public Inicio(Usuario ousuario) : this(ousuario, string.Empty) { }
 
@@ -44,6 +46,14 @@ namespace CapaPresentacion
             gruposProductoMenu.Click += (s, ev) => AbrirFrm(btnProducto, new frmGruposReposicion());
             reportePedidosMenu.Click += (s, ev) => AbrirFrm(btnProducto, new frmReporteReposicion());
             gruposProveedoresMenu.Click += (s, ev) => AbrirFrm(menuProveedores, new frmGruposProveedores());
+            menuVentas.DropDownItems.Add(devolucionesMenu);
+            devolucionesMenu.Click += (s, ev) => AbrirFrm(menuVentas, new frmDevoluciones(usuarioActual));
+            menuCompras.DropDownItems.Add(corregirCompraMenu);
+            corregirCompraMenu.Click += (s, ev) =>
+            {
+                using (var modal = new mdCorregirCompra(usuarioActual))
+                    modal.ShowDialog(this);
+            };
             menuVentas.DoubleClickEnabled = true;
             menuCompras.DoubleClickEnabled = true;
             menuVentas.DoubleClick += (s, ev) => AbrirFrm(menuVentas, new frmVentas(usuarioActual));
@@ -67,6 +77,8 @@ namespace CapaPresentacion
             finanzasToolStripMenuItem.Visible = listaPermisos.Any(m => m.NombreMenu == finanzasToolStripMenuItem.Name);
             reposicionToolStripMenuItem.Visible = false;
             menuAcercaDe.Visible = listaPermisos.Any(m => m.NombreMenu == menuAcercaDe.Name);
+            menuUsuarios.Visible = usuarioActual.EsAdministradorPrincipal || usuarioActual.EsSuperAdministradorWeb;
+            menuUsuarios.Enabled = usuarioActual.EsAdministradorPrincipal || usuarioActual.EsSuperAdministradorWeb;
             lblNombreUsuario.Text = usuarioActual.NombreCompleto.ToString();
         }
         private void AbrirFrm(IconMenuItem menu, Form formulario)
@@ -117,7 +129,7 @@ namespace CapaPresentacion
         }
         private void menuUsuarios_Click(object sender, EventArgs e)
         {
-            AbrirFrm((IconMenuItem)sender, new frmUsuarios());
+            AbrirFrm((IconMenuItem)sender, new frmUsuarios(usuarioActual));
         }
 
         private void menuVentas_Click(object sender, EventArgs e)

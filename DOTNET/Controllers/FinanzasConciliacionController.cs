@@ -24,45 +24,45 @@ namespace ImagenPDF.Controllers
         private int? UserId => HttpContext.Session.GetInt32("ProductUserId");
 
         private const string BalancesSql = @"
-WITH FundTotals AS (
- SELECT 'Capital' Fondo,CAST(150.00
-   +ISNULL((SELECT SUM(CapitalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL),0)
-   +ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Capital'),0)
-   +ISNULL((SELECT SUM(Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE WHERE Fondo='Capital'),0)
-   -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE Anulado=0 AND CuentaOrigen IN ('Capital','Caja')),0)
-   -ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE Anulado=0 AND CuentaOrigen='Capital'),0) AS decimal(12,2)) Total
- UNION ALL
- SELECT 'Ganancia',CAST(100.00
-   +ISNULL((SELECT SUM(PersonalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL),0)
-   +ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Personal'),0)
-   +ISNULL((SELECT SUM(Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE WHERE Fondo='Ganancia'),0)
-   -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE Anulado=0 AND CuentaOrigen='Personal'),0)
-   -ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE Anulado=0 AND CuentaOrigen='Personal'),0) AS decimal(12,2))
-), BankFunds AS (
- SELECT b.IdBanco,b.Nombre,'Capital' Fondo,CAST(b.SaldoCapitalInicial
-   +ISNULL((SELECT SUM(x.CapitalDepositado) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
-   -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoOrigen=b.IdBanco AND Fondo='Capital'),0)
-   +ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoDestino=b.IdBanco AND Fondo='Capital'),0)
-   -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco=b.IdBanco AND Anulado=0 AND CuentaOrigen IN ('Capital','Caja')),0)
-   -ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE IdBanco=b.IdBanco AND Anulado=0 AND CuentaOrigen='Capital'),0)
-   +ISNULL((SELECT SUM(Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE WHERE IdBanco=b.IdBanco AND Fondo='Capital'),0) AS decimal(12,2)) Esperado
+DECLARE @corteId int=(SELECT MAX(IdConciliacion) FROM dbo.FIN_CONCILIACION);
+DECLARE @corte datetime2(0)=(SELECT FechaRegistro FROM dbo.FIN_CONCILIACION WHERE IdConciliacion=@corteId);
+WITH BankFunds AS (
+ SELECT b.IdBanco,b.Nombre,'Capital' Fondo,CAST(
+   COALESCE((SELECT TOP(1) d.SaldoReal FROM dbo.FIN_CONCILIACION_DETALLE d WHERE d.IdConciliacion=@corteId AND d.IdBanco=b.IdBanco AND d.Fondo='Capital'),b.SaldoCapitalInicial)
+   +ISNULL((SELECT SUM(x.CapitalDepositado) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0 AND (@corte IS NULL OR l.FechaRegistro>@corte)),0)
+   -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoOrigen=b.IdBanco AND Fondo='Capital' AND AfectaSaldo=1 AND (@corte IS NULL OR FechaRegistro>@corte)),0)
+   +ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoDestino=b.IdBanco AND Fondo='Capital' AND AfectaSaldo=1 AND (@corte IS NULL OR FechaRegistro>@corte)),0)
+   -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco=b.IdBanco AND Anulado=0 AND CuentaOrigen IN ('Capital','Caja') AND (@corte IS NULL OR FechaRegistro>@corte)),0)
+   -ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE IdBanco=b.IdBanco AND Anulado=0 AND CuentaOrigen='Capital' AND (@corte IS NULL OR FechaRegistro>@corte)),0) AS decimal(12,2)) Esperado
  FROM dbo.FIN_BANCO_TEMPORAL b WHERE b.Activo=1
  UNION ALL
- SELECT b.IdBanco,b.Nombre,'Ganancia',CAST(b.SaldoGananciaInicial
-   +ISNULL((SELECT SUM(x.GananciaDepositada) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
-   -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoOrigen=b.IdBanco AND Fondo='Personal'),0)
-   +ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoDestino=b.IdBanco AND Fondo='Personal'),0)
-   -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco=b.IdBanco AND Anulado=0 AND CuentaOrigen='Personal'),0)
-   -ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE IdBanco=b.IdBanco AND Anulado=0 AND CuentaOrigen='Personal'),0)
-   +ISNULL((SELECT SUM(Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE WHERE IdBanco=b.IdBanco AND Fondo='Ganancia'),0) AS decimal(12,2))
+ SELECT b.IdBanco,b.Nombre,'Ganancia',CAST(
+   COALESCE((SELECT TOP(1) d.SaldoReal FROM dbo.FIN_CONCILIACION_DETALLE d WHERE d.IdConciliacion=@corteId AND d.IdBanco=b.IdBanco AND d.Fondo='Ganancia'),b.SaldoGananciaInicial)
+   +ISNULL((SELECT SUM(x.GananciaDepositada) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0 AND (@corte IS NULL OR l.FechaRegistro>@corte)),0)
+   -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoOrigen=b.IdBanco AND Fondo IN ('Ganancia','Personal') AND AfectaSaldo=1 AND (@corte IS NULL OR FechaRegistro>@corte)),0)
+   +ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoDestino=b.IdBanco AND Fondo IN ('Ganancia','Personal') AND AfectaSaldo=1 AND (@corte IS NULL OR FechaRegistro>@corte)),0)
+   -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco=b.IdBanco AND Anulado=0 AND CuentaOrigen='Personal' AND (@corte IS NULL OR FechaRegistro>@corte)),0)
+   -ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE IdBanco=b.IdBanco AND Anulado=0 AND CuentaOrigen='Personal' AND (@corte IS NULL OR FechaRegistro>@corte)),0) AS decimal(12,2))
  FROM dbo.FIN_BANCO_TEMPORAL b WHERE b.Activo=1
+), FundTotals AS (
+ SELECT 'Capital' Fondo,CAST(COALESCE((SELECT SUM(d.SaldoReal) FROM dbo.FIN_CONCILIACION_DETALLE d WHERE d.IdConciliacion=@corteId AND d.Fondo='Capital'),(SELECT ISNULL(SUM(SaldoCapitalInicial),0)+150.00 FROM dbo.FIN_BANCO_TEMPORAL WHERE Activo=1))
+   +ISNULL((SELECT SUM(CapitalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL WHERE @corte IS NULL OR FechaRegistro>@corte),0)
+   +ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Capital' AND (@corte IS NULL OR Fecha>@corte)),0)
+   -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco IS NULL AND Anulado=0 AND (@corte IS NULL OR FechaRegistro>@corte)),0)
+   -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco IS NOT NULL AND Anulado=0 AND CuentaOrigen IN ('Capital','Caja') AND (@corte IS NULL OR FechaRegistro>@corte)),0)
+   -ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE CuentaOrigen='Capital' AND Anulado=0 AND (@corte IS NULL OR FechaRegistro>@corte)),0) AS decimal(12,2)) Total
+ UNION ALL
+ SELECT 'Ganancia',CAST(COALESCE((SELECT SUM(d.SaldoReal) FROM dbo.FIN_CONCILIACION_DETALLE d WHERE d.IdConciliacion=@corteId AND d.Fondo='Ganancia'),(SELECT ISNULL(SUM(SaldoGananciaInicial),0)+100.00 FROM dbo.FIN_BANCO_TEMPORAL WHERE Activo=1))
+   +ISNULL((SELECT SUM(PersonalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL WHERE @corte IS NULL OR FechaRegistro>@corte),0)
+   +ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Personal' AND (@corte IS NULL OR Fecha>@corte)),0)
+   -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco IS NULL AND Anulado=0 AND (@corte IS NULL OR FechaRegistro>@corte)),0)
+   -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco IS NOT NULL AND Anulado=0 AND CuentaOrigen='Personal' AND (@corte IS NULL OR FechaRegistro>@corte)),0)
+   -ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE CuentaOrigen='Personal' AND Anulado=0 AND (@corte IS NULL OR FechaRegistro>@corte)),0) AS decimal(12,2)) Total
 ), BankTotals AS (
  SELECT Fondo,SUM(Esperado) Total FROM BankFunds GROUP BY Fondo
 )
 SELECT IdBanco,Nombre,Fondo,Esperado FROM BankFunds
-UNION ALL
-SELECT CAST(NULL AS int),'Efectivo en caja',t.Fondo,CAST(t.Total-ISNULL(b.Total,0) AS decimal(12,2))
-FROM FundTotals t LEFT JOIN BankTotals b ON b.Fondo=t.Fondo;";
+UNION ALL SELECT CAST(NULL AS int),'Efectivo en caja',t.Fondo,CAST(t.Total-ISNULL(b.Total,0) AS decimal(12,2)) FROM FundTotals t LEFT JOIN BankTotals b ON b.Fondo=t.Fondo;";
 
         [HttpGet]
         public async Task<IActionResult> Current()
@@ -108,7 +108,11 @@ ORDER BY c.FechaCierre DESC,c.IdCierreTemporal DESC;", connection))
         {
             if (!UserId.HasValue) return Unauthorized(new { mensaje = "La sesión venció. Inicia sesión otra vez." });
             var reason = (request.Motivo ?? "").Trim();
-            if (request.Fecha == default || request.Fecha.Date > DateTime.Today || reason.Length is < 5 or > 250 || request.Saldos == null || request.Saldos.Count < 2 || request.Saldos.Any(x => x.SaldoCapital < 0 || x.SaldoGanancia < 0) || request.Saldos.Select(x => x.IdBanco).Distinct().Count() != request.Saldos.Count || request.Cierres?.Any(x => x.IdCierre <= 0 || x.Fecha == default || x.Fecha.Date > request.Fecha.Date) == true || request.Cierres?.Select(x => x.IdCierre).Distinct().Count() != request.Cierres?.Count)
+            if (reason.Length < 5)
+                return BadRequest(new { mensaje = "Escribe un motivo de al menos 5 caracteres para guardar la conciliación." });
+            if (reason.Length > 250)
+                return BadRequest(new { mensaje = "El motivo no puede superar los 250 caracteres." });
+            if (request.Fecha == default || request.Fecha.Date > DateTime.Today || request.Saldos == null || request.Saldos.Count < 2 || request.Saldos.Any(x => x.SaldoCapital < 0 || x.SaldoGanancia < 0) || request.Saldos.Select(x => x.IdBanco).Distinct().Count() != request.Saldos.Count || request.Cierres?.Any(x => x.IdCierre <= 0 || x.Fecha == default || x.Fecha.Date > request.Fecha.Date) == true || request.Cierres?.Select(x => x.IdCierre).Distinct().Count() != request.Cierres?.Count)
                 return BadRequest(new { mensaje = "Indica fecha, motivo, caja y saldos reales válidos para cada banco." });
             if (string.IsNullOrWhiteSpace(ConnectionString)) return StatusCode(503, new { mensaje = "Falta configurar SQL Server." });
             try
@@ -154,16 +158,13 @@ WHERE c.IdCierreTemporal IN ({string.Join(",", placeholders)}) AND c.FechaCierre
                             AddMoney(detail, "@esperado", current.Esperado); AddMoney(detail, "@real", real); AddMoney(detail, "@ajuste", real - current.Esperado); await detail.ExecuteNonQueryAsync();
                         }
                     }
-                    foreach (var closure in closureStates)
+                    // El saldo real guardado es el nuevo punto de partida. Todo cierre anterior
+                    // queda absorbido por ese saldo y no puede volver a cobrarse como pendiente.
+                    await using (var settleClosings = new SqlCommand(@"UPDATE dbo.FIN_CIERRE_TEMPORAL SET Conciliado=1
+WHERE FechaCierre<DATEADD(day,1,@fecha) AND Conciliado=0;", connection, transaction))
                     {
-                        await using var markClosure = new SqlCommand(@"UPDATE c SET Conciliado=@depositado
-FROM dbo.FIN_CIERRE_TEMPORAL c
-WHERE c.IdCierreTemporal=@id AND c.FechaCierre<DATEADD(day,1,@fecha)
- AND NOT EXISTS(SELECT 1 FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE x.IdCierreTemporal=c.IdCierreTemporal AND l.Anulado=0);", connection, transaction);
-                        markClosure.Parameters.Add("@depositado", SqlDbType.Bit).Value = closure.YaDepositado;
-                        markClosure.Parameters.Add("@id", SqlDbType.Int).Value = closure.IdCierre;
-                        markClosure.Parameters.Add("@fecha", SqlDbType.Date).Value = request.Fecha.Date;
-                        await markClosure.ExecuteNonQueryAsync();
+                        settleClosings.Parameters.Add("@fecha", SqlDbType.Date).Value = request.Fecha.Date;
+                        await settleClosings.ExecuteNonQueryAsync();
                     }
                     await transaction.CommitAsync(); return Ok(new { id, mensaje = "Conciliación registrada. Solo se actualizaron los estados de cierre que seleccionaste; todo el historial se conserva." });
                 }

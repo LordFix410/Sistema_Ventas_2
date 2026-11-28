@@ -46,13 +46,15 @@ namespace ImagenPDF.Controllers
 DECLARE @inicio date=DATEFROMPARTS(YEAR(GETDATE()),MONTH(GETDATE()),1), @fin date=DATEADD(month,1,DATEFROMPARTS(YEAR(GETDATE()),MONTH(GETDATE()),1));
 DECLARE @ultimoCierre datetime2(0)=(SELECT MAX(FechaCierre) FROM dbo.FIN_CIERRE_TEMPORAL);
 IF @ultimoCierre IS NULL SET @ultimoCierre=CONVERT(datetime2(0),CONVERT(date,GETDATE()));
+DECLARE @ultimaConciliacion datetime2(0)=(SELECT MAX(FechaRegistro) FROM dbo.FIN_CONCILIACION);
+IF @ultimaConciliacion>@ultimoCierre SET @ultimoCierre=@ultimaConciliacion;
 SELECT
   CAST(150.00+ISNULL((SELECT SUM(CapitalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Capital'),0)+ISNULL((SELECT SUM(Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE WHERE Fondo='Capital'),0)-ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE CuentaOrigen IN ('Capital','Caja') AND Anulado=0),0)-ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE CuentaOrigen='Capital' AND Anulado=0),0) AS decimal(12,2)) Capital,
  CAST(ISNULL((SELECT SUM(CapitalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Capital'),0) AS decimal(12,2)) CapitalGeneradoTotal,
  CAST(100.00+ISNULL((SELECT SUM(PersonalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Personal'),0)+ISNULL((SELECT SUM(Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE WHERE Fondo='Ganancia'),0)-ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE CuentaOrigen='Personal' AND Anulado=0),0)-ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE CuentaOrigen='Personal' AND Anulado=0),0) AS decimal(12,2)) Personal,
  CAST(ISNULL((SELECT SUM(PersonalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Personal'),0) AS decimal(12,2)) PersonalGeneradoTotal,
- CAST(ISNULL((SELECT SUM(b.SaldoCapitalInicial)+SUM(ISNULL(x.Depositos,0))-SUM(ISNULL(x.TransferenciasSalientes,0))+SUM(ISNULL(x.TransferenciasEntrantes,0))-SUM(ISNULL(x.Salidas,0))+SUM(ISNULL(x.Ajustes,0)) FROM dbo.FIN_BANCO_TEMPORAL b OUTER APPLY(SELECT (SELECT SUM(c.CapitalDepositado) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE c JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=c.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0) Depositos,(SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoOrigen=b.IdBanco AND Fondo='Capital') TransferenciasSalientes,(SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoDestino=b.IdBanco AND Fondo='Capital') TransferenciasEntrantes,ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco=b.IdBanco AND CuentaOrigen IN ('Capital','Caja') AND Anulado=0),0)+ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE IdBanco=b.IdBanco AND CuentaOrigen='Capital' AND Anulado=0),0) Salidas,(SELECT SUM(Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE WHERE IdBanco=b.IdBanco AND Fondo='Capital') Ajustes) x),0) AS decimal(12,2)) DepositadoCapital,
- CAST(ISNULL((SELECT SUM(b.SaldoGananciaInicial)+SUM(ISNULL(x.Depositos,0))-SUM(ISNULL(x.TransferenciasSalientes,0))+SUM(ISNULL(x.TransferenciasEntrantes,0))-SUM(ISNULL(x.Salidas,0))+SUM(ISNULL(x.Ajustes,0)) FROM dbo.FIN_BANCO_TEMPORAL b OUTER APPLY(SELECT (SELECT SUM(c.GananciaDepositada) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE c JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=c.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0) Depositos,(SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoOrigen=b.IdBanco AND Fondo='Personal') TransferenciasSalientes,(SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoDestino=b.IdBanco AND Fondo='Personal') TransferenciasEntrantes,ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco=b.IdBanco AND CuentaOrigen='Personal' AND Anulado=0),0)+ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE IdBanco=b.IdBanco AND CuentaOrigen='Personal' AND Anulado=0),0) Salidas,(SELECT SUM(Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE WHERE IdBanco=b.IdBanco AND Fondo='Ganancia') Ajustes) x),0) AS decimal(12,2)) DepositadoPersonal,
+ CAST(ISNULL((SELECT SUM(b.SaldoCapitalInicial)+SUM(ISNULL(x.Depositos,0))-SUM(ISNULL(x.TransferenciasSalientes,0))+SUM(ISNULL(x.TransferenciasEntrantes,0))-SUM(ISNULL(x.Salidas,0))+SUM(ISNULL(x.Ajustes,0)) FROM dbo.FIN_BANCO_TEMPORAL b OUTER APPLY(SELECT (SELECT SUM(c.CapitalDepositado) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE c JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=c.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0) Depositos,(SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoOrigen=b.IdBanco AND Fondo='Capital' AND AfectaSaldo=1) TransferenciasSalientes,(SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoDestino=b.IdBanco AND Fondo='Capital' AND AfectaSaldo=1) TransferenciasEntrantes,ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco=b.IdBanco AND CuentaOrigen IN ('Capital','Caja') AND Anulado=0),0)+ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE IdBanco=b.IdBanco AND CuentaOrigen='Capital' AND Anulado=0),0) Salidas,(SELECT SUM(Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE WHERE IdBanco=b.IdBanco AND Fondo='Capital') Ajustes) x),0) AS decimal(12,2)) DepositadoCapital,
+ CAST(ISNULL((SELECT SUM(b.SaldoGananciaInicial)+SUM(ISNULL(x.Depositos,0))-SUM(ISNULL(x.TransferenciasSalientes,0))+SUM(ISNULL(x.TransferenciasEntrantes,0))-SUM(ISNULL(x.Salidas,0))+SUM(ISNULL(x.Ajustes,0)) FROM dbo.FIN_BANCO_TEMPORAL b OUTER APPLY(SELECT (SELECT SUM(c.GananciaDepositada) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE c JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=c.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0) Depositos,(SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoOrigen=b.IdBanco AND Fondo='Personal' AND AfectaSaldo=1) TransferenciasSalientes,(SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoDestino=b.IdBanco AND Fondo='Personal' AND AfectaSaldo=1) TransferenciasEntrantes,ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco=b.IdBanco AND CuentaOrigen='Personal' AND Anulado=0),0)+ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE IdBanco=b.IdBanco AND CuentaOrigen='Personal' AND Anulado=0),0) Salidas,(SELECT SUM(Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE WHERE IdBanco=b.IdBanco AND Fondo='Ganancia') Ajustes) x),0) AS decimal(12,2)) DepositadoPersonal,
  CAST(150.00+ISNULL((SELECT SUM(CapitalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Capital'),0)+ISNULL((SELECT SUM(Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE WHERE Fondo='Capital'),0)-ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE CuentaOrigen IN ('Capital','Caja') AND Anulado=0),0)-ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE CuentaOrigen='Capital' AND Anulado=0),0) AS decimal(12,2)) CapitalDepositosMasCaja,
  CAST(100.00+ISNULL((SELECT SUM(PersonalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Personal'),0)+ISNULL((SELECT SUM(Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE WHERE Fondo='Ganancia'),0)-ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE CuentaOrigen='Personal' AND Anulado=0),0)-ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE CuentaOrigen='Personal' AND Anulado=0),0) AS decimal(12,2)) GananciaDepositosMasCaja,
  CAST(ISNULL((SELECT SUM(MontoProgramado) FROM dbo.GASTO_PERSONAL_PERIODO WHERE Anio=YEAR(GETDATE()) AND Mes=MONTH(GETDATE())),0) AS decimal(12,2)) ObligacionesMes,
@@ -91,32 +93,55 @@ SELECT
                 }
 
                 const string bankSummarySql = @"
-SELECT b.IdBanco,b.Nombre,
- b.SaldoCapitalInicial+ISNULL((SELECT SUM(x.CapitalDepositado) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
- -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoOrigen=b.IdBanco AND Fondo='Capital'),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoDestino=b.IdBanco AND Fondo='Capital'),0)
- -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco=b.IdBanco AND CuentaOrigen IN ('Capital','Caja') AND Anulado=0),0)-ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE IdBanco=b.IdBanco AND CuentaOrigen='Capital' AND Anulado=0),0)
- +ISNULL((SELECT SUM(Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE WHERE IdBanco=b.IdBanco AND Fondo='Capital'),0) Capital,
- b.SaldoGananciaInicial+ISNULL((SELECT SUM(x.GananciaDepositada) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
- -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoOrigen=b.IdBanco AND Fondo='Personal'),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoDestino=b.IdBanco AND Fondo='Personal'),0)
- -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco=b.IdBanco AND CuentaOrigen='Personal' AND Anulado=0),0)-ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE IdBanco=b.IdBanco AND CuentaOrigen='Personal' AND Anulado=0),0)
- +ISNULL((SELECT SUM(Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE WHERE IdBanco=b.IdBanco AND Fondo='Ganancia'),0) Ganancia
-FROM dbo.FIN_BANCO_TEMPORAL b WHERE b.Activo=1 ORDER BY b.Nombre;";
+DECLARE @corteId int=(SELECT MAX(IdConciliacion) FROM dbo.FIN_CONCILIACION),@corte datetime2(0);
+SELECT @corte=FechaRegistro FROM dbo.FIN_CONCILIACION WHERE IdConciliacion=@corteId;
+SELECT b.IdBanco,b.Nombre,cap.Capital,gan.Ganancia
+FROM dbo.FIN_BANCO_TEMPORAL b
+OUTER APPLY(SELECT COALESCE((SELECT TOP(1) d.SaldoReal FROM dbo.FIN_CONCILIACION_DETALLE d WHERE d.IdConciliacion=@corteId AND d.IdBanco=b.IdBanco AND d.Fondo='Capital'),b.SaldoCapitalInicial)
+ +ISNULL((SELECT SUM(x.CapitalDepositado) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0 AND (@corte IS NULL OR l.FechaRegistro>@corte)),0)
+ -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoOrigen=b.IdBanco AND Fondo='Capital' AND AfectaSaldo=1 AND (@corte IS NULL OR FechaRegistro>@corte)),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoDestino=b.IdBanco AND Fondo='Capital' AND AfectaSaldo=1 AND (@corte IS NULL OR FechaRegistro>@corte)),0)
+ -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco=b.IdBanco AND CuentaOrigen IN ('Capital','Caja') AND Anulado=0 AND (@corte IS NULL OR FechaRegistro>@corte)),0)-ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE IdBanco=b.IdBanco AND CuentaOrigen='Capital' AND Anulado=0 AND (@corte IS NULL OR FechaRegistro>@corte)),0) Capital) cap
+OUTER APPLY(SELECT COALESCE((SELECT TOP(1) d.SaldoReal FROM dbo.FIN_CONCILIACION_DETALLE d WHERE d.IdConciliacion=@corteId AND d.IdBanco=b.IdBanco AND d.Fondo='Ganancia'),b.SaldoGananciaInicial)
+ +ISNULL((SELECT SUM(x.GananciaDepositada) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0 AND (@corte IS NULL OR l.FechaRegistro>@corte)),0)
+ -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoOrigen=b.IdBanco AND Fondo IN ('Personal','Ganancia') AND AfectaSaldo=1 AND (@corte IS NULL OR FechaRegistro>@corte)),0)+ISNULL((SELECT SUM(Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA WHERE IdBancoDestino=b.IdBanco AND Fondo IN ('Personal','Ganancia') AND AfectaSaldo=1 AND (@corte IS NULL OR FechaRegistro>@corte)),0)
+ -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE IdBanco=b.IdBanco AND CuentaOrigen='Personal' AND Anulado=0 AND (@corte IS NULL OR FechaRegistro>@corte)),0)-ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE IdBanco=b.IdBanco AND CuentaOrigen='Personal' AND Anulado=0 AND (@corte IS NULL OR FechaRegistro>@corte)),0) Ganancia) gan
+WHERE b.Activo=1 ORDER BY b.Nombre;";
                 await using (var command = new SqlCommand(bankSummarySql, connection))
                 await using (var reader = await command.ExecuteReaderAsync())
                     while (await reader.ReadAsync()) response.Bancos.Add(new FinanceBankBalance { IdBanco = reader.GetInt32(0), Nombre = reader.GetString(1), Capital = reader.GetDecimal(2), Ganancia = reader.GetDecimal(3) });
 
-                const string pendingDepositSql = @"
-SELECT ISNULL(SUM(c.CapitalAsignado-c.SalidasCapitalCaja),0),ISNULL(SUM(c.PersonalAsignado-c.SalidasGananciaCaja),0)
-FROM dbo.FIN_CIERRE_TEMPORAL c
-WHERE c.Conciliado=0
- AND NOT EXISTS(SELECT 1 FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE x.IdCierreTemporal=c.IdCierreTemporal AND l.Anulado=0);";
-                await using (var command = new SqlCommand(pendingDepositSql, connection))
+                const string reconciledTotalsSql = @"
+DECLARE @corteId int=(SELECT MAX(IdConciliacion) FROM dbo.FIN_CONCILIACION),@corte datetime2(0);
+SELECT @corte=FechaRegistro FROM dbo.FIN_CONCILIACION WHERE IdConciliacion=@corteId;
+SELECT CAST(COALESCE((SELECT SUM(SaldoReal) FROM dbo.FIN_CONCILIACION_DETALLE WHERE IdConciliacion=@corteId AND Fondo='Capital'),(SELECT ISNULL(SUM(SaldoCapitalInicial),0)+150.00 FROM dbo.FIN_BANCO_TEMPORAL WHERE Activo=1))
+ +ISNULL((SELECT SUM(CapitalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL WHERE @corte IS NULL OR FechaRegistro>@corte),0)
+ +ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Capital' AND (@corte IS NULL OR Fecha>@corte)),0)
+ -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE CuentaOrigen IN ('Capital','Caja') AND Anulado=0 AND (@corte IS NULL OR FechaRegistro>@corte)),0)
+ -ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE CuentaOrigen='Capital' AND Anulado=0 AND (@corte IS NULL OR FechaRegistro>@corte)),0) AS decimal(12,2)) Capital,
+ CAST(COALESCE((SELECT SUM(SaldoReal) FROM dbo.FIN_CONCILIACION_DETALLE WHERE IdConciliacion=@corteId AND Fondo='Ganancia'),(SELECT ISNULL(SUM(SaldoGananciaInicial),0)+100.00 FROM dbo.FIN_BANCO_TEMPORAL WHERE Activo=1))
+ +ISNULL((SELECT SUM(PersonalAsignado) FROM dbo.FIN_CIERRE_TEMPORAL WHERE @corte IS NULL OR FechaRegistro>@corte),0)
+ +ISNULL((SELECT SUM(Monto) FROM dbo.FIN_AJUSTE_CUENTA_TEMPORAL WHERE Cuenta='Personal' AND (@corte IS NULL OR Fecha>@corte)),0)
+ -ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE CuentaOrigen='Personal' AND Anulado=0 AND (@corte IS NULL OR FechaRegistro>@corte)),0)
+ -ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL WHERE CuentaOrigen='Personal' AND Anulado=0 AND (@corte IS NULL OR FechaRegistro>@corte)),0) AS decimal(12,2)) Ganancia,
+ ISNULL((SELECT SUM(CapitalAsignado-SalidasCapitalCaja) FROM dbo.FIN_CIERRE_TEMPORAL c WHERE c.Conciliado=0 AND (@corte IS NULL OR c.FechaRegistro>@corte) AND NOT EXISTS(SELECT 1 FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE x.IdCierreTemporal=c.IdCierreTemporal AND l.Anulado=0)),0) PendienteCapital,
+ ISNULL((SELECT SUM(PersonalAsignado-SalidasGananciaCaja) FROM dbo.FIN_CIERRE_TEMPORAL c WHERE c.Conciliado=0 AND (@corte IS NULL OR c.FechaRegistro>@corte) AND NOT EXISTS(SELECT 1 FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE x.IdCierreTemporal=c.IdCierreTemporal AND l.Anulado=0)),0) PendienteGanancia;";
+                await using (var command = new SqlCommand(reconciledTotalsSql, connection))
                 await using (var reader = await command.ExecuteReaderAsync())
-                    if (await reader.ReadAsync()) { response.PendienteDepositoCapital = reader.GetDecimal(0); response.PendienteDepositoGanancia = reader.GetDecimal(1); }
+                    if (await reader.ReadAsync())
+                    {
+                        response.Capital = response.CapitalDepositosMasCaja = reader.GetDecimal(0);
+                        response.Personal = response.GananciaDepositosMasCaja = reader.GetDecimal(1);
+                        response.PendienteDepositoCapital = reader.GetDecimal(2);
+                        response.PendienteDepositoGanancia = reader.GetDecimal(3);
+                        response.DepositadoCapital = response.Bancos.Sum(bank => bank.Capital);
+                        response.DepositadoPersonal = response.Bancos.Sum(bank => bank.Ganancia);
+                    }
 
                 const string cashOutflowDetailsSql = @"
 DECLARE @ultimoCierre datetime2(0)=(SELECT MAX(FechaCierre) FROM dbo.FIN_CIERRE_TEMPORAL);
 IF @ultimoCierre IS NULL SET @ultimoCierre=CONVERT(datetime2(0),CONVERT(date,GETDATE()));
+DECLARE @ultimaConciliacion datetime2(0)=(SELECT MAX(FechaRegistro) FROM dbo.FIN_CONCILIACION);
+IF @ultimaConciliacion>@ultimoCierre SET @ultimoCierre=@ultimaConciliacion;
 DECLARE @momento datetime2(0)=SYSDATETIME();
 SELECT Clave,Concepto,Monto,CuentaOrigen,OrigenEfectivo,FechaRegistro FROM (
  SELECT CAST('M:'+CONVERT(varchar(20),m.IdMovimiento) AS varchar(30)) Clave,m.Concepto,m.Monto,m.CuentaOrigen,m.OrigenEfectivo,m.FechaRegistro
@@ -422,15 +447,15 @@ UPDATE dbo.FIN_DEPOSITO_TEMPORAL SET Anulado=1 WHERE IdDepositoTemporal=@id;", c
 SELECT b.Nombre,CASE WHEN UPPER(b.Nombre) LIKE '%BANRURAL%' THEN 'Capital' ELSE 'Ganancia' END Fondo,
  CAST(CASE WHEN UPPER(b.Nombre) LIKE '%BANRURAL%' THEN b.SaldoCapitalInicial
    +ISNULL((SELECT SUM(x.CapitalDepositado) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
-   -ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoOrigen=b.IdBanco AND t.Fondo='Capital'),0)
-   +ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoDestino=b.IdBanco AND t.Fondo='Capital'),0)
+   -ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoOrigen=b.IdBanco AND t.Fondo='Capital' AND t.AfectaSaldo=1),0)
+   +ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoDestino=b.IdBanco AND t.Fondo='Capital' AND t.AfectaSaldo=1),0)
    -ISNULL((SELECT SUM(m.Monto) FROM dbo.FIN_MOVIMIENTO m WHERE m.IdBanco=b.IdBanco AND m.Anulado=0 AND m.CuentaOrigen='Capital'),0)
    -ISNULL((SELECT SUM(p.Monto) FROM dbo.PAGO_GASTO_PERSONAL p WHERE p.IdBanco=b.IdBanco AND p.Anulado=0 AND p.CuentaOrigen='Capital'),0)
    +ISNULL((SELECT SUM(d.Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE d WHERE d.IdBanco=b.IdBanco AND d.Fondo='Capital'),0)
  ELSE b.SaldoGananciaInicial
    +ISNULL((SELECT SUM(x.GananciaDepositada) FROM dbo.FIN_DEPOSITO_LOTE_CIERRE x JOIN dbo.FIN_DEPOSITO_LOTE l ON l.IdLote=x.IdLote WHERE l.IdBanco=b.IdBanco AND l.Anulado=0),0)
-   -ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoOrigen=b.IdBanco AND t.Fondo='Ganancia'),0)
-   +ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoDestino=b.IdBanco AND t.Fondo='Ganancia'),0)
+   -ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoOrigen=b.IdBanco AND t.Fondo='Ganancia' AND t.AfectaSaldo=1),0)
+   +ISNULL((SELECT SUM(t.Monto) FROM dbo.FIN_TRANSFERENCIA_BANCARIA t WHERE t.IdBancoDestino=b.IdBanco AND t.Fondo='Ganancia' AND t.AfectaSaldo=1),0)
    -ISNULL((SELECT SUM(m.Monto) FROM dbo.FIN_MOVIMIENTO m WHERE m.IdBanco=b.IdBanco AND m.Anulado=0 AND m.CuentaOrigen='Personal'),0)
    -ISNULL((SELECT SUM(p.Monto) FROM dbo.PAGO_GASTO_PERSONAL p WHERE p.IdBanco=b.IdBanco AND p.Anulado=0 AND p.CuentaOrigen='Personal'),0)
    +ISNULL((SELECT SUM(d.Ajuste) FROM dbo.FIN_CONCILIACION_DETALLE d WHERE d.IdBanco=b.IdBanco AND d.Fondo='Ganancia'),0)

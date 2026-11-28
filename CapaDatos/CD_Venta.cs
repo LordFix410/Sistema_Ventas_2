@@ -51,11 +51,11 @@ namespace CapaDatos
                 try
                 {
                     StringBuilder query = new StringBuilder();
-                    query.AppendLine("update producto set stock = stock - @cantidad where idproducto = @idproducto");
+                    query.AppendLine("update producto set stock = stock - @cantidad where idproducto = @idproducto and @cantidad > 0 and estado = 1");
 
                     SqlCommand cmd = new SqlCommand(query.ToString(), oconexion);
-                    cmd.Parameters.AddWithValue("@cantidad", cantidad);
-                    cmd.Parameters.AddWithValue("@idproducto", idproducto);
+                    cmd.Parameters.Add("@cantidad", SqlDbType.Int).Value = cantidad;
+                    cmd.Parameters.Add("@idproducto", SqlDbType.Int).Value = idproducto;
                     cmd.CommandType = CommandType.Text;
                     oconexion.Open();
 
@@ -77,11 +77,11 @@ namespace CapaDatos
                 try
                 {
                     StringBuilder query = new StringBuilder();
-                    query.AppendLine("update producto set stock = stock +  @cantidad where idproducto = @idproducto");
+                    query.AppendLine("update producto set stock = stock + @cantidad where idproducto = @idproducto and @cantidad > 0");
 
                     SqlCommand cmd = new SqlCommand(query.ToString(), oconexion);
-                    cmd.Parameters.AddWithValue("@cantidad", cantidad);
-                    cmd.Parameters.AddWithValue("@idproducto", idproducto);
+                    cmd.Parameters.Add("@cantidad", SqlDbType.Int).Value = cantidad;
+                    cmd.Parameters.Add("@idproducto", SqlDbType.Int).Value = idproducto;
                     cmd.CommandType = CommandType.Text;
                     oconexion.Open();
 
@@ -236,6 +236,128 @@ namespace CapaDatos
                 }
             }
             return oLista;
+        }
+
+        public DataTable ObtenerDetalleDevolucion(string numeroDocumento, out string mensaje)
+        {
+            mensaje = string.Empty;
+            DataTable tabla = new DataTable();
+            using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+            using (SqlCommand comando = new SqlCommand(@"
+SELECT v.IdVenta, v.NumeroDocumento, v.FechaRegistro, v.DocumentoCliente, v.NombreCliente, v.MontoTotal AS TotalVenta,
+       ISNULL((SELECT SUM(h.MontoDevuelto) FROM dbo.DEVOLUCION_VENTA h WHERE h.IdVenta=v.IdVenta),0) AS MontoDevueltoAcumulado,
+       dv.IdDetalleVenta, p.IdProducto, p.Nombre AS Producto, dv.Cantidad AS CantidadVendida,
+       ISNULL(dev.CantidadDevuelta,0) AS CantidadDevuelta,
+       dv.Cantidad-ISNULL(dev.CantidadDevuelta,0) AS CantidadPendiente,
+       dv.PrecioVenta,
+       CASE WHEN ISNULL(p.Codigo,'') LIKE 'T%' AND UPPER(ISNULL(p.Descripcion,''))='ARTICULO TEMPORAL DE VENTA' THEN 1 ELSE 0 END AS EsTemporal
+FROM dbo.VENTA v
+INNER JOIN dbo.DETALLE_VENTA dv ON dv.IdVenta=v.IdVenta
+INNER JOIN dbo.PRODUCTO p ON p.IdProducto=dv.IdProducto
+OUTER APPLY
+(
+    SELECT SUM(dd.Cantidad) AS CantidadDevuelta
+    FROM dbo.DETALLE_DEVOLUCION_VENTA dd
+    WHERE dd.IdDetalleVenta=dv.IdDetalleVenta
+) dev
+WHERE v.NumeroDocumento=@NumeroDocumento
+ORDER BY dv.IdDetalleVenta;", conexion))
+            {
+                comando.Parameters.Add("@NumeroDocumento", SqlDbType.VarChar, 50).Value = (numeroDocumento ?? string.Empty).Trim();
+                try
+                {
+                    using (SqlDataAdapter adaptador = new SqlDataAdapter(comando))
+                        adaptador.Fill(tabla);
+                }
+                catch (Exception ex)
+                {
+                    mensaje = ex.Message;
+                }
+            }
+            return tabla;
+        }
+
+        public DataTable ObtenerHistorialDevoluciones(out string mensaje)
+        {
+            mensaje = string.Empty;
+            DataTable tabla = new DataTable();
+            const string consulta = @"
+SELECT TOP (100) h.IdDevolucion AS IdRegistro, h.FechaRegistro, v.NumeroDocumento, h.Tipo, h.Motivo,
+       COALESCE(
+           STUFF((
+               SELECT CHAR(13)+CHAR(10)+ISNULL(p.Nombre,N'Producto')+N' × '+CONVERT(nvarchar(12),dd.Cantidad)+N' (Q '+CONVERT(nvarchar(30),dd.SubTotal)+N')'
+               FROM dbo.DETALLE_DEVOLUCION_VENTA dd
+               INNER JOIN dbo.DETALLE_VENTA dv ON dv.IdDetalleVenta=dd.IdDetalleVenta
+               INNER JOIN dbo.PRODUCTO p ON p.IdProducto=dv.IdProducto
+               WHERE dd.IdDevolucion=h.IdDevolucion
+               ORDER BY dd.IdDetalleDevolucion
+               FOR XML PATH(''), TYPE
+           ).value('.', 'nvarchar(max)'),1,2,N''),N'(sin detalle guardado)') AS ProductosDevueltos,
+       ISNULL((SELECT SUM(dd.SubTotal) FROM dbo.DETALLE_DEVOLUCION_VENTA dd WHERE dd.IdDevolucion=h.IdDevolucion),0) AS ValorProductos,
+       h.MontoDevuelto, u.NombreCompleto AS Usuario
+FROM dbo.DEVOLUCION_VENTA h
+INNER JOIN dbo.VENTA v ON v.IdVenta=h.IdVenta
+INNER JOIN dbo.USUARIO u ON u.IdUsuario=h.IdUsuario
+ORDER BY h.FechaRegistro DESC, h.IdDevolucion DESC;";
+            using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+            using (SqlCommand comando = new SqlCommand(consulta, conexion))
+            {
+                try
+                {
+                    using (SqlDataAdapter adaptador = new SqlDataAdapter(comando))
+                        adaptador.Fill(tabla);
+                }
+                catch (Exception ex)
+                {
+                    mensaje = ex.Message;
+                }
+            }
+            return tabla;
+        }
+
+        public bool RegistrarDevolucion(int idVenta, int idUsuario, string tipo, string motivo,
+            decimal montoReembolsado, DataTable detalle, out decimal montoDevuelto, out string mensaje)
+        {
+            montoDevuelto = 0m;
+            mensaje = string.Empty;
+            try
+            {
+                using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+                using (SqlCommand comando = new SqlCommand("dbo.usp_RegistrarDevolucionVenta", conexion))
+                {
+                    comando.CommandType = CommandType.StoredProcedure;
+                    comando.Parameters.Add("@IdVenta", SqlDbType.Int).Value = idVenta;
+                    comando.Parameters.Add("@IdUsuario", SqlDbType.Int).Value = idUsuario;
+                    comando.Parameters.Add("@Tipo", SqlDbType.VarChar, 15).Value = tipo;
+                    comando.Parameters.Add("@Motivo", SqlDbType.VarChar, 250).Value = motivo.Trim();
+                    SqlParameter parametroReembolso = comando.Parameters.Add("@MontoReembolsado", SqlDbType.Decimal);
+                    parametroReembolso.Precision = 18;
+                    parametroReembolso.Scale = 2;
+                    parametroReembolso.Value = montoReembolsado;
+                    SqlParameter parametroDetalle = comando.Parameters.AddWithValue("@Detalle", detalle);
+                    parametroDetalle.SqlDbType = SqlDbType.Structured;
+                    parametroDetalle.TypeName = "dbo.EDetalle_DevolucionVenta";
+                    comando.Parameters.Add("@Resultado", SqlDbType.Bit).Direction = ParameterDirection.Output;
+                    comando.Parameters.Add("@Mensaje", SqlDbType.VarChar, 500).Direction = ParameterDirection.Output;
+                    SqlParameter parametroMonto = comando.Parameters.Add("@MontoDevuelto", SqlDbType.Decimal);
+                    parametroMonto.Precision = 18;
+                    parametroMonto.Scale = 2;
+                    parametroMonto.Direction = ParameterDirection.Output;
+
+                    conexion.Open();
+                    comando.ExecuteNonQuery();
+                    bool resultado = Convert.ToBoolean(comando.Parameters["@Resultado"].Value);
+                    mensaje = Convert.ToString(comando.Parameters["@Mensaje"].Value);
+                    if (resultado && parametroMonto.Value != DBNull.Value)
+                        montoDevuelto = Convert.ToDecimal(parametroMonto.Value);
+                    return resultado;
+                }
+            }
+            catch (Exception ex)
+            {
+                mensaje = ex.Message;
+                return false;
+            }
         }
     }
 }

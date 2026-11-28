@@ -24,7 +24,7 @@ namespace CapaNegocio
             return objcd_usuario.ListarActivosPorClave(clave);
         }
 
-        public int Registrar(Usuario obj, out string Mensaje)
+        public int Registrar(Usuario obj, int idUsuarioActor, out string Mensaje)
         {
             Mensaje = string.Empty;
             NormalizarMayusculas(obj);
@@ -35,9 +35,9 @@ namespace CapaNegocio
             if (obj.Clave == "") Mensaje += "Es necesario una clave\n";
             
             if (Mensaje != string.Empty) return 0;
-            else return objcd_usuario.Registrar(obj, out Mensaje);
+            else return objcd_usuario.Registrar(obj, idUsuarioActor, out Mensaje);
         }
-        public bool Editar(Usuario obj, out string Mensaje)
+        public bool Editar(Usuario obj, int idUsuarioActor, out string Mensaje)
         {
             Mensaje = string.Empty;
             NormalizarMayusculas(obj);
@@ -48,15 +48,15 @@ namespace CapaNegocio
             if (obj.Clave == "") Mensaje += "Es necesario una clave\n";
 
             if (Mensaje != string.Empty) return false;
-            return objcd_usuario.Editar(obj, out Mensaje);
+            return objcd_usuario.Editar(obj, idUsuarioActor, out Mensaje);
         }
-        public bool Eliminar(Usuario obj, out string Mensaje)
+        public bool Eliminar(Usuario obj, int idUsuarioActor, out string Mensaje)
         {
             Mensaje = string.Empty;
             if (obj.IdUsuario <= 0) Mensaje += "Es necesario seleccionar un usuario válido\n";
 
             if (Mensaje != string.Empty) return false;
-            return objcd_usuario.Eliminar(obj, out Mensaje);
+            return objcd_usuario.Eliminar(obj, idUsuarioActor, out Mensaje);
         }
 
         private static void NormalizarMayusculas(Usuario usuario)

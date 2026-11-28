@@ -15,7 +15,7 @@
     const response = await fetch(url, { credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
     const data = response.status === 204 ? null : await response.json().catch(() => ({}));
     if (!response.ok) {
-      if (response.status === 401 && url !== '/api/productos/sesion') show(false);
+      if ((response.status === 401 || response.status === 403) && url !== '/api/productos/sesion') show(false);
       throw new Error(data?.mensaje || data?.detail || data?.title || `No se pudo completar la solicitud (HTTP ${response.status}).`);
     }
     return data;
@@ -122,7 +122,6 @@
 
   async function refresh() {
     try {
-      await api('/api/finanzas/resumen'); // También asegura que exista el período de gastos del mes.
       catalog = await api('/api/finanzas/operaciones/salidas/catalogo');
       renderExpenseOptions();
       addBankOption('BAM', 'BAM', 'BAM · Ganancia', 'bamOption');
@@ -211,7 +210,7 @@
   $('#loginForm').addEventListener('submit', async event => {
     event.preventDefault();
     try {
-      const data = await api('/api/productos/sesion', { method: 'POST', body: JSON.stringify({ clave: new FormData(event.currentTarget).get('clave') }) });
+      const data = await api('/api/productos/sesion', { method: 'POST', body: JSON.stringify({ clave: new FormData(event.currentTarget).get('clave'), pagina: 'salidas.html' }) });
       show(true, data.nombre);
       await refresh();
     } catch (error) { $('#loginMessage').textContent = error.message; }

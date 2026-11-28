@@ -12,6 +12,7 @@ namespace CapaEntidad
         public string Codigo {  get; set; }
         public string Nombre { get; set; }
         public string Descripcion { get; set; }
+        public string Equivalencia { get; set; }
 
         public Categoria oCategoria { get; set; }
         public int Stock {  get; set; }

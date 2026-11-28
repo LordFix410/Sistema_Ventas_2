@@ -37,6 +37,43 @@ namespace CapaNegocio
 
         }
 
+        public Compra ObtenerCompraParaCorreccion(string numero)
+        {
+            return objcd_compra.ObtenerCompraParaCorreccion(numero);
+        }
+
+        public List<Detalle_Compra> ObtenerDetalleCompraParaCorreccion(int idCompra)
+        {
+            return objcd_compra.ObtenerDetalleCompraParaCorreccion(idCompra);
+        }
+
+        public bool CorregirCompra(int idCompra, int idUsuario, int idProveedor, string numeroFacturaProveedor,
+            string motivo, DataTable detalle, out string mensaje)
+        {
+            return objcd_compra.CorregirCompra(idCompra, idUsuario, idProveedor, numeroFacturaProveedor,
+                motivo, detalle, out mensaje);
+        }
+
+        public bool AnularCompra(int idCompra, int idUsuario, string motivo, out string mensaje)
+        {
+            return objcd_compra.AnularCompra(idCompra, idUsuario, motivo, out mensaje);
+        }
+
+        public bool ReactivarCompra(int idCompra, int idUsuario, string motivo, out string mensaje)
+        {
+            return objcd_compra.ReactivarCompra(idCompra, idUsuario, motivo, out mensaje);
+        }
+
+        public DataTable ObtenerHistorialAnulaciones()
+        {
+            return objcd_compra.ObtenerHistorialAnulaciones();
+        }
+
+        public DataTable ObtenerDetalleHistorialAnulacion(int idCorreccion)
+        {
+            return objcd_compra.ObtenerDetalleHistorialAnulacion(idCorreccion);
+        }
+
     
     }
 }

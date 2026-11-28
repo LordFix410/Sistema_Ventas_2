@@ -59,6 +59,7 @@
     <Compile Include="Detalle_Venta.cs" />
     <Compile Include="Negocio.cs" />
     <Compile Include="Permiso.cs" />
+    <Compile Include="PaginaWeb.cs" />
     <Compile Include="Producto.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Settings.Designer.cs">

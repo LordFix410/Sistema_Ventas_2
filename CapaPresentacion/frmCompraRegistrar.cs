@@ -209,13 +209,14 @@ namespace CapaPresentacion
                     var lineas = new XElement("Productos",
                         dataGridView1.Rows.Cast<DataGridViewRow>().Select(f => new XElement("Producto",
                             new XElement("IdProducto", Convert.ToString(f.Cells["IdProducto"].Value)),
+                            new XElement("Codigo", (f.Tag as Producto)?.Codigo ?? string.Empty),
                             new XElement("Nombre", Convert.ToString(f.Cells["Producto"].Value)),
                             new XElement("PrecioCompra", Convert.ToDecimal(f.Cells["PrecioCompra"].Value).ToString(CultureInfo.InvariantCulture)),
                             new XElement("PrecioVenta", Convert.ToDecimal(f.Cells["PrecioVenta"].Value).ToString(CultureInfo.InvariantCulture)),
                             new XElement("Porcentaje", Convert.ToDecimal(f.Cells["Porcentaje"].Value).ToString(CultureInfo.InvariantCulture)),
                             new XElement("Cantidad", Convert.ToString(f.Cells["Cantidad"].Value)),
                             new XElement("Subtotal", Convert.ToDecimal(f.Cells["SubTotal"].Value).ToString(CultureInfo.InvariantCulture)))));
-                    new XDocument(new XElement("BorradorCompra", new XAttribute("Version", "1"),
+                    new XDocument(new XElement("BorradorCompra", new XAttribute("Version", "2"),
                         new XElement("IdProveedor", txtIdProveedor.Text),
                         new XElement("DocumentoProveedor", txtNuevoDocumento.Text),
                         new XElement("RazonSocial", txtRazonSocial.Text),
@@ -239,22 +240,46 @@ namespace CapaPresentacion
                 try
                 {
                     XDocument documento = XDocument.Load(dialogo.FileName);
-                    XElement raiz = documento.Element("BorradorCompra");
-                    if (raiz == null || Convert.ToString(raiz.Attribute("Version")) != "1")
-                        throw new InvalidOperationException("El archivo no es un borrador de compra reconocido.");
+                    XElement raiz = documento.Root;
+                    if (raiz == null || !string.Equals(raiz.Name.LocalName, "BorradorCompra", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string elementoRaiz = raiz == null ? "vacío" : raiz.Name.LocalName;
+                        throw new InvalidOperationException("El XML seleccionado no es un borrador de compra. Elemento encontrado: " + elementoRaiz + ". Usa un archivo guardado con «Guardar borrador».");
+                    }
+                    string versionTexto = raiz.Attributes().FirstOrDefault(a =>
+                        string.Equals(a.Name.LocalName, "Version", StringComparison.OrdinalIgnoreCase))?.Value;
+                    int versionBorrador = string.IsNullOrWhiteSpace(versionTexto) ? 1 :
+                        int.TryParse(versionTexto, NumberStyles.Integer, CultureInfo.InvariantCulture, out int versionLeida)
+                            ? versionLeida : 0;
+                    if (versionBorrador != 1 && versionBorrador != 2)
+                        throw new InvalidOperationException("La versión del borrador no es compatible: " + (versionTexto ?? "sin versión") + ". Guarda uno nuevo desde esta versión del sistema.");
 
                     int idProveedor = EnteroBorrador(raiz, "IdProveedor", 0);
-                    Proveedor proveedor = null;
-                    if (idProveedor > 0)
-                    {
-                        proveedor = new CN_Proveedor().Listar().FirstOrDefault(p => p.IdProveedor == idProveedor && p.Estado);
-                        if (proveedor == null) throw new InvalidOperationException("El proveedor del borrador ya no existe o está inactivo.");
-                    }
+                    string documentoProveedorBorrador = ValorBorrador(raiz, "DocumentoProveedor").Trim();
+                    List<Proveedor> proveedoresGuardados = new CN_Proveedor().Listar();
+                    Proveedor proveedorGuardado = idProveedor > 0
+                        ? proveedoresGuardados.FirstOrDefault(p => p.IdProveedor == idProveedor)
+                        : null;
+                    if (proveedorGuardado != null && documentoProveedorBorrador.Length > 0 &&
+                        !string.Equals(proveedorGuardado.Documento?.Trim(), documentoProveedorBorrador, StringComparison.OrdinalIgnoreCase))
+                        proveedorGuardado = null;
+                    if (proveedorGuardado == null && documentoProveedorBorrador.Length > 0)
+                        proveedorGuardado = proveedoresGuardados.FirstOrDefault(p => p.Estado &&
+                            string.Equals(p.Documento?.Trim(), documentoProveedorBorrador, StringComparison.OrdinalIgnoreCase));
+                    Proveedor proveedor = proveedorGuardado != null && proveedorGuardado.Estado
+                        ? proveedorGuardado
+                        : null;
+                    bool proveedorRequiereSeleccion = (idProveedor > 0 || documentoProveedorBorrador.Length > 0) && proveedor == null;
 
-                    List<Producto> productosActivos = new CN_Producto().Listar().Where(p => p.Estado).ToList();
+                    // Se cargan también los productos inactivos para que el borrador no se pierda.
+                    // El procedimiento de compra impedirá registrarlos hasta que se reactiven.
+                    List<Producto> productos = new CN_Producto().Listar();
                     var datos = new List<object[]>();
                     var ids = new HashSet<int>();
-                    foreach (XElement x in raiz.Element("Productos")?.Elements("Producto") ?? Enumerable.Empty<XElement>())
+                    var productosInactivos = new List<string>();
+                    foreach (XElement x in ElementoBorrador(raiz, "Productos")?.Elements()
+                        .Where(elemento => string.Equals(elemento.Name.LocalName, "Producto", StringComparison.OrdinalIgnoreCase))
+                        ?? Enumerable.Empty<XElement>())
                     {
                         int id = EnteroBorrador(x, "IdProducto", 0);
                         int cantidad = EnteroBorrador(x, "Cantidad", 0);
@@ -262,14 +287,28 @@ namespace CapaPresentacion
                         decimal venta = DecimalBorrador(x, "PrecioVenta");
                         decimal margen = DecimalBorrador(x, "Porcentaje");
                         decimal subtotal = DecimalBorrador(x, "Subtotal");
-                        Producto producto = productosActivos.FirstOrDefault(p => p.IdProducto == id);
-                        if (id <= 0 || cantidad <= 0 || producto == null || !ids.Add(id) || costo <= 0 || venta <= 0 || venta < costo || margen < 0 ||
+                        string nombreBorrador = ValorBorrador(x, "Nombre").Trim();
+                        string codigoBorrador = ValorBorrador(x, "Codigo").Trim();
+                        string linea = "Renglón " + (datos.Count + 1) + (string.IsNullOrWhiteSpace(nombreBorrador) ? string.Empty : " (" + nombreBorrador + ")");
+                        if (id <= 0 || cantidad <= 0 || costo <= 0 || venta <= 0 || venta < costo || margen < 0 ||
                             Math.Abs(venta * 4m - decimal.Round(venta * 4m, 0)) > 0.0001m ||
                             (costo > 0 && Math.Abs(margen - ((venta - costo) / costo)) > 0.0001m) ||
                             Math.Abs(subtotal - Math.Round(costo * cantidad, 2)) > 0.01m)
-                            throw new InvalidOperationException("El borrador contiene un producto, cantidad o precio inválido. No se cargó ningún dato.");
+                            throw new InvalidOperationException(linea + ": revisa el ID, la cantidad, los precios o el subtotal. No se cargó ningún dato.");
 
-                        datos.Add(new object[] { id, GestorImagenProducto.CargarMiniatura(producto.ImagenRuta, 52, 52), producto.Nombre, costo.ToString("0.00"), venta.ToString("0.00"),
+                        Producto producto = versionBorrador >= 2 && codigoBorrador.Length > 0
+                            ? productos.FirstOrDefault(p => string.Equals(p.Codigo?.Trim(), codigoBorrador, StringComparison.OrdinalIgnoreCase))
+                            : productos.FirstOrDefault(p => p.IdProducto == id);
+                        if (producto == null)
+                            throw new InvalidOperationException(linea + ": no se encontró el producto por su código o ID. No se cargó ningún dato.");
+                        if (!string.IsNullOrWhiteSpace(nombreBorrador) &&
+                            !string.Equals(producto.Nombre?.Trim(), nombreBorrador, StringComparison.OrdinalIgnoreCase))
+                            throw new InvalidOperationException(linea + ": el ID/código del borrador ahora corresponde a otro nombre de producto. Revisa el catálogo; no se cargó ningún dato.");
+                        if (!ids.Add(producto.IdProducto))
+                            throw new InvalidOperationException(linea + ": el borrador apunta dos veces al mismo producto. No se cargó ningún dato.");
+                        if (!producto.Estado) productosInactivos.Add(producto.Nombre);
+
+                        datos.Add(new object[] { producto.IdProducto, GestorImagenProducto.CargarMiniatura(producto.ImagenRuta, 52, 52), producto.Nombre, costo.ToString("0.00"), venta.ToString("0.00"),
                             margen.ToString("0.####"), cantidad, subtotal.ToString("0.00") });
                     }
                     if (datos.Count == 0) throw new InvalidOperationException("El borrador no contiene productos.");
@@ -283,7 +322,7 @@ namespace CapaPresentacion
                     {
                         int indiceFila = dataGridView1.Rows.Add(fila);
                         int idProducto = Convert.ToInt32(dataGridView1.Rows[indiceFila].Cells["IdProducto"].Value);
-                        dataGridView1.Rows[indiceFila].Tag = productosActivos.FirstOrDefault(p => p.IdProducto == idProducto);
+                        dataGridView1.Rows[indiceFila].Tag = productos.FirstOrDefault(p => p.IdProducto == idProducto);
                     }
                     txtIdProveedor.Text = proveedor == null ? "0" : proveedor.IdProveedor.ToString();
                     txtNuevoDocumento.Text = proveedor?.Documento ?? ValorBorrador(raiz, "DocumentoProveedor");
@@ -295,7 +334,12 @@ namespace CapaPresentacion
                     indiceProductoEditando = -1;
                     calculatTotal();
                     txtCodigoProducto.Focus();
-                    CapaPresentacion.DialogoSistema.Show("Borrador cargado. Revisa proveedor, productos, precios y total de factura antes de registrar.",
+                    string aviso = "Borrador cargado. Revisa proveedor, productos, precios y total de factura antes de registrar.";
+                    if (proveedorRequiereSeleccion)
+                        aviso += "\n\nEl proveedor guardado ya no está activo o fue eliminado. Selecciona un proveedor activo antes de registrar.";
+                    if (productosInactivos.Count > 0)
+                        aviso += "\n\nReactiva estos productos antes de registrar la compra: " + string.Join(", ", productosInactivos.Distinct()) + ".";
+                    CapaPresentacion.DialogoSistema.Show(aviso,
                         "Borrador de compra", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
@@ -306,7 +350,10 @@ namespace CapaPresentacion
             }
         }
 
-        private static string ValorBorrador(XElement raiz, string campo) => (string)raiz.Element(campo) ?? string.Empty;
+        private static XElement ElementoBorrador(XElement raiz, string campo) => raiz?.Elements()
+            .FirstOrDefault(elemento => string.Equals(elemento.Name.LocalName, campo, StringComparison.OrdinalIgnoreCase));
+
+        private static string ValorBorrador(XElement raiz, string campo) => (string)ElementoBorrador(raiz, campo) ?? string.Empty;
         private static int EnteroBorrador(XElement raiz, string campo, int predeterminado) =>
             int.TryParse(ValorBorrador(raiz, campo), NumberStyles.Integer, CultureInfo.InvariantCulture, out int valor) ? valor : predeterminado;
         private static decimal DecimalBorrador(XElement raiz, string campo) =>
@@ -503,7 +550,7 @@ namespace CapaPresentacion
 
         private void btnBuscarProducto_Click(object sender, EventArgs e)
         {
-            using (var modal = new mdProducto())
+            using (var modal = new mdProducto(false, false, true))
             {
                 var result = modal.ShowDialog();
 
@@ -629,12 +676,22 @@ namespace CapaPresentacion
                 return;
 
             evaluandoCambioCosto = true;
+            if (costoNuevo >= costoOriginalProducto)
+            {
+                // Si el costo subió, conservamos el precio de venta y solo cambia el margen.
+                txtPrecioVenta.Text = precioVentaOriginalProducto.ToString("0.00");
+                ActualizarMargenDesdePrecios();
+                evaluandoCambioCosto = false;
+                return;
+            }
+
             var botones = MessageBoxButtons.YesNo;
             DialogResult actualizarPrecio = CapaPresentacion.DialogoSistema.Show(this,
                 "El costo registrado era " + costoOriginalProducto.ToString("Q 0.00") +
                 " y el nuevo costo es " + costoNuevo.ToString("Q 0.00") + ".\n\n" +
-                "¿Desea ajustar también el precio de venta conservando el margen anterior?\n" +
-                "Si elige No, se conservará el precio de venta actual y se recalculará el margen.",
+                "El costo bajó. ¿Desea bajar también el precio de venta?\n" +
+                "Sí: actualiza el precio.\n" +
+                "No (opción predeterminada): conserva el precio actual y recalcula el margen.",
                 "Cambio de costo", botones, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
 
             if (actualizarPrecio == DialogResult.Yes)
@@ -648,6 +705,7 @@ namespace CapaPresentacion
                 txtPrecioVenta.Text = precioVentaOriginalProducto.ToString("0.00");
                 ActualizarMargenDesdePrecios();
             }
+            evaluandoCambioCosto = false;
         }
 
         private bool SolicitarTotalFactura(decimal totalProductos, out decimal totalFactura, out decimal importeNoInventariable)
@@ -664,22 +722,21 @@ namespace CapaPresentacion
                 dialogo.Text = "Confirmar total de factura";
                 dialogo.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialogo.StartPosition = FormStartPosition.CenterParent;
-                dialogo.ClientSize = new Size(520, 180);
+                dialogo.ClientSize = new Size(520, 165);
                 dialogo.MinimizeBox = false;
                 dialogo.MaximizeBox = false;
-                etiqueta.Text = "Total de productos cargados: Q " + totalProductos.ToString("N2") +
-                    "\nEscriba el total que aparece en la factura:";
+                etiqueta.Text = "Revise la factura física e ingrese aquí el total que aparece impreso.";
                 etiqueta.AutoSize = false;
-                etiqueta.SetBounds(18, 14, 480, 52);
-                entrada.SetBounds(20, 76, 210, 28);
+                etiqueta.SetBounds(18, 14, 480, 42);
+                entrada.SetBounds(20, 62, 210, 28);
                 entrada.Text = string.Empty;
                 entrada.TextAlign = HorizontalAlignment.Right;
                 aceptar.Text = "Continuar";
                 aceptar.DialogResult = DialogResult.OK;
-                aceptar.SetBounds(308, 132, 95, 32);
+                aceptar.SetBounds(308, 112, 95, 32);
                 cancelar.Text = "Cancelar";
                 cancelar.DialogResult = DialogResult.Cancel;
-                cancelar.SetBounds(410, 132, 95, 32);
+                cancelar.SetBounds(410, 112, 95, 32);
                 dialogo.Controls.AddRange(new System.Windows.Forms.Control[] { etiqueta, entrada, aceptar, cancelar });
                 dialogo.AcceptButton = aceptar;
                 dialogo.CancelButton = cancelar;
@@ -697,6 +754,8 @@ namespace CapaPresentacion
             }
 
             decimal diferencia = totalFactura - totalProductos;
+            // La cantidad y el costo unitario los ingresa el usuario. La diferencia
+            // contra el total de la factura admite hasta Q1.00 por redondeos de centavos.
             if (Math.Abs(diferencia) <= 1.00m)
             {
                 importeNoInventariable = Math.Max(0, diferencia);
@@ -712,9 +771,11 @@ namespace CapaPresentacion
             }
 
             DialogResult productosCompletos = CapaPresentacion.DialogoSistema.Show(this,
-                "La factura supera en Q " + diferencia.ToString("N2") + " los productos cargados.\n\n" +
-                "¿Ya agregó todos los productos que deben entrar al inventario?\n" +
-                "Si falta alguno, elija No para volver a la compra y agregarlo.",
+                "Total indicado en la factura: Q " + totalFactura.ToString("N2") +
+                "\nProductos cargados al inventario: Q " + totalProductos.ToString("N2") +
+                "\nDiferencia: Q " + diferencia.ToString("N2") + ".\n\n" +
+                "Si esa diferencia corresponde a productos de otra persona o a cargos que no van al inventario, elija Sí y escriba cuánto debe excluir.\n" +
+                "Si todavía falta agregar un producto suyo, elija No para volver a la compra.",
                 "Revisar productos", MessageBoxButtons.YesNo, MessageBoxIcon.Question,
                 MessageBoxDefaultButton.Button2);
             if (productosCompletos != DialogResult.Yes) return false;
@@ -734,9 +795,9 @@ namespace CapaPresentacion
                 dialogo.MaximizeBox = false;
                 etiqueta.AutoSize = false;
                 etiqueta.TextAlign = ContentAlignment.MiddleLeft;
-                etiqueta.Text = "La factura supera en Q " + diferencia.ToString("N2") + " el total de productos cargados.\n" +
-                    "Escriba el importe exacto de los artículos o cargos que no se controlan en inventario.\n" +
-                    "No incluya aquí productos que sí deban registrarse en el inventario.";
+                etiqueta.Text = "Escriba cuánto de la diferencia NO se cargará al inventario.\n" +
+                    "Ejemplo: si Q 80.00 de la factura son productos de otra persona, ingrese Q 80.00.\n" +
+                    "No incluya aquí productos suyos que sí deban registrarse.";
                 etiqueta.SetBounds(18, 14, 560, 82);
                 entrada.SetBounds(20, 106, 210, 28);
                 entrada.Text = string.Empty;
@@ -766,8 +827,12 @@ namespace CapaPresentacion
             decimal diferenciaFinal = totalFactura - importeNoInventariable - totalProductos;
             if (Math.Abs(diferenciaFinal) > 1.00m)
             {
-                CapaPresentacion.DialogoSistema.Show("La factura aún difiere en Q " + diferenciaFinal.ToString("N2") +
-                    ". Corrija el importe no inventariable o vuelva a revisar los productos.",
+                CapaPresentacion.DialogoSistema.Show("La compra aún no cuadra.\n\n" +
+                    "Factura: Q " + totalFactura.ToString("N2") + "\n" +
+                    "Productos cargados: Q " + totalProductos.ToString("N2") + "\n" +
+                    "Importe excluido: Q " + importeNoInventariable.ToString("N2") + "\n" +
+                    "Diferencia pendiente: Q " + diferenciaFinal.ToString("N2") +
+                    ".\nRevise los datos y vuelva a intentarlo.",
                     "La compra no cuadra", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
@@ -1023,9 +1088,8 @@ namespace CapaPresentacion
                         Convert.ToInt32(row.Cells["IdProducto"].Value.ToString()),
                         Convert.ToDecimal(row.Cells["PrecioCompra"].Value),
                         Convert.ToDecimal(row.Cells["PrecioVenta"].Value),
-                        // El TVP de SQL valida el margen en puntos porcentuales (61),
-                        // aunque PRODUCTO y la cuadrícula lo guardan como fracción (0.61).
-                        Convert.ToDecimal(row.Cells["Porcentaje"].Value) * 100m,
+                        // El TVP y PRODUCTO guardan el margen como fracción (0.61 = 61%).
+                        Convert.ToDecimal(row.Cells["Porcentaje"].Value),
                         Convert.ToInt32(row.Cells["Cantidad"].Value),
                         Convert.ToDecimal(row.Cells["SubTotal"].Value),
 
@@ -1039,7 +1103,8 @@ namespace CapaPresentacion
                 TipoDocumento = ((OpcionCombo)cboTipoDocumento.SelectedItem).Texto,
                 NumeroDocumento = string.Empty,
                 MontoTotal = totalFactura,
-                MontoNoInventariable = montoNoInventariable
+                MontoNoInventariable = montoNoInventariable,
+                NumeroFacturaProveedor = string.Empty
             };
 
 

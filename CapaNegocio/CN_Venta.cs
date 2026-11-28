@@ -44,6 +44,23 @@ namespace CapaNegocio
 
             return oVenta;
         }
+
+        public DataTable ObtenerDetalleDevolucion(string numeroDocumento, out string mensaje)
+        {
+            return objcd_venta.ObtenerDetalleDevolucion(numeroDocumento, out mensaje);
+        }
+
+        public DataTable ObtenerHistorialDevoluciones(out string mensaje)
+        {
+            return objcd_venta.ObtenerHistorialDevoluciones(out mensaje);
+        }
+
+        public bool RegistrarDevolucion(int idVenta, int idUsuario, string tipo, string motivo,
+            decimal montoReembolsado, DataTable detalle, out decimal montoDevuelto, out string mensaje)
+        {
+            return objcd_venta.RegistrarDevolucion(idVenta, idUsuario, tipo, motivo, montoReembolsado, detalle,
+                out montoDevuelto, out mensaje);
+        }
     }
 
 }

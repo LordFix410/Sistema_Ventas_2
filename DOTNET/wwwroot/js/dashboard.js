@@ -17,7 +17,10 @@
       ...options
     });
     const data = response.status === 204 ? null : await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data?.mensaje || 'No se pudo consultar el resumen.');
+    if (!response.ok) {
+      if ((response.status === 401 || response.status === 403) && url !== '/api/productos/sesion') setSignedIn(false);
+      throw new Error(data?.mensaje || 'No se pudo consultar el resumen.');
+    }
     return data;
   }
   function setSignedIn(signedIn, name = '') {
@@ -70,7 +73,7 @@
     try {
       const result = await api('/api/productos/sesion', {
         method: 'POST',
-        body: JSON.stringify({clave: new FormData(form).get('clave')})
+        body: JSON.stringify({clave: new FormData(form).get('clave'), pagina: 'dashboard.html'})
       });
       setSignedIn(true, result.nombre || 'Usuario');
       await loadSummary();

@@ -5,7 +5,8 @@
     Incluye las tablas de obligaciones personales, cierres temporales web y permisos de Finanzas.
     Al final crea o actualiza el login de aplicación ventas_app2.
     Ejecutar con una cuenta administradora del servidor SQL.
-    Para una base ya existente ejecuta migracion_finanzas_temporal.sql y las migraciones requeridas por tu versión.
+    No ejecutar sobre una base ya existente. Para actualizar cierres, depósitos y conciliación
+    web en una base existente, usa DOTNET/migracion_finanzas_web.sql si están presentes las tablas base.
 */
 create database DBSISTEMA_VENTA
 go
@@ -1635,6 +1636,7 @@ BEGIN
         Comprobante varchar(100) NOT NULL,
         IdUsuario int NULL CONSTRAINT FK_FIN_TRANSFERENCIA_BANCARIA_USUARIO REFERENCES dbo.USUARIO(IdUsuario),
         FechaRegistro datetime2(0) NOT NULL CONSTRAINT DF_FIN_TRANSFERENCIA_BANCARIA_FechaRegistro DEFAULT(sysdatetime()),
+        AfectaSaldo bit NOT NULL CONSTRAINT DF_FIN_TRANSFERENCIA_BANCARIA_AfectaSaldo DEFAULT(1),
         CONSTRAINT CK_FIN_TRANSFERENCIA_BANCARIA_Fondo CHECK(Fondo IN ('Capital','Personal')),
         CONSTRAINT CK_FIN_TRANSFERENCIA_BANCARIA_Monto CHECK(Monto>0),
         CONSTRAINT CK_FIN_TRANSFERENCIA_BANCARIA_Bancos CHECK(IdBancoOrigen<>IdBancoDestino)
@@ -1642,6 +1644,9 @@ BEGIN
     CREATE INDEX IX_FIN_TRANSFERENCIA_BANCARIA_OrigenFecha ON dbo.FIN_TRANSFERENCIA_BANCARIA(IdBancoOrigen,Fecha);
     CREATE INDEX IX_FIN_TRANSFERENCIA_BANCARIA_DestinoFecha ON dbo.FIN_TRANSFERENCIA_BANCARIA(IdBancoDestino,Fecha);
 END;
+
+IF COL_LENGTH(N'dbo.FIN_TRANSFERENCIA_BANCARIA', N'AfectaSaldo') IS NULL
+    ALTER TABLE dbo.FIN_TRANSFERENCIA_BANCARIA ADD AfectaSaldo bit NOT NULL CONSTRAINT DF_FIN_TRANSFERENCIA_BANCARIA_AfectaSaldo DEFAULT(1) WITH VALUES;
 
 IF COL_LENGTH(N'dbo.FIN_MOVIMIENTO', N'IdBanco') IS NULL
     ALTER TABLE dbo.FIN_MOVIMIENTO ADD IdBanco int NULL CONSTRAINT FK_FIN_MOVIMIENTO_BANCO_TEMPORAL REFERENCES dbo.FIN_BANCO_TEMPORAL(IdBanco);

@@ -60,6 +60,8 @@ namespace CapaDatos
                         comando.Parameters.Add("Codigo", SqlDbType.VarChar, 50).Value = (obj.Codigo ?? string.Empty).ToUpperInvariant();
                         comando.Parameters.Add("Nombre", SqlDbType.VarChar, 500).Value = (obj.Nombre ?? string.Empty).ToUpperInvariant();
                         comando.Parameters.Add("Descripcion", SqlDbType.VarChar, 500).Value = (obj.Descripcion ?? string.Empty).ToUpperInvariant();
+                        comando.Parameters.Add("Equivalencia", SqlDbType.VarChar, 500).Value = string.IsNullOrWhiteSpace(obj.Equivalencia)
+                            ? (object)DBNull.Value : obj.Equivalencia.ToUpperInvariant();
                         comando.Parameters.Add("IdCategoria", SqlDbType.Int).Value = idCategoria;
                         AgregarParametroPorcentaje(comando, obj.Porcentaje);
                         AgregarParametroPrecio(comando, "PrecioCompra", 0m);
@@ -136,7 +138,7 @@ namespace CapaDatos
                     
 
                     StringBuilder query = new StringBuilder();
-                    query.AppendLine("select p.IdProducto, p.Codigo, p.Nombre, p.Descripcion, c.IdCategoria, c.DESCRIPCION[DescripcionCategoria], p.Stock, p.PrecioCompra, p.PrecioVenta, p.Porcentaje, p.Estado, p.IdGrupoReposicion, COALESCE(p.CantidadMinima, gr.CantidadMinima) CantidadMinima, COALESCE(p.CantidadMaxima, gr.CantidadMaxima) CantidadMaxima, p.IdGrupoProveedor, ISNULL(gr.Nombre,'') GrupoReposicion, ISNULL(gp.Nombre,'') GrupoProveedores, p.ImagenRuta from PRODUCTO p");
+                    query.AppendLine("select p.IdProducto, p.Codigo, p.Nombre, p.Descripcion, p.Equivalencia, c.IdCategoria, c.DESCRIPCION[DescripcionCategoria], p.Stock, p.PrecioCompra, p.PrecioVenta, p.Porcentaje, p.Estado, p.IdGrupoReposicion, COALESCE(p.CantidadMinima, gr.CantidadMinima) CantidadMinima, COALESCE(p.CantidadMaxima, gr.CantidadMaxima) CantidadMaxima, p.IdGrupoProveedor, ISNULL(gr.Nombre,'') GrupoReposicion, ISNULL(gp.Nombre,'') GrupoProveedores, p.ImagenRuta from PRODUCTO p");
                     query.AppendLine("inner join CATEGORIA c on c.IdCategoria = p.IdCategoria");
                     query.AppendLine("left join dbo.GRUPO_REPOSICION gr on gr.IdGrupoReposicion=p.IdGrupoReposicion left join dbo.GRUPO_PROVEEDOR gp on gp.IdGrupoProveedor=p.IdGrupoProveedor");
 
@@ -155,6 +157,7 @@ namespace CapaDatos
                                 Codigo = dr["Codigo"].ToString(),
                                 Nombre = dr["Nombre"].ToString(),
                                 Descripcion = dr["Descripcion"].ToString(),
+                        Equivalencia = dr["Equivalencia"] == DBNull.Value ? null : Convert.ToString(dr["Equivalencia"]),
                                 oCategoria = new Categoria() { IdCategoria = Convert.ToInt32(dr["IdCategoria"]), Descripcion = dr["DescripcionCategoria"].ToString() },
                                 Stock = Convert.ToInt32( dr["Stock"].ToString()),
                                 PrecioCompra = Convert.ToDecimal(dr["PrecioCompra"].ToString()),
@@ -203,6 +206,7 @@ namespace CapaDatos
                                 Codigo = Convert.ToString(dr["Codigo"]),
                                 Nombre = Convert.ToString(dr["Nombre"]),
                                 Descripcion = Convert.ToString(dr["Descripcion"]),
+                                Equivalencia = dr["Equivalencia"] == DBNull.Value ? null : Convert.ToString(dr["Equivalencia"]),
                                 oCategoria = new Categoria
                                 {
                                     IdCategoria = Convert.ToInt32(dr["IdCategoria"]),
@@ -241,7 +245,7 @@ namespace CapaDatos
             if (idProducto <= 0) return null;
             const string consulta = @"SELECT TOP (1) p.IdProducto, p.Codigo, p.Nombre, p.Descripcion,
                 c.IdCategoria, c.Descripcion AS DescripcionCategoria, p.Stock, p.PrecioCompra, p.PrecioVenta,
-                p.Porcentaje, p.Estado, p.IdGrupoReposicion,
+                p.Porcentaje, p.Estado, p.Equivalencia, p.IdGrupoReposicion,
                 COALESCE(p.CantidadMinima, gr.CantidadMinima) AS CantidadMinima,
                 COALESCE(p.CantidadMaxima, gr.CantidadMaxima) AS CantidadMaxima,
                 p.IdGrupoProveedor, ISNULL(gr.Nombre, '') AS GrupoReposicion,
@@ -265,6 +269,7 @@ namespace CapaDatos
                         Codigo = Convert.ToString(dr["Codigo"]),
                         Nombre = Convert.ToString(dr["Nombre"]),
                         Descripcion = Convert.ToString(dr["Descripcion"]),
+                                Equivalencia = dr["Equivalencia"] == DBNull.Value ? null : Convert.ToString(dr["Equivalencia"]),
                         oCategoria = new Categoria
                         {
                             IdCategoria = Convert.ToInt32(dr["IdCategoria"]),
@@ -315,7 +320,7 @@ namespace CapaDatos
                 COALESCE(p.CantidadMinima, gr.CantidadMinima) AS CantidadMinima,
                 COALESCE(p.CantidadMaxima, gr.CantidadMaxima) AS CantidadMaxima,
                 p.IdGrupoProveedor, ISNULL(gr.Nombre, '') AS GrupoReposicion,
-                ISNULL(gp.Nombre, '') AS GrupoProveedores, p.ImagenRuta
+                ISNULL(gp.Nombre, '') AS GrupoProveedores, p.ImagenRuta, p.Equivalencia
                 FROM dbo.PRODUCTO p
                 INNER JOIN dbo.CATEGORIA c ON c.IdCategoria = p.IdCategoria
                 LEFT JOIN dbo.GRUPO_REPOSICION gr ON gr.IdGrupoReposicion = p.IdGrupoReposicion
@@ -333,30 +338,70 @@ namespace CapaDatos
                 {
                     while (dr.Read())
                     {
-                        lista.Add(new Producto
-                        {
-                            IdProducto = Convert.ToInt32(dr["IdProducto"]),
-                            Codigo = Convert.ToString(dr["Codigo"]),
-                            Nombre = Convert.ToString(dr["Nombre"]),
-                            Descripcion = Convert.ToString(dr["Descripcion"]),
-                            oCategoria = new Categoria { IdCategoria = Convert.ToInt32(dr["IdCategoria"]), Descripcion = Convert.ToString(dr["DescripcionCategoria"]) },
-                            Stock = Convert.ToInt32(dr["Stock"]),
-                            PrecioCompra = Convert.ToDecimal(dr["PrecioCompra"]),
-                            PrecioVenta = Convert.ToDecimal(dr["PrecioVenta"]),
-                            Porcentaje = Convert.ToDecimal(dr["Porcentaje"]),
-                            Estado = Convert.ToBoolean(dr["Estado"]),
-                            IdGrupoReposicion = dr["IdGrupoReposicion"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoReposicion"]),
-                            CantidadMinima = dr["CantidadMinima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMinima"]),
-                            CantidadMaxima = dr["CantidadMaxima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMaxima"]),
-                            IdGrupoProveedor = dr["IdGrupoProveedor"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoProveedor"]),
-                            GrupoReposicion = Convert.ToString(dr["GrupoReposicion"]),
-                            GrupoProveedores = Convert.ToString(dr["GrupoProveedores"]),
-                            ImagenRuta = dr["ImagenRuta"] == DBNull.Value ? null : Convert.ToString(dr["ImagenRuta"])
-                        });
+                        lista.Add(MapearProductoBusqueda(dr));
                     }
                 }
             }
             return lista;
+        }
+
+        public List<Producto> BuscarFlexible(string termino, bool soloActivos = true)
+        {
+            string[] terminos = (termino ?? string.Empty).Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            if (terminos.Length == 0) return new List<Producto>();
+
+            const string columnas = @"SELECT TOP (500) p.IdProducto, p.Codigo, p.Nombre, p.Descripcion,
+                c.IdCategoria, c.DESCRIPCION AS DescripcionCategoria, p.Stock, p.PrecioCompra, p.PrecioVenta,
+                p.Porcentaje, p.Estado, p.IdGrupoReposicion,
+                COALESCE(p.CantidadMinima, gr.CantidadMinima) AS CantidadMinima,
+                COALESCE(p.CantidadMaxima, gr.CantidadMaxima) AS CantidadMaxima,
+                p.IdGrupoProveedor, ISNULL(gr.Nombre, '') AS GrupoReposicion,
+                ISNULL(gp.Nombre, '') AS GrupoProveedores, p.ImagenRuta, p.Equivalencia
+                FROM dbo.PRODUCTO p
+                INNER JOIN dbo.CATEGORIA c ON c.IdCategoria = p.IdCategoria
+                LEFT JOIN dbo.GRUPO_REPOSICION gr ON gr.IdGrupoReposicion = p.IdGrupoReposicion
+                LEFT JOIN dbo.GRUPO_PROVEEDOR gp ON gp.IdGrupoProveedor = p.IdGrupoProveedor";
+            const string camposBusqueda = "dbo.fn_NormalizarTextoBusqueda(ISNULL(p.Nombre, '') + ' ' + ISNULL(p.Equivalencia, '') + ' ' + ISNULL(p.Codigo, '') + ' ' + ISNULL(p.Descripcion, ''))";
+            string[] filtros = terminos.Select((terminoParte, indice) =>
+                camposBusqueda + " LIKE '%' + dbo.fn_NormalizarTextoBusqueda(@Busqueda" + indice + ") + '%'").ToArray();
+            string filtroEstado = soloActivos ? " AND p.Estado = 1" : string.Empty;
+            string consulta = columnas + " WHERE " + string.Join(" AND ", filtros) + filtroEstado + " ORDER BY p.Nombre, p.Codigo";
+            var lista = new List<Producto>();
+            using (SqlConnection conexion = new SqlConnection(Conexion.cadena))
+            using (SqlCommand comando = new SqlCommand(consulta, conexion))
+            {
+                for (int i = 0; i < terminos.Length; i++)
+                    comando.Parameters.Add("@Busqueda" + i, SqlDbType.VarChar, 500).Value = terminos[i];
+                conexion.Open();
+                using (SqlDataReader dr = comando.ExecuteReader())
+                    while (dr.Read()) lista.Add(MapearProductoBusqueda(dr));
+            }
+            return lista;
+        }
+
+        private static Producto MapearProductoBusqueda(SqlDataReader dr)
+        {
+            return new Producto
+            {
+                IdProducto = Convert.ToInt32(dr["IdProducto"]),
+                Codigo = Convert.ToString(dr["Codigo"]),
+                Nombre = Convert.ToString(dr["Nombre"]),
+                Descripcion = Convert.ToString(dr["Descripcion"]),
+                Equivalencia = dr["Equivalencia"] == DBNull.Value ? null : Convert.ToString(dr["Equivalencia"]),
+                oCategoria = new Categoria { IdCategoria = Convert.ToInt32(dr["IdCategoria"]), Descripcion = Convert.ToString(dr["DescripcionCategoria"]) },
+                Stock = Convert.ToInt32(dr["Stock"]),
+                PrecioCompra = Convert.ToDecimal(dr["PrecioCompra"]),
+                PrecioVenta = Convert.ToDecimal(dr["PrecioVenta"]),
+                Porcentaje = Convert.ToDecimal(dr["Porcentaje"]),
+                Estado = Convert.ToBoolean(dr["Estado"]),
+                IdGrupoReposicion = dr["IdGrupoReposicion"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoReposicion"]),
+                CantidadMinima = dr["CantidadMinima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMinima"]),
+                CantidadMaxima = dr["CantidadMaxima"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["CantidadMaxima"]),
+                IdGrupoProveedor = dr["IdGrupoProveedor"] == DBNull.Value ? (int?)null : Convert.ToInt32(dr["IdGrupoProveedor"]),
+                GrupoReposicion = Convert.ToString(dr["GrupoReposicion"]),
+                GrupoProveedores = Convert.ToString(dr["GrupoProveedores"]),
+                ImagenRuta = dr["ImagenRuta"] == DBNull.Value ? null : Convert.ToString(dr["ImagenRuta"])
+            };
         }
 
         //-----------Registrar---------
@@ -375,6 +420,7 @@ namespace CapaDatos
                     cmd.Parameters.Add("Codigo", SqlDbType.VarChar, 50).Value = (obj.Codigo ?? string.Empty).ToUpperInvariant();
                     cmd.Parameters.Add("Nombre", SqlDbType.VarChar, 500).Value = (obj.Nombre ?? string.Empty).ToUpperInvariant();
                     cmd.Parameters.Add("Descripcion", SqlDbType.VarChar, 500).Value = (obj.Descripcion ?? string.Empty).ToUpperInvariant();
+                    cmd.Parameters.Add("Equivalencia", SqlDbType.VarChar, 500).Value = string.IsNullOrWhiteSpace(obj.Equivalencia) ? (object)DBNull.Value : obj.Equivalencia.ToUpperInvariant();
                     cmd.Parameters.AddWithValue("IdCategoria", obj.oCategoria.IdCategoria);
                     AgregarParametroPorcentaje(cmd, obj.Porcentaje);
                     AgregarParametroPrecio(cmd, "PrecioCompra", obj.PrecioCompra);
@@ -417,6 +463,7 @@ namespace CapaDatos
                     cmd.Parameters.Add("Codigo", SqlDbType.VarChar, 50).Value = (obj.Codigo ?? string.Empty).ToUpperInvariant();
                     cmd.Parameters.Add("Nombre", SqlDbType.VarChar, 500).Value = (obj.Nombre ?? string.Empty).ToUpperInvariant();
                     cmd.Parameters.Add("Descripcion", SqlDbType.VarChar, 500).Value = (obj.Descripcion ?? string.Empty).ToUpperInvariant();
+                    cmd.Parameters.Add("Equivalencia", SqlDbType.VarChar, 500).Value = string.IsNullOrWhiteSpace(obj.Equivalencia) ? (object)DBNull.Value : obj.Equivalencia.ToUpperInvariant();
                     cmd.Parameters.AddWithValue("IdCategoria", obj.oCategoria.IdCategoria);
                     AgregarParametroPorcentaje(cmd, obj.Porcentaje);
                     AgregarParametroPrecio(cmd, "PrecioCompra", obj.PrecioCompra);
@@ -437,7 +484,10 @@ namespace CapaDatos
             catch (Exception ex)
             {
                 respuesta = false;
-                Mensaje = ex.Message;
+                if (ex is SqlException errorSql && errorSql.Number == 8144)
+                    Mensaje = "La base de datos conectada tiene una versión anterior de dbo.sp_ModificarProducto. Ejecuta migracion_equivalencia_producto.sql en DBSISTEMA_VENTA y en el mismo servidor indicado por conexion.txt. Detalle: " + ex.Message;
+                else
+                    Mensaje = ex.Message;
             }
             return respuesta;
         }

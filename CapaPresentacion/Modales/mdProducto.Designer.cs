@@ -39,6 +39,7 @@
             this.btnBuscar = new FontAwesome.Sharp.IconButton();
             this.IdProducto = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Codigo = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Equivalencia = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Nombre = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Categoria = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Stock = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -107,6 +108,7 @@
             this.dgvData.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.IdProducto,
             this.Codigo,
+            this.Equivalencia,
             this.Nombre,
             this.Categoria,
             this.Stock,
@@ -191,7 +193,15 @@
             this.Codigo.Name = "Codigo";
             this.Codigo.ReadOnly = true;
             this.Codigo.Width = 80;
-            // 
+            //
+            // Equivalencia
+            //
+            this.Equivalencia.HeaderText = "EQUIVALENTE";
+            this.Equivalencia.MinimumWidth = 6;
+            this.Equivalencia.Name = "Equivalencia";
+            this.Equivalencia.ReadOnly = true;
+            this.Equivalencia.Width = 120;
+            //
             // Nombre
             // 
             this.Nombre.HeaderText = "NOMBRE";
@@ -266,6 +276,7 @@
         private System.Windows.Forms.DataGridView dgvData;
         private System.Windows.Forms.DataGridViewTextBoxColumn IdProducto;
         private System.Windows.Forms.DataGridViewTextBoxColumn Codigo;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Equivalencia;
         private System.Windows.Forms.DataGridViewTextBoxColumn Nombre;
         private System.Windows.Forms.DataGridViewTextBoxColumn Categoria;
         private System.Windows.Forms.DataGridViewTextBoxColumn Stock;

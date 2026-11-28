@@ -170,7 +170,7 @@
       $('#clientResults').append(card);
       setMessage($('#clientSearchMessage'), 'Cliente encontrado. Confirma que sea la persona correcta.', true);
     } catch (error) {
-      if (error.status === 401) { location.reload(); return; }
+      if (error.status === 401 || error.status === 403) { location.reload(); return; }
       setMessage($('#clientSearchMessage'), error.message);
     }
   });
@@ -191,7 +191,7 @@
       closeClientDialog();
       setMessage($('#saleSearchMessage'), `Cliente ${selectedClient.nombreCompleto} agregado a esta venta.`, true);
     } catch (error) {
-      if (error.status === 401) { location.reload(); return; }
+      if (error.status === 401 || error.status === 403) { location.reload(); return; }
       setMessage($('#clientCreateMessage'), error.message);
     } finally { button.disabled = false; }
   });
@@ -216,7 +216,7 @@
     button.disabled = true;
     setMessage($('#loginMessage'), 'Validando vendedor…');
     try {
-      const session = await request('/productos/sesion', { method: 'POST', body: JSON.stringify({ clave: new FormData(form).get('clave') }) });
+      const session = await request('/productos/sesion', { method: 'POST', body: JSON.stringify({ clave: new FormData(form).get('clave'), pagina: 'venta.html' }) });
       signedIn();
       restoreSaleDraft();
       renderCart(); renderSelectedClient(); updatePayment();
@@ -397,7 +397,7 @@
         $('#saleSearch').value = '';
       } else setMessage(messageElement, `${products.length}${products.length === 20 ? ' o más' : ''} resultado(s).`, true);
     } catch (error) {
-      if (error.status === 401) { location.reload(); return; }
+      if (error.status === 401 || error.status === 403) { location.reload(); return; }
       setMessage(messageElement, error.message);
     }
   }
@@ -437,7 +437,7 @@
         setMessage($('#copyReceiptMessage'), 'Toca “Copiar número” para copiarlo.');
       }
     } catch (error) {
-      if (error.status === 401) { location.reload(); return; }
+      if (error.status === 401 || error.status === 403) { location.reload(); return; }
       setMessage($('#saleMessage'), error.message);
       if (error.body?.total != null) {
         $('#saleTotal').textContent = money(error.body.total);

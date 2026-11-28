@@ -52,7 +52,7 @@ WHERE IdGrupoProveedor = @id;", cn))
 
         public DataTable ListarProductos()
         {
-            return Consultar(@"SELECT p.IdProducto, p.Codigo, p.Nombre, p.Stock,
+            return Consultar(@"SELECT p.IdProducto, p.Codigo, p.Equivalencia, p.Nombre, p.Stock,
        p.IdGrupoReposicion, p.CantidadMinima, p.CantidadMaxima,
        p.IdGrupoProveedor, ISNULL(gr.Nombre, '') AS GrupoReposicion,
        ISNULL(gp.Nombre, '') AS GrupoProveedores,

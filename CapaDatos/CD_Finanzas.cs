@@ -40,7 +40,7 @@ SELECT c.IdCompra,pr.RazonSocial AS Proveedor,c.NumeroDocumento,
        DATEDIFF(day,CONVERT(date,GETDATE()),CONVERT(date,DATEADD(day,30,c.FechaRegistro))) AS DiasRestantes
 FROM dbo.COMPRA c JOIN dbo.PROVEEDOR pr ON pr.IdProveedor=c.IdProveedor
 OUTER APPLY(SELECT SUM(m.Monto) Pagado FROM dbo.FIN_MOVIMIENTO m WHERE m.IdCompra=c.IdCompra AND m.Tipo='Proveedor') p
-WHERE c.MontoTotal>ISNULL(p.Pagado,0)
+WHERE c.Anulada=0 AND c.MontoTotal>ISNULL(p.Pagado,0)
 ORDER BY DATEADD(day,30,c.FechaRegistro),pr.RazonSocial;
 
 SELECT CAST(ISNULL((SELECT SUM(MontoMensual) FROM dbo.GASTO_PERSONAL WHERE Activo=1),0) AS decimal(12,2)) GastosMensuales,
@@ -48,14 +48,14 @@ SELECT CAST(ISNULL((SELECT SUM(MontoMensual) FROM dbo.GASTO_PERSONAL WHERE Activ
 
 SELECT CAST(ISNULL((SELECT SUM(CapitalGenerado) FROM dbo.FIN_CIERRE_CAJA),0)-ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE Tipo IN ('Empresa','Proveedor')),0) AS decimal(12,2)) CapitalDisponible,
        CAST(ISNULL((SELECT SUM(GananciaGenerada) FROM dbo.FIN_CIERRE_CAJA),0)-ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL),0) AS decimal(12,2)) GananciaAcumulada,
-       CAST(ISNULL((SELECT SUM(c.MontoTotal) FROM dbo.COMPRA c),0)-ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE Tipo='Proveedor'),0) AS decimal(12,2)) DeudaProveedores,
+       CAST(ISNULL((SELECT SUM(c.MontoTotal) FROM dbo.COMPRA c WHERE c.Anulada=0),0)-ISNULL((SELECT SUM(Monto) FROM dbo.FIN_MOVIMIENTO WHERE Tipo='Proveedor'),0) AS decimal(12,2)) DeudaProveedores,
        CAST(ISNULL((SELECT SUM(p.MontoProgramado) FROM dbo.GASTO_PERSONAL_PERIODO p),0)-ISNULL((SELECT SUM(Monto) FROM dbo.PAGO_GASTO_PERSONAL),0) AS decimal(12,2)) DeudaPersonal;
 
 SELECT c.IdCompra,pr.RazonSocial+' - '+c.NumeroDocumento+' (Q '+FORMAT(c.MontoTotal-ISNULL(x.Pagado,0),'N2')+')' AS Etiqueta,
        CAST(c.MontoTotal-ISNULL(x.Pagado,0) AS decimal(12,2)) Saldo
 FROM dbo.COMPRA c JOIN dbo.PROVEEDOR pr ON pr.IdProveedor=c.IdProveedor
 OUTER APPLY(SELECT SUM(Monto) Pagado FROM dbo.FIN_MOVIMIENTO m WHERE m.IdCompra=c.IdCompra AND m.Tipo='Proveedor') x
-WHERE c.MontoTotal>ISNULL(x.Pagado,0)
+WHERE c.Anulada=0 AND c.MontoTotal>ISNULL(x.Pagado,0)
 ORDER BY c.FechaRegistro;
 
 SELECT p.IdPeriodoGastoPersonal,p.IdGastoPersonal,g.Nombre+' - Q '+FORMAT(p.MontoProgramado-ISNULL(x.Pagado,0),'N2') AS Etiqueta,
@@ -161,7 +161,7 @@ VALUES(@id,@usuario,@monto,@fecha,@medio,@referencia,@concepto,'Personal',@pagad
                         {
                             if (tipo == "Proveedor")
                             {
-                                using (SqlCommand validar = new SqlCommand(@"IF @monto > (SELECT c.MontoTotal-ISNULL(SUM(m.Monto),0) FROM dbo.COMPRA c WITH(UPDLOCK,HOLDLOCK) LEFT JOIN dbo.FIN_MOVIMIENTO m ON m.IdCompra=c.IdCompra AND m.Tipo='Proveedor' WHERE c.IdCompra=@id GROUP BY c.MontoTotal) THROW 51002,'El pago supera el saldo pendiente de la factura.',1;", cn, tx))
+                                using (SqlCommand validar = new SqlCommand(@"IF NOT EXISTS (SELECT 1 FROM dbo.COMPRA WITH(UPDLOCK,HOLDLOCK) WHERE IdCompra=@id AND Anulada=0) THROW 51002,'La compra no existe o está anulada.',1; IF @monto > (SELECT c.MontoTotal-ISNULL(SUM(m.Monto),0) FROM dbo.COMPRA c WITH(UPDLOCK,HOLDLOCK) LEFT JOIN dbo.FIN_MOVIMIENTO m ON m.IdCompra=c.IdCompra AND m.Tipo='Proveedor' WHERE c.IdCompra=@id AND c.Anulada=0 GROUP BY c.MontoTotal) THROW 51003,'El pago supera el saldo pendiente de la factura.',1;", cn, tx))
                                 {
                                     validar.Parameters.AddWithValue("@id", idRelacionado.Value);
                                     validar.Parameters.AddWithValue("@monto", monto);

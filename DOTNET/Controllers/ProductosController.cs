@@ -18,6 +18,7 @@ namespace ImagenPDF.Controllers
     [Route("api/productos")]
     public sealed class ProductosController : ControllerBase
     {
+        private static readonly string[] WebPageCodes = { "dashboard.html", "finanzas.html", "depositos.html", "salidas.html", "conciliacion.html", "productos.html", "venta.html" };
         private readonly IConfiguration _configuration;
         private readonly ILogger<ProductosController> _logger;
         private readonly IWebHostEnvironment _environment;
@@ -40,6 +41,8 @@ namespace ImagenPDF.Controllers
         {
             if (string.IsNullOrEmpty(request.Clave))
                 return BadRequest(new { mensaje = "Escribe tu contraseña." });
+            if (!WebPageCodes.Contains(request.Pagina ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+                return BadRequest(new { mensaje = "No se pudo identificar la página que intenta abrirse." });
             if (string.IsNullOrWhiteSpace(ConnectionString))
                 return StatusCode(503, new { mensaje = "Falta configurar la conexión de SQL Server en el servidor." });
 
@@ -47,14 +50,27 @@ namespace ImagenPDF.Controllers
             {
                 await using var connection = new SqlConnection(ConnectionString);
                 await connection.OpenAsync();
-                await using var command = new SqlCommand(@"SELECT TOP (2) IdUsuario, NombreCompleto
+                await using var command = new SqlCommand(@"SELECT TOP (2) IdUsuario, NombreCompleto, EsAdministradorPrincipal
                     FROM dbo.USUARIO WHERE Estado = 1 AND UPPER(Clave) = UPPER(@clave) ORDER BY IdUsuario", connection);
                 command.Parameters.Add("@clave", SqlDbType.VarChar, 50).Value = request.Clave.ToUpperInvariant();
                 await using var reader = await command.ExecuteReaderAsync();
                 if (!await reader.ReadAsync()) return Unauthorized(new { mensaje = "Usuario o contraseña incorrectos." });
                 var userId = reader.GetInt32(0);
                 var userName = reader.IsDBNull(1) ? "Usuario" : reader.GetString(1);
-                if (await reader.ReadAsync()) return Unauthorized(new { mensaje = "Esta contraseña corresponde a más de una cuenta. Pide que las contraseñas de usuario sean distintas." });
+                var isPrincipal = reader.GetBoolean(2);
+                var duplicate = await reader.ReadAsync();
+                await reader.CloseAsync();
+                if (duplicate) return Unauthorized(new { mensaje = "Esta contraseña corresponde a más de una cuenta. Pide que las contraseñas de usuario sean distintas." });
+                if (!isPrincipal)
+                {
+                    await using var permission = new SqlCommand(@"SELECT CASE WHEN EXISTS(
+SELECT 1 FROM dbo.PERMISO_PAGINA_WEB p INNER JOIN dbo.PAGINA_WEB w ON w.CodigoPagina=p.CodigoPagina AND w.Activa=1
+WHERE p.IdUsuario=@usuario AND p.CodigoPagina=@pagina) THEN 1 ELSE 0 END;", connection);
+                    permission.Parameters.Add("@usuario", SqlDbType.Int).Value = userId;
+                    permission.Parameters.Add("@pagina", SqlDbType.VarChar, 100).Value = request.Pagina;
+                    if (Convert.ToInt32(await permission.ExecuteScalarAsync()) != 1)
+                        return StatusCode(StatusCodes.Status403Forbidden, new { mensaje = "Tu usuario no tiene permiso para abrir esta página. Pide al administrador principal que te habilite el acceso." });
+                }
                 HttpContext.Session.SetInt32("ProductUserId", userId);
                 HttpContext.Session.SetString("ProductUserName", userName);
                 return Ok(new { autenticado = true, nombre = HttpContext.Session.GetString("ProductUserName") });
@@ -488,7 +504,7 @@ namespace ImagenPDF.Controllers
         private IActionResult DatabaseNotConfigured() => StatusCode(503, new { mensaje = "El servidor no tiene configurada la conexión de productos." });
     }
 
-    public sealed class LoginRequest { public string Clave { get; set; } = ""; }
+    public sealed class LoginRequest { public string Clave { get; set; } = ""; public string Pagina { get; set; } = ""; }
     public class NameRequest { public string? Nombre { get; set; } }
     public sealed class CategoryCreateRequest : NameRequest { public bool Estado { get; set; } = true; }
     public sealed class ReplenishmentRequest : NameRequest { public int CantidadMinima { get; set; } public int CantidadMaxima { get; set; } }

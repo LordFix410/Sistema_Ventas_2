@@ -34,6 +34,8 @@ namespace ImagenPDF
                 app.UseDeveloperExceptionPage();
             }
 
+            app.UseSession();
+            app.UseMiddleware<WebPageAuthorizationMiddleware>();
             app.UseDefaultFiles();
             app.UseStaticFiles();
             var productImagesPath = ProductImageStorage.Root(configuration, environment);
@@ -44,7 +46,6 @@ namespace ImagenPDF
                 FileProvider = new PhysicalFileProvider(productImagesPath),
                 RequestPath = "/imagenes"
             });
-            app.UseSession();
             app.UseRouting();
             app.UseEndpoints(endpoints =>
             {
