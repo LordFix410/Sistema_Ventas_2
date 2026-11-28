@@ -1,0 +1,21 @@
+.finance-message-dialog{width:min(580px,calc(100% - 28px));max-width:580px;max-height:min(88vh,760px);overflow:auto;padding:0;border:1px solid #d5e1e9;border-radius:16px;background:#fff;color:#183d57;box-shadow:0 20px 60px #102f4650}
+.finance-message-dialog::backdrop{background:#0c2638a8;backdrop-filter:blur(2px)}
+.finance-message-dialog [hidden]{display:none!important}
+.finance-message-dialog form{display:grid;gap:12px;padding:22px}
+.finance-message-dialog .eyebrow{margin:0;color:#327aa5;font-size:.72rem;font-weight:850;letter-spacing:.1em}
+.finance-message-dialog h2{margin:0;font-size:1.45rem;line-height:1.2}
+.finance-dialog-message{margin:0;color:#536e80;line-height:1.5;white-space:pre-line}
+.finance-dialog-details{display:grid;gap:0;margin:0;padding:7px 14px;border-radius:10px;background:#f1f6f9}
+.finance-dialog-details>div{display:grid;grid-template-columns:minmax(130px,.8fr) minmax(0,1.2fr);gap:12px;padding:10px 0;border-bottom:1px solid #dce6ec}
+.finance-dialog-details>div:last-child{border-bottom:0}
+.finance-dialog-details dt{color:#60798b}
+.finance-dialog-details dd{margin:0;color:#183d57;font-weight:800;overflow-wrap:anywhere}
+.finance-dialog-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:11px}
+.finance-dialog-fields label{display:grid;gap:6px;color:#29485e;font-size:.88rem;font-weight:800}
+.finance-dialog-fields input,.finance-dialog-fields textarea{box-sizing:border-box;width:100%;min-height:44px;border:1px solid #c6d5df;border-radius:9px;background:#fff;padding:10px 12px;color:#183d57;font:inherit}
+.finance-dialog-fields textarea{min-height:100px;resize:vertical}
+.finance-dialog-note{margin:0;padding:11px 12px;border-radius:9px;background:#f1f6f9;color:#60798b;font-size:.84rem;line-height:1.45}
+.finance-dialog-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:3px}
+.finance-dialog-actions.single-action{grid-template-columns:1fr}
+.finance-dialog-actions .button{min-height:46px}
+@media(max-width:560px){.finance-message-dialog form{padding:17px}.finance-dialog-details>div{grid-template-columns:minmax(95px,.8fr) minmax(0,1.2fr);gap:8px}.finance-dialog-actions{grid-template-columns:1fr}}

@@ -51,16 +51,18 @@ namespace CapaPresentacion
             };
             raiz.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
             raiz.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            raiz.Controls.Add(new Label
+            var encabezado = new Label
             {
+                Name = "lblTituloDevoluciones",
                 Text = "Devoluciones y anulaciones de ventas",
                 Dock = DockStyle.Fill,
-                BackColor = azul,
+                BackColor = Color.FromArgb(20, 61, 88),
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 16F, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(14, 0, 0, 0)
-            }, 0, 0);
+            };
+            raiz.Controls.Add(encabezado, 0, 0);
 
             var tabs = new TabControl { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 10F) };
             var registrar = new TabPage("Registrar") { BackColor = fondo, Padding = new Padding(8) };
@@ -143,9 +145,14 @@ namespace CapaPresentacion
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
                 EditMode = DataGridViewEditMode.EditOnEnter,
-                ColumnHeadersHeight = 36,
-                DefaultCellStyle = { Font = new Font("Segoe UI", 9F) },
-                ColumnHeadersDefaultCellStyle = { Font = new Font("Segoe UI", 9F, FontStyle.Bold), WrapMode = DataGridViewTriState.True }
+                EnableHeadersVisualStyles = false,
+                GridColor = Color.FromArgb(204, 218, 228),
+                ColumnHeadersHeight = 48,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing,
+                DefaultCellStyle = { Font = new Font("Segoe UI", 9.5F), Padding = new Padding(8, 5, 8, 5) },
+                ColumnHeadersDefaultCellStyle = { BackColor = azul, ForeColor = Color.White, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Padding = new Padding(8, 6, 8, 6), WrapMode = DataGridViewTriState.True },
+                RowTemplate = { Height = 38 },
+                AlternatingRowsDefaultCellStyle = { BackColor = Color.FromArgb(242, 247, 250) }
             };
             dgvDetalle.Columns.Add(new DataGridViewTextBoxColumn { Name = "IdDetalleVenta", DataPropertyName = "IdDetalleVenta", Visible = false });
             dgvDetalle.Columns.Add(new DataGridViewTextBoxColumn { Name = "IdProducto", DataPropertyName = "IdProducto", Visible = false });
@@ -325,7 +332,15 @@ namespace CapaPresentacion
                 RowHeadersVisible = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 AutoGenerateColumns = true,
-                DefaultCellStyle = { Font = new Font("Segoe UI", 9F), WrapMode = DataGridViewTriState.True }
+                EnableHeadersVisualStyles = false,
+                GridColor = Color.FromArgb(204, 218, 228),
+                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+                ColumnHeadersHeight = 64,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing,
+                ColumnHeadersDefaultCellStyle = { BackColor = azul, ForeColor = Color.White, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Padding = new Padding(8, 6, 8, 6), WrapMode = DataGridViewTriState.True },
+                DefaultCellStyle = { Font = new Font("Segoe UI", 9.5F), Padding = new Padding(8, 6, 8, 6), WrapMode = DataGridViewTriState.True, SelectionBackColor = azul, SelectionForeColor = Color.White },
+                RowTemplate = { Height = 38 },
+                AlternatingRowsDefaultCellStyle = { BackColor = Color.FromArgb(242, 247, 250) }
             };
             dgvHistorial.DataBindingComplete += (s, e) =>
             {
@@ -333,7 +348,7 @@ namespace CapaPresentacion
                 {
                     dgvHistorial.Columns["IdRegistro"].HeaderText = "N.º registro";
                     dgvHistorial.Columns["IdRegistro"].FillWeight = 65;
-                    dgvHistorial.Columns["IdRegistro"].MinimumWidth = 75;
+                    dgvHistorial.Columns["IdRegistro"].MinimumWidth = 125;
                 }
                 if (dgvHistorial.Columns.Contains("FechaRegistro"))
                 {
@@ -374,7 +389,7 @@ namespace CapaPresentacion
                     dgvHistorial.Columns["ValorProductos"].DefaultCellStyle.Format = "'Q' #,##0.00";
                     dgvHistorial.Columns["ValorProductos"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
                     dgvHistorial.Columns["ValorProductos"].FillWeight = 85;
-                    dgvHistorial.Columns["ValorProductos"].MinimumWidth = 100;
+                    dgvHistorial.Columns["ValorProductos"].MinimumWidth = 130;
                 }
                 if (dgvHistorial.Columns.Contains("MontoDevuelto"))
                 {
@@ -580,7 +595,8 @@ namespace CapaPresentacion
             if (dgvHistorial == null) return;
             string mensaje;
             DataTable historial = negocio.ObtenerHistorialDevoluciones(out mensaje);
-            dgvHistorial.DataSource = historial;
+            historial.DefaultView.Sort = "FechaRegistro DESC, IdRegistro DESC";
+            dgvHistorial.DataSource = historial.DefaultView;
             if (!string.IsNullOrEmpty(mensaje))
                 CapaPresentacion.DialogoSistema.Show("No se pudo cargar el historial.\n\n" + mensaje,
                     "Historial de devoluciones", MessageBoxButtons.OK, MessageBoxIcon.Error);

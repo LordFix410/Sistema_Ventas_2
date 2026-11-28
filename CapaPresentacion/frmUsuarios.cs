@@ -46,8 +46,8 @@ namespace CapaPresentacion
                 TextImageRelation = TextImageRelation.ImageBeforeText,
                 BackColor = System.Drawing.Color.FromArgb(31, 111, 166), ForeColor = System.Drawing.Color.White,
                 FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand,
-                Location = new System.Drawing.Point(1217, 98), Size = new System.Drawing.Size(150, 38),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Location = new System.Drawing.Point(318, 98), Size = new System.Drawing.Size(150, 38),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left,
                 Enabled = usuarioActual != null && (usuarioActual.EsAdministradorPrincipal || usuarioActual.EsSuperAdministradorWeb)
             };
             btnPermisosWeb.FlatAppearance.BorderSize = 0;

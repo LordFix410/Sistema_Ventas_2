@@ -106,7 +106,8 @@ namespace CapaPresentacion.Modales
             superAdministrador.Checked = target.EsSuperAdministradorWeb;
             superAdministrador.Enabled = actor.EsAdministradorPrincipal && !target.EsAdministradorPrincipal && target.Estado;
             guardar.Enabled = !target.EsAdministradorPrincipal && target.Estado;
-            mensaje.Text = target.EsAdministradorPrincipal ? "La cuenta principal siempre conserva acceso completo." : "Los permisos se aplican al volver a iniciar sesión o al abrir una página.";
+            mensaje.Text = target.EsAdministradorPrincipal ? string.Empty : "Los permisos se aplican al volver a iniciar sesión o al abrir una página.";
+            mensaje.Visible = !target.EsAdministradorPrincipal;
         }
 
         private void GuardarAccesos(object sender, EventArgs e)

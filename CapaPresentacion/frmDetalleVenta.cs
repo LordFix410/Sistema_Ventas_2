@@ -30,8 +30,16 @@ namespace CapaPresentacion
         {
             if (IsDisposed || dataGridView1 == null || label10 == null) return;
             int margen = 18;
-            int x = Math.Max(margen, label10.Left);
-            int ancho = Math.Max(300, ClientSize.Width - x - margen);
+            int anchoColumnas = dataGridView1.Columns
+                .Cast<DataGridViewColumn>()
+                .Where(columna => columna.Visible)
+                .Sum(columna => columna.Width);
+            int anchoNecesario = anchoColumnas + SystemInformation.VerticalScrollBarWidth + 6;
+            int ancho = Math.Min(Math.Max(300, ClientSize.Width - margen * 2), Math.Max(300, anchoNecesario));
+            int centroIzquierdo = label3 != null ? label3.Left : label10.Left;
+            int centroDerecho = groupBox3 != null ? groupBox3.Right : ClientSize.Width - margen;
+            int centro = (centroIzquierdo + centroDerecho) / 2;
+            int x = Math.Max(margen, Math.Min(ClientSize.Width - ancho - margen, centro - ancho / 2));
             int y = label10.Bottom + 20;
             int altoContenido = dataGridView1.ColumnHeadersHeight + 8;
             foreach (DataGridViewRow fila in dataGridView1.Rows)

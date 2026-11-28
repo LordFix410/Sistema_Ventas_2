@@ -55,6 +55,9 @@ namespace CapaPresentacion.Utilidades
             {
                 if (control is Label etiqueta)
                 {
+                    if (etiqueta.Name.Equals("lblTituloDevoluciones", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
                     etiqueta.Font = new Font(etiqueta.Font.FontFamily, etiqueta.Font.Size,
                         etiqueta.Font.Style | FontStyle.Bold);
                     etiqueta.ForeColor = Color.FromArgb(38, 61, 80);

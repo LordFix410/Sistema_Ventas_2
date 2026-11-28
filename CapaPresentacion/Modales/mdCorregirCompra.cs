@@ -54,12 +54,12 @@ namespace CapaPresentacion.Modales
 
         private void ConstruirDisenoVisual()
         {
-            Color fondo = Color.FromArgb(24, 26, 28);
-            Color panel = Color.FromArgb(30, 32, 34);
-            Color campo = Color.FromArgb(36, 38, 40);
-            Color texto = Color.FromArgb(240, 240, 240);
-            Color tenue = Color.FromArgb(185, 188, 190);
-            Color azul = Color.FromArgb(35, 79, 117);
+            Color fondo = Color.FromArgb(27, 34, 39);
+            Color panel = Color.FromArgb(39, 48, 55);
+            Color campo = Color.FromArgb(51, 62, 70);
+            Color texto = Color.FromArgb(248, 250, 252);
+            Color tenue = Color.FromArgb(207, 216, 222);
+            Color azul = Color.FromArgb(32, 112, 163);
 
             SuspendLayout();
             Controls.Clear();
@@ -102,6 +102,7 @@ namespace CapaPresentacion.Modales
             EstilizarEntrada(txtIdCompra, campo, texto);
             EstilizarEntrada(txtNumeroFactura, campo, texto);
             EstilizarEntrada(cboProveedor, campo, texto);
+            cboProveedor.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
 
             label1.Text = "Compra";
             label1.AutoSize = true;
@@ -117,11 +118,12 @@ namespace CapaPresentacion.Modales
             EstilizarEtiqueta(label7, texto);
             label4.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             label7.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            label2.Font = new Font("Segoe UI", 10.5F, FontStyle.Bold);
 
             EstilizarBoton(btnBuscarCompra, azul, texto);
             EstilizarBoton(btnGuardarCorreccion, azul, texto);
-            EstilizarBoton(btnAnularCompra, Color.FromArgb(106, 38, 42), Color.FromArgb(255, 220, 220));
-            EstilizarBoton(btnCerrar, Color.FromArgb(48, 50, 52), texto);
+            EstilizarBoton(btnAnularCompra, Color.FromArgb(174, 54, 60), Color.White);
+            EstilizarBoton(btnCerrar, Color.FromArgb(70, 83, 91), Color.White);
             btnBuscarCompra.Text = "Buscar compra";
             btnGuardarCorreccion.Text = "Guardar corrección";
             btnAnularCompra.Text = "Anular compra";
@@ -363,23 +365,23 @@ namespace CapaPresentacion.Modales
             dgvDetalleCompra.EnableHeadersVisualStyles = false;
             dgvDetalleCompra.BackgroundColor = fondo;
             dgvDetalleCompra.BorderStyle = BorderStyle.None;
-            dgvDetalleCompra.GridColor = Color.FromArgb(55, 58, 60);
+            dgvDetalleCompra.GridColor = Color.FromArgb(76, 90, 99);
             dgvDetalleCompra.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
             dgvDetalleCompra.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
             dgvDetalleCompra.ColumnHeadersHeight = 48;
             dgvDetalleCompra.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-            dgvDetalleCompra.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(39, 42, 44);
+            dgvDetalleCompra.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(49, 64, 73);
             dgvDetalleCompra.ColumnHeadersDefaultCellStyle.ForeColor = texto;
-            dgvDetalleCompra.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            dgvDetalleCompra.ColumnHeadersDefaultCellStyle.Padding = new Padding(7, 4, 7, 4);
+            dgvDetalleCompra.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            dgvDetalleCompra.ColumnHeadersDefaultCellStyle.Padding = new Padding(8, 6, 8, 6);
             dgvDetalleCompra.DefaultCellStyle.BackColor = fondo;
             dgvDetalleCompra.DefaultCellStyle.ForeColor = texto;
             dgvDetalleCompra.DefaultCellStyle.SelectionBackColor = azul;
             dgvDetalleCompra.DefaultCellStyle.SelectionForeColor = Color.White;
-            dgvDetalleCompra.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
-            dgvDetalleCompra.DefaultCellStyle.Padding = new Padding(7, 4, 7, 4);
-            dgvDetalleCompra.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(28, 30, 32);
-            dgvDetalleCompra.RowTemplate.Height = 40;
+            dgvDetalleCompra.DefaultCellStyle.Font = new Font("Segoe UI", 9.5F);
+            dgvDetalleCompra.DefaultCellStyle.Padding = new Padding(8, 5, 8, 5);
+            dgvDetalleCompra.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(46, 57, 65);
+            dgvDetalleCompra.RowTemplate.Height = 44;
             dgvDetalleCompra.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvDetalleCompra.AllowUserToResizeRows = false;
             dgvDetalleCompra.SelectionMode = DataGridViewSelectionMode.CellSelect;
@@ -427,11 +429,13 @@ namespace CapaPresentacion.Modales
                 return;
             }
 
-            Color fondo = Color.FromArgb(24, 26, 28);
-            Color panel = Color.FromArgb(30, 32, 34);
-            Color texto = Color.FromArgb(240, 240, 240);
-            Color tenue = Color.FromArgb(185, 188, 190);
-            Color azul = Color.FromArgb(35, 79, 117);
+            Color fondo = Color.FromArgb(27, 34, 39);
+            Color panel = Color.FromArgb(39, 48, 55);
+            Color texto = Color.FromArgb(248, 250, 252);
+            Color tenue = Color.FromArgb(207, 216, 222);
+            Color azul = Color.FromArgb(32, 112, 163);
+            Color panelEventos = Color.FromArgb(39, 53, 61);
+            Color panelDetalle = Color.FromArgb(47, 62, 70);
 
             using (Form ventana = new Form())
             {
@@ -487,6 +491,7 @@ namespace CapaPresentacion.Modales
                     Dock = DockStyle.Fill,
                     Orientation = Orientation.Horizontal,
                     SplitterWidth = 7,
+                    BorderStyle = BorderStyle.FixedSingle,
                     BackColor = fondo,
                     Size = new Size(1100, 500)
                 };
@@ -494,7 +499,7 @@ namespace CapaPresentacion.Modales
                 split.Panel1MinSize = 160;
                 split.Panel2MinSize = 140;
                 var eventos = new DataGridView { Dock = DockStyle.Fill };
-                ConfigurarGridHistorial(eventos, fondo, panel, texto, azul);
+                ConfigurarGridHistorial(eventos, fondo, panelEventos, texto, azul);
                 eventos.DataSource = historial;
                 DataGridViewColumn columnaIdCorreccion = BuscarColumnaEnlazada(eventos, "IdCorreccion");
                 DataGridViewColumn columnaIdCompra = BuscarColumnaEnlazada(eventos, "IdCompra");
@@ -509,11 +514,11 @@ namespace CapaPresentacion.Modales
                 ConfigurarColumnaHistorial(eventos, "Usuario", "Responsable", 115);
                 ConfigurarColumnaHistorial(eventos, "Motivo", "Motivo", 155);
 
-                var panelEventos = CrearPanelGridHistorial("Eventos registrados", eventos, panel, texto);
-                split.Panel1.Controls.Add(panelEventos);
+                var seccionEventos = CrearPanelGridHistorial("Eventos registrados", eventos, panelEventos, texto);
+                split.Panel1.Controls.Add(seccionEventos);
 
                 var detalle = new DataGridView { Dock = DockStyle.Fill };
-                ConfigurarGridHistorial(detalle, fondo, panel, texto, azul);
+                ConfigurarGridHistorial(detalle, fondo, panelDetalle, texto, azul);
                 var etiquetaDetalle = new Label
                 {
                     Dock = DockStyle.Fill,
@@ -522,8 +527,8 @@ namespace CapaPresentacion.Modales
                     Font = new Font("Segoe UI", 10F, FontStyle.Bold),
                     TextAlign = ContentAlignment.MiddleLeft
                 };
-                var panelDetalle = CrearPanelGridHistorial(etiquetaDetalle, detalle, panel, texto);
-                split.Panel2.Controls.Add(panelDetalle);
+                var seccionDetalle = CrearPanelGridHistorial(etiquetaDetalle, detalle, panelDetalle, texto);
+                split.Panel2.Controls.Add(seccionDetalle);
 
                 if (eventos.Rows.Count > 0)
                 {
@@ -549,7 +554,7 @@ namespace CapaPresentacion.Modales
                     Size = new Size(170, 42),
                     Dock = DockStyle.Right
                 };
-                EstilizarBoton(cerrar, Color.FromArgb(48, 50, 52), texto);
+                EstilizarBoton(cerrar, Color.FromArgb(70, 83, 91), Color.White);
                 cerrar.Click += (s, e) => ventana.Close();
                 pie.Controls.Add(cerrar);
 
@@ -587,9 +592,11 @@ namespace CapaPresentacion.Modales
                 Padding = new Padding(0, 3, 0, 3)
             };
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 32F));
+            panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
             panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             etiqueta.ForeColor = texto;
+            etiqueta.BackColor = fondo;
+            etiqueta.Padding = new Padding(10, 0, 0, 0);
             panel.Controls.Add(etiqueta, 0, 0);
             panel.Controls.Add(grid, 0, 1);
             return panel;
@@ -610,20 +617,22 @@ namespace CapaPresentacion.Modales
             grid.EnableHeadersVisualStyles = false;
             grid.BackgroundColor = fondo;
             grid.BorderStyle = BorderStyle.None;
-            grid.GridColor = Color.FromArgb(55, 58, 60);
-            grid.ColumnHeadersHeight = 42;
+            grid.GridColor = Color.FromArgb(76, 90, 99);
+            grid.ColumnHeadersHeight = 52;
             grid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-            grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(39, 42, 44);
+            grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(49, 64, 73);
             grid.ColumnHeadersDefaultCellStyle.ForeColor = texto;
-            grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            grid.ColumnHeadersDefaultCellStyle.Padding = new Padding(7, 4, 7, 4);
+            grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            grid.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            grid.ColumnHeadersDefaultCellStyle.Padding = new Padding(8, 6, 8, 6);
             grid.DefaultCellStyle.BackColor = panel;
             grid.DefaultCellStyle.ForeColor = texto;
             grid.DefaultCellStyle.SelectionBackColor = azul;
             grid.DefaultCellStyle.SelectionForeColor = Color.White;
-            grid.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
-            grid.DefaultCellStyle.Padding = new Padding(7, 4, 7, 4);
-            grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(28, 30, 32);
+            grid.DefaultCellStyle.Font = new Font("Segoe UI", 9.5F);
+            grid.DefaultCellStyle.Padding = new Padding(8, 6, 8, 6);
+            grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(47, 58, 66);
+            grid.RowTemplate.Height = 40;
         }
 
         private static DataGridViewColumn BuscarColumnaEnlazada(DataGridView grid, string nombreCampo)

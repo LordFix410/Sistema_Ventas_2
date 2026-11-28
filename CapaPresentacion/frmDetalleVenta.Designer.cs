@@ -121,12 +121,13 @@
             this.PrecioCompra,
             this.Cantidad,
             this.SubTotal});
-            this.dataGridView1.Location = new System.Drawing.Point(418, 317);
+            this.dataGridView1.Location = new System.Drawing.Point(664, 317);
             this.dataGridView1.Margin = new System.Windows.Forms.Padding(4);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.ReadOnly = true;
+            this.dataGridView1.RowHeadersVisible = false;
             this.dataGridView1.RowHeadersWidth = 51;
-            this.dataGridView1.Size = new System.Drawing.Size(1108, 330);
+            this.dataGridView1.Size = new System.Drawing.Size(596, 330);
             this.dataGridView1.TabIndex = 68;
             // 
             // Producto

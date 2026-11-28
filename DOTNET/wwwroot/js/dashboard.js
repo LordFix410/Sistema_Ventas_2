@@ -1,15 +1,30 @@
 (() => {
   const $ = selector => document.querySelector(selector);
   const loginPanel = $('#loginPanel');
+  const loginForm = $('#loginForm');
   const dashboardApp = $('#dashboardApp');
   const loginMessage = $('#loginMessage');
   const pageMessage = $('#pageMessage');
   const currency = new Intl.NumberFormat('es-GT', {style: 'currency', currency: 'GTQ'});
+  const gainBank = /bam/i;
+  const capitalBank = /banrural/i;
+  const centTolerance = 0.005;
+
+  const number = value => Number(value || 0);
+  const money = value => currency.format(number(value));
 
   function message(element, text, success = false) {
     element.textContent = text || '';
     element.classList.toggle('success', success);
   }
+
+  function setSignedIn(signedIn, name = '') {
+    loginPanel.hidden = signedIn;
+    dashboardApp.hidden = !signedIn;
+    if (signedIn) $('#responsibleName').textContent = name;
+    else loginForm.reset();
+  }
+
   async function api(url, options = {}) {
     const response = await fetch(url, {
       credentials: 'same-origin',
@@ -18,44 +33,115 @@
     });
     const data = response.status === 204 ? null : await response.json().catch(() => ({}));
     if (!response.ok) {
-      if ((response.status === 401 || response.status === 403) && url !== '/api/productos/sesion') setSignedIn(false);
-      throw new Error(data?.mensaje || 'No se pudo consultar el resumen.');
+      const error = data?.mensaje || 'No se pudo consultar el resumen.';
+      if ((response.status === 401 || response.status === 403) && url !== '/api/productos/sesion') {
+        setSignedIn(false);
+        message(loginMessage, error);
+      }
+      throw new Error(error);
     }
     return data;
   }
-  function setSignedIn(signedIn, name = '') {
-    loginPanel.hidden = signedIn;
-    dashboardApp.hidden = !signedIn;
-    if (signedIn) $('#responsibleName').textContent = name;
-    else $('#loginForm').reset();
+
+  function cell(className, label, value) {
+    const box = document.createElement('div');
+    box.className = 'cell ' + className + (number(value) === 0 ? ' is-zero' : '');
+    const small = document.createElement('small');
+    small.textContent = label;
+    const bold = document.createElement('b');
+    bold.textContent = money(value);
+    box.append(small, bold);
+    return box;
   }
+
+  function ledgerRow(name, capital, gain, isSum = false) {
+    const row = document.createElement('article');
+    row.className = 'ledger-row' + (isSum ? ' is-sum' : '');
+    const title = document.createElement('h3');
+    title.className = 'ln';
+    title.textContent = name;
+    row.append(title, cell('c', 'Capital', capital), cell('g', 'Ganancia', gain), cell('t', 'Total', number(capital) + number(gain)));
+    return row;
+  }
+
+  function check(list, kind, text) {
+    const item = document.createElement('li');
+    item.className = kind;
+    const mark = document.createElement('b');
+    mark.className = 'mark';
+    mark.textContent = kind === 'ok' ? '✓' : kind === 'warn' ? '!' : 'i';
+    const span = document.createElement('span');
+    span.textContent = text;
+    item.append(mark, span);
+    list.append(item);
+  }
+
   function render(data) {
-    $('#monthLabel').textContent = new Date(`${data.mes}-01T12:00:00`).toLocaleDateString('es-GT', {month: 'long', year: 'numeric'});
-    const banks = data.bancos || [];
-    const bankTotal = banks.reduce((sum, bank) => sum + Number(bank.capital || 0) + Number(bank.ganancia || 0), 0);
-    const cashCapital = Number(data.capitalDepositosMasCaja || 0) - Number(data.depositadoCapital || 0);
-    const cashGain = Number(data.gananciaDepositosMasCaja || 0) - Number(data.depositadoPersonal || 0);
-    const pendingCapital = Number(data.pendienteDepositoCapital || 0);
-    const pendingGain = Number(data.pendienteDepositoGanancia || 0);
-    $('#bankTotal').textContent = currency.format(bankTotal);
-    $('#bankAndCashTotal').textContent = currency.format(bankTotal + cashCapital + cashGain);
-    $('#pendingDepositCapital').textContent = currency.format(pendingCapital);
-    $('#pendingDepositGain').textContent = currency.format(pendingGain);
-    $('#pendingDepositTotal').textContent = currency.format(pendingCapital + pendingGain);
-    $('#capitalBalance').textContent = currency.format(data.capital);
-    $('#personalBalance').textContent = currency.format(data.personal);
-    $('#capitalDeposited').textContent = currency.format(data.depositadoCapital);
-    $('#personalDeposited').textContent = currency.format(data.depositadoPersonal);
-    $('#capitalCashTotal').textContent = currency.format(data.capitalDepositosMasCaja);
-    $('#personalCashTotal').textContent = currency.format(data.gananciaDepositosMasCaja);
-    $('#monthCapitalOutflows').textContent = currency.format(data.salidasCapitalMes || 0);
-    $('#monthPersonalOutflows').textContent = currency.format(data.salidasPersonalMes || 0);
-    const bankList=$('#bankBalanceList');bankList.replaceChildren();
-    if(!banks.length){const empty=document.createElement('p');empty.className='empty-state';empty.textContent='Todavía no hay bancos registrados.';bankList.append(empty);}
-    for(const bank of banks){const row=document.createElement('article');row.className='bank-balance-item';const name=document.createElement('strong');name.textContent=bank.nombre;const total=document.createElement('strong');total.textContent=currency.format(Number(bank.capital)+Number(bank.ganancia));const split=document.createElement('small');split.textContent=`Capital ${currency.format(bank.capital)} · Ganancia ${currency.format(bank.ganancia)}`;row.append(name,total,split);bankList.append(row);}
-    $('#cashCapitalActual').textContent=currency.format(cashCapital);
-    $('#cashGainActual').textContent=currency.format(cashGain);
+    if (data.mes) {
+      $('#monthLabel').textContent = new Date(data.mes + '-01T12:00:00')
+        .toLocaleDateString('es-GT', {month: 'long', year: 'numeric'});
+    }
+
+    const banks = Array.isArray(data.bancos) ? data.bancos : [];
+    const sumCapital = banks.reduce((sum, bank) => sum + number(bank.capital), 0);
+    const sumGain = banks.reduce((sum, bank) => sum + number(bank.ganancia), 0);
+    const totalCapital = number(data.capitalDepositosMasCaja ?? data.capital);
+    const totalGain = number(data.gananciaDepositosMasCaja ?? data.personal);
+    const pendingCapital = number(data.pendienteDepositoCapital);
+    const pendingGain = number(data.pendienteDepositoGanancia);
+    const fixedCashCapital = totalCapital - sumCapital - pendingCapital;
+    const fixedCashGain = totalGain - sumGain - pendingGain;
+
+    $('#goalCapital').textContent = money(totalCapital);
+    $('#goalGain').textContent = money(totalGain);
+
+    const ledger = $('#ledgerList');
+    ledger.replaceChildren();
+    if (!banks.length) {
+      const empty = document.createElement('p');
+      empty.className = 'empty-state';
+      empty.textContent = 'Todavía no hay bancos registrados.';
+      ledger.append(empty);
+    } else {
+      banks.forEach(bank => ledger.append(ledgerRow(bank.nombre, bank.capital, bank.ganancia)));
+    }
+    ledger.append(
+      ledgerRow('Suma de bancos', sumCapital, sumGain, true),
+      ledgerRow('En caja (fijo)', fixedCashCapital, fixedCashGain),
+      ledgerRow('Cierres sin depositar', pendingCapital, pendingGain),
+      ledgerRow('Total real', totalCapital, totalGain, true)
+    );
+
+    const checks = $('#checkList');
+    checks.replaceChildren();
+    if (banks.length) {
+      check(checks, 'info', 'Suma de bancos: ' + money(sumCapital + sumGain) + '. Compárala con los saldos de Banrural y BAM.');
+    } else {
+      check(checks, 'warn', 'No hay bancos registrados para comparar sus saldos.');
+    }
+
+    if (pendingCapital > centTolerance || pendingGain > centTolerance) {
+      check(checks, 'warn', money(pendingCapital + pendingGain) + ' en cierres sin depositar (Capital ' + money(pendingCapital) + ' · Ganancia ' + money(pendingGain) + ').');
+    } else if (pendingCapital < -centTolerance || pendingGain < -centTolerance) {
+      check(checks, 'warn', 'Hay un saldo negativo en cierres pendientes. Revisa esos cierres antes de depositar.');
+    } else {
+      check(checks, 'ok', 'No hay cierres pendientes de depositar.');
+    }
+
+    const hasGainBank = banks.some(bank => gainBank.test(bank.nombre || ''));
+    const hasCapitalBank = banks.some(bank => capitalBank.test(bank.nombre || ''));
+    const gainOutsideBam = banks.filter(bank => !gainBank.test(bank.nombre || '')).reduce((sum, bank) => sum + number(bank.ganancia), 0);
+    const capitalInsideBam = banks.filter(bank => gainBank.test(bank.nombre || '')).reduce((sum, bank) => sum + number(bank.capital), 0);
+
+    if (!hasCapitalBank) check(checks, 'warn', 'No encuentro una cuenta llamada Banrural. Revisa el nombre del banco.');
+    if (!hasGainBank) check(checks, 'warn', 'No encuentro una cuenta llamada BAM. Revisa el nombre del banco.');
+    if (gainOutsideBam > centTolerance) check(checks, 'warn', 'Falta transferir ' + money(gainOutsideBam) + ' de ganancia desde Banrural hacia BAM.');
+    if (capitalInsideBam > centTolerance) check(checks, 'warn', 'BAM tiene ' + money(capitalInsideBam) + ' de capital; verifica que se haya transferido a Banrural.');
+    if (hasCapitalBank && hasGainBank && gainOutsideBam <= centTolerance && capitalInsideBam <= centTolerance) {
+      check(checks, 'ok', 'La ganancia está en BAM y el capital en Banrural, según los movimientos registrados.');
+    }
   }
+
   async function loadSummary() {
     message(pageMessage, 'Actualizando resumen…');
     try {
@@ -66,26 +152,31 @@
     }
   }
 
-  $('#loginForm').addEventListener('submit', async event => {
+  loginForm.addEventListener('submit', async event => {
     event.preventDefault();
-    const form = event.currentTarget;
     message(loginMessage, 'Validando acceso…');
     try {
       const result = await api('/api/productos/sesion', {
         method: 'POST',
-        body: JSON.stringify({clave: new FormData(form).get('clave'), pagina: 'dashboard.html'})
+        body: JSON.stringify({
+          clave: new FormData(loginForm).get('clave'),
+          pagina: 'dashboard.html'
+        })
       });
       setSignedIn(true, result.nombre || 'Usuario');
       await loadSummary();
     } catch (error) {
       message(loginMessage, error.message);
-      form.querySelector('input').focus();
+      loginForm.querySelector('input').focus();
     }
   });
+
   $('#logoutButton').addEventListener('click', async () => {
     try { await api('/api/productos/sesion', {method: 'DELETE'}); } catch {}
     setSignedIn(false);
+    message(loginMessage, '');
   });
+
   $('#refreshButton').addEventListener('click', loadSummary);
 
   async function initialize() {
@@ -94,11 +185,14 @@
       if (status.autenticado) {
         setSignedIn(true, status.nombre || 'Usuario');
         await loadSummary();
-      } else setSignedIn(false);
+      } else {
+        setSignedIn(false);
+      }
     } catch (error) {
       setSignedIn(false);
       message(loginMessage, error.message);
     }
   }
+
   initialize();
 })();
